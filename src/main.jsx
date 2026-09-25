@@ -10,6 +10,7 @@ import { syncExaminationCore } from './modules/examinations/index.js';
 import { createPrescriptionCore } from './modules/prescriptions/index.js';
 import { createInvestigationWorkflow, completeInvestigation } from './modules/investigations/index.js';
 import { createImagingStudy } from './modules/imaging/index.js';
+import { appointmentFromRow, appointmentToRow, diffAppointments } from './modules/appointments/index.js';
 import { can, ROLES } from './app/permissions.js';
 import { normalizeFileMeta, resolveFileUrl } from './services/storage.js';
 
@@ -34,6 +35,7 @@ globalThis.IAppModules.prescriptions = { createPrescriptionCore };
 globalThis.IAppModules.investigations = { createInvestigationWorkflow, completeInvestigation };
 globalThis.IAppModules.imaging = { createImagingStudy };
 
+globalThis.IAppModules.appointments = { fromRow: appointmentFromRow, toRow: appointmentToRow, diff: diffAppointments };
 globalThis.IAppModules.auth = { can, ROLES };
 globalThis.IAppModules.storage = { normalizeFileMeta, resolveFileUrl };
 

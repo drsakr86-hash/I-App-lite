@@ -1331,7 +1331,7 @@ async function ensureKiosk() {
 const APT_KEY = "iapp_appointments";
 const APT_TABLE = "iapp_appointments";
 const APT_HISTORY_DAYS = 365;
-const aptFromRow = r => ({
+const aptFromRowLegacy = r => ({
   id: Number(r.id),
   patientId: r.patient_id == null ? null : Number(r.patient_id),
   patient: r.patient || "",
@@ -1357,7 +1357,7 @@ const aptFromRow = r => ({
   reminded: r.reminded || undefined
 });
 const num = v => v === undefined || v === null || v === "" ? null : Number(v);
-const aptToRow = a => ({
+const aptToRowLegacy = a => ({
   id: Number(a.id),
   patient_id: a.patientId == null ? null : Number(a.patientId),
   patient: a.patient || "",
@@ -1383,6 +1383,11 @@ const aptToRow = a => ({
   reminded: a.reminded || null,
   updated_at: new Date().toISOString()
 });
+const _aptMod = () => window.IAppModules && window.IAppModules.appointments;
+// Phase 76: mapping/diff live in src/modules/appointments (unit-tested).
+// The *Legacy copies stay only as a fallback until the final cleanup.
+const aptFromRow = r => _aptMod() ? _aptMod().fromRow(r) : aptFromRowLegacy(r);
+const aptToRow = a => _aptMod() ? _aptMod().toRow(a) : aptToRowLegacy(a);
 async function aptList() {
   try {
     const sb = getSB();
@@ -1440,13 +1445,18 @@ async function aptMutate(mutator, verify) {
     error: next.abort,
     data: base
   };
-  const prevById = new Map(base.map(a => [String(a.id), a]));
-  const nextById = new Map(next.map(a => [String(a.id), a]));
-  const changed = next.filter(a => {
-    const p = prevById.get(String(a.id));
-    return !p || JSON.stringify(p) !== JSON.stringify(a);
-  });
-  const removed = base.filter(a => !nextById.has(String(a.id)));
+  let changed, removed;
+  if (_aptMod()) {
+    ({ changed, removed } = _aptMod().diff(base, next));
+  } else {
+    const prevById = new Map(base.map(a => [String(a.id), a]));
+    const nextById = new Map(next.map(a => [String(a.id), a]));
+    changed = next.filter(a => {
+      const p = prevById.get(String(a.id));
+      return !p || JSON.stringify(p) !== JSON.stringify(a);
+    });
+    removed = base.filter(a => !nextById.has(String(a.id)));
+  }
   let ok = true;
   for (const a of changed) {
     if (!(await aptUpsert(a))) ok = false;
