@@ -2,27 +2,27 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { createClient } from '@supabase/supabase-js';
 import './styles/legacy.css';
+import { getPatient360, mapPatient360ToLegacyView } from './modules/patients/index.js';
 
+// Phase 41 migration bridge: keep the proven production runtime intact while
+// moving the shell/build system to Vite. New modules should use services/hooks
+// rather than writing directly to the legacy runtime.
 globalThis.React = React;
 globalThis.ReactDOM = ReactDOM;
 globalThis.supabase = { createClient };
 
-// Phase 41 migration bridge.
-// Load the proven production runtime only after the globals above exist.
-(async () => {
-  try {
-    await import('../legacy/app-runtime.js');
-  } catch (error) {
-    console.error('I-App legacy runtime failed to load:', error);
-    const root = document.getElementById('root');
-    if (root) {
-      root.innerHTML = `
-        <div style="padding:24px;font-family:Arial;direction:rtl">
-          <h2>تعذر تحميل التطبيق</h2>
-          <p>حدث خطأ أثناء تحميل النظام.</p>
-          <pre style="white-space:pre-wrap">${String(error?.message || error)}</pre>
-        </div>
-      `;
-    }
-  }
-})();
+// Phase 42: expose the extracted Patient service to the legacy runtime through
+// a narrow migration boundary. The legacy UI can consume the new service now
+// without importing React modules directly; later phases can remove the bridge.
+globalThis.IAppModules = globalThis.IAppModules || {};
+globalThis.IAppModules.patients = {
+  getPatient360,
+  mapPatient360ToLegacyView
+};
+
+const legacyScript = document.createElement('script');
+legacyScript.src = '/legacy/app-runtime.js';
+legacyScript.async = false;
+legacyScript.onload = () => console.log('I-App legacy runtime loaded');
+legacyScript.onerror = (e) => console.error('I-App legacy runtime failed to load', e);
+document.body.appendChild(legacyScript);
