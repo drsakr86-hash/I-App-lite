@@ -917,7 +917,9 @@ const SB_KEY = "sb_publishable_tVZ1mUOyb3vOjRV1jBpq6g_P2u-xIqF";
 let _sb = null;
 function getSB() {
   if (_sb) return _sb;
-  if (window.supabase) {
+  if (window.__IAppSupabaseClient) {
+    _sb = window.__IAppSupabaseClient;
+  } else if (window.supabase) {
     _sb = window.supabase.createClient(SB_URL, SB_KEY, {
       auth: {
         persistSession: true,
@@ -927,6 +929,13 @@ function getSB() {
     });
   }
   return _sb;
+}
+// Phase 48-52: all Supabase RPC calls go through the shared service layer
+// (timeout, in-flight dedupe for writes). Falls back to the raw client if the
+// Vite bridge is not present. Always resolves to { data, error }.
+function iappRpc(sb, name, args) {
+  const safe = window.IAppModules && window.IAppModules.rpc && window.IAppModules.rpc.safe;
+  return safe ? safe(sb, name, args) : sb.rpc(name, args);
 }
 const LS = {
   get(k) {
@@ -1800,13 +1809,13 @@ async function sbMutate(key, mutator, verify) {
 // function/parameter shape. This is safe under either real signature.
 async function createClinicalVisitCore(sb, params, legacyId) {
   const withLegacy = { ...params, p_legacy_id: legacyId };
-  const first = await sb.rpc("iapp_create_clinical_visit", withLegacy);
+  const first = await iappRpc(sb, "iapp_create_clinical_visit", withLegacy);
   if (!first.error) return first;
   const msg = String(first.error?.message || first.error?.hint || "");
   const looksLikeUnknownParam = first.error?.code === "PGRST202" || /p_legacy_id|could not find|does not exist|no function matches/i.test(msg);
   if (!looksLikeUnknownParam) return first;
   console.warn("[iapp_create_clinical_visit] retrying without p_legacy_id (function may not accept it yet):", msg);
-  return await sb.rpc("iapp_create_clinical_visit", params);
+  return await iappRpc(sb, "iapp_create_clinical_visit", params);
 }
 function useDB(key, seed) {
   const [data, setData] = useState(() => {
@@ -5185,6 +5194,12 @@ function PatientFile({
           sb.rpc(name, args),
           new Promise((_, reject) => setTimeout(() => reject(new Error(name + " timeout")), ms))
         ]);
+        const svc360 = window.IAppModules && window.IAppModules.patients && window.IAppModules.patients.getPatient360;
+        if (svc360) {
+          // Phase 53-56: Patient 360 comes from the extracted service.
+          data = await svc360(sb, code);
+          source = data._source || "360";
+        } else {
         try {
           ({ data, error } = await rpcWithTimeout("iapp_get_patient_360_timeline", { p_patient_code: String(code) }));
           if (!error && data?.found) source = "360";
@@ -5208,6 +5223,7 @@ function PatientFile({
           } catch (e) {
             error = e;
           }
+        }
         }
         if (error) throw error;
         if (!active) return;
@@ -5529,7 +5545,7 @@ function PatientFile({
         coreVisitId = visitId || null;
         const eyeValues = [...new Set(tests.map(t => t.eye).filter(Boolean))];
         const coreEye = eyeValues.length === 1 ? eyeValues[0] : "OU";
-        const { data, error } = await sb.rpc("iapp_create_investigation_workflow_order", {
+        const { data, error } = await iappRpc(sb, "iapp_create_investigation_workflow_order", {
           p_patient_id: Number(curPatient.id),
           p_visit_id: coreVisitId,
           p_investigation_type: "imaging",
@@ -8073,7 +8089,7 @@ function Patients({
     try {
       const sb = getSB();
       if (sb && !offlineNow()) {
-        const { data: syncedVisitId, error } = await sb.rpc("iapp_sync_examination_core", {
+        const { data: syncedVisitId, error } = await iappRpc(sb, "iapp_sync_examination_core", {
           p_exam: f,
           p_patient_code: patients.find(p => p.id === f.patientId)?.patientCode || ""
         });
@@ -8087,14 +8103,14 @@ function Patients({
         if (!visitId) visitId = (await sb.from("iapp_visits_core").select("id").eq("legacy_id", legacyVisitId).maybeSingle()).data?.id || null;
         if (visitId) {
           if (String(f.diagnosis || "").trim()) {
-            const { error: e1 } = await sb.rpc("iapp_create_diagnosis_core", {
+            const { error: e1 } = await iappRpc(sb, "iapp_create_diagnosis_core", {
               p_visit_id: visitId, p_diagnosis: String(f.diagnosis).trim(), p_laterality: null,
               p_is_primary: true, p_status: "active", p_notes: null
             });
             if (e1) throw e1;
           }
           if (String(f.treatmentPlan || "").trim()) {
-            const { error: e2 } = await sb.rpc("iapp_create_treatment_core", {
+            const { error: e2 } = await iappRpc(sb, "iapp_create_treatment_core", {
               p_visit_id: visitId, p_treatment: String(f.treatmentPlan).trim(), p_eye: null,
               p_instructions: null, p_notes: null
             });
@@ -8102,7 +8118,7 @@ function Patients({
           }
         }
         if (String(f.followUp || "").trim()) {
-          const { error: e3 } = await sb.rpc("iapp_create_followup_core", {
+          const { error: e3 } = await iappRpc(sb, "iapp_create_followup_core", {
             p_patient_id: Number(f.patientId), p_followup_date: String(f.followUp).slice(0, 10),
             p_visit_id: visitId, p_reason: "متابعة", p_notes: null, p_status: "planned",
             p_doctor_name: f.doctor || ""
@@ -8184,7 +8200,7 @@ function Patients({
       const sb = getSB();
       if (sb && !offlineNow()) {
         const patient = patients.find(p => p.id === f.patientId);
-        const { error } = await sb.rpc("iapp_sync_visit_core", {
+        const { error } = await iappRpc(sb, "iapp_sync_visit_core", {
           p_visit: f, p_patient_code: patient?.patientCode || ""
         });
         if (error) throw error;
@@ -8232,7 +8248,7 @@ function Patients({
               shadowId: `rx-visit:${changed.id}`
             });
           }
-          const { error } = await sb.rpc("iapp_create_prescription_core", {
+          const { error } = await iappRpc(sb, "iapp_create_prescription_core", {
             p_patient_id: Number(changed.patientId),
             p_prescription_date: changed.date || localISO(),
             p_visit_id: coreVisitId, p_eye: changed.eye || "OU",
@@ -14311,7 +14327,7 @@ function ImagingCenter({
           const selectedCoreOrderId = selectedOrder?.coreInvestigationOrderId || selectedOrder?.investigationOrderId || null;
           if (selectedCoreOrderId) {
             coreVisitId = selectedOrder?.coreVisitId || null;
-            const { data, error } = await sb.rpc("iapp_create_imaging_study", {
+            const { data, error } = await iappRpc(sb, "iapp_create_imaging_study", {
               p_investigation_order_id: Number(selectedCoreOrderId),
               p_study_type: imagingTypeName(finalType),
               p_cloudinary_public_id: uploaded[0]?.public_id || null,
@@ -14331,7 +14347,7 @@ function ImagingCenter({
             // reuse it instead of creating a duplicate order on retry.
             coreWorkflow = pendingCoreOrder.coreWorkflow;
             coreVisitId = pendingCoreOrder.coreVisitId;
-            const { data: studyId, error: studyError } = await sb.rpc("iapp_create_imaging_study", {
+            const { data: studyId, error: studyError } = await iappRpc(sb, "iapp_create_imaging_study", {
               p_investigation_order_id: Number(pendingCoreOrder.investigationOrderId),
               p_study_type: imagingTypeName(finalType),
               p_cloudinary_public_id: uploaded[0]?.public_id || null,
@@ -14346,7 +14362,7 @@ function ImagingCenter({
             if (studyError) throw studyError;
             coreStudyId = studyId || null;
           } else {
-            const { data, error } = await sb.rpc("iapp_create_investigation_workflow_order", {
+            const { data, error } = await iappRpc(sb, "iapp_create_investigation_workflow_order", {
               p_patient_id: Number(selectedPatient.id),
               p_visit_id: null,
               p_investigation_type: "imaging",
@@ -14375,7 +14391,7 @@ function ImagingCenter({
             try {
               localStorage.setItem("iapp_pending_core_imaging_order", JSON.stringify(nextPendingCoreOrder));
             } catch (_) {}
-            const { data: studyId, error: studyError } = await sb.rpc("iapp_create_imaging_study", {
+            const { data: studyId, error: studyError } = await iappRpc(sb, "iapp_create_imaging_study", {
               p_investigation_order_id: Number(data?.investigation_order_id),
               p_study_type: imagingTypeName(finalType),
               p_cloudinary_public_id: uploaded[0]?.public_id || null,
