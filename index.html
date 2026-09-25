@@ -5738,6 +5738,37 @@ function PatientFile({
       status: "requested",
       imagingOrderId: "ORD-" + nowId
     };
+    let coreWorkflow = null;
+    let coreError = null;
+    try {
+      const sb = getSB();
+      if (sb && !offlineNow()) {
+        const eyeValues = [...new Set(tests.map(t => t.eye).filter(Boolean))];
+        const coreEye = eyeValues.length === 1 ? eyeValues[0] : "OU";
+        const { data, error } = await sb.rpc("iapp_create_investigation_workflow_order", {
+          p_patient_id: Number(curPatient.id),
+          p_visit_id: null,
+          p_investigation_type: "imaging",
+          p_test_name: tests.map(t => t.name || t.name_ar || t.id).join(" + "),
+          p_eye: coreEye,
+          p_priority: "routine",
+          p_requested_by: primaryDoctor?.name || "",
+          p_doctor_name: primaryDoctor?.name || "",
+          p_clinical_note: requestNotes || "",
+          p_tests: tests,
+          p_source_exam_legacy_id: String(nowId)
+        });
+        if (error) throw error;
+        coreWorkflow = data;
+        rec.coreInvestigationOrderId = data?.investigation_order_id || null;
+        rec.coreImagingOrderId = data?.imaging_order_id || null;
+      } else {
+        coreError = "offline";
+      }
+    } catch (e) {
+      coreError = e?.message || String(e);
+      console.warn("[core investigation sync]", e);
+    }
     if (onSaveRadiologyRequest) await onSaveRadiologyRequest(rec);
     const order = {
       id: "ORD-" + nowId,
@@ -5751,7 +5782,10 @@ function PatientFile({
       notes: requestNotes || "",
       status: "requested",
       sourceExamId: nowId,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      coreInvestigationOrderId: coreWorkflow?.investigation_order_id || null,
+      coreImagingOrderId: coreWorkflow?.imaging_order_id || null,
+      coreSyncError: coreError || null
     };
     const remoteOrders = await sbGet("iapp_imaging_orders");
     await sbSet("iapp_imaging_orders", [order, ...(Array.isArray(remoteOrders) ? remoteOrders : [])]);
@@ -8194,15 +8228,38 @@ function Patients({
     setPatients(patients.filter(p => p.id !== id));
     logAudit("حذف مريض", rec && rec.patientCode + " · " + rec.name || id);
   };
-  const saveExam = f => {
+  const saveExam = async f => {
     const ex = exams.find(e => e.id === f.id);
-    setExams(ex ? exams.map(e => e.id === f.id ? f : e) : [...exams, f]);
+    const next = ex ? exams.map(e => e.id === f.id ? f : e) : [...exams, f];
+    const legacyResult = await setRawE(next);
+    let coreSynced = false;
+    let coreError = null;
+    try {
+      const sb = getSB();
+      if (sb && !offlineNow()) {
+        const { error } = await sb.rpc("iapp_sync_examination_core", {
+          p_exam: f,
+          p_patient_code: patients.find(p => p.id === f.patientId)?.patientCode || ""
+        });
+        if (error) throw error;
+        coreSynced = true;
+      } else {
+        coreError = "offline";
+      }
+    } catch (e) {
+      coreError = e?.message || String(e);
+      console.warn("[core examination sync]", e);
+    }
+    if (!coreSynced && coreError && legacyResult?.queued !== true) {
+      console.warn("Examination saved in legacy store; Core sync pending", coreError);
+    }
+    return { legacyResult, coreSynced, coreError };
   };
   const saveRadiologyRequest = async rec => {
     const remote = await sbGet("iapp_exams");
     const base = Array.isArray(remote) ? remote : exams;
     const next = base.some(e => e.id === rec.id) ? base.map(e => e.id === rec.id ? rec : e) : [...base, rec];
-    await setExams(next);
+    await setRawE(next);
   };
   const delExam = async id => {
     const rec = exams.find(e => e.id === id);
