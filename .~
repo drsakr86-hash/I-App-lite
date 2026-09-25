@@ -1,0 +1,154 @@
+--- index.html
++++ index.html
+@@ -5348,6 +5348,75 @@
+   const [timelineFilter, setTimelineFilter] = useState("All");
+   const [modal, setModal] = useState(null);
+   const [delTarget, setDelTarget] = useState(null);
++  // Phase 14: Core Patient 360 is read-first with legacy fallback/merge.
++  // Legacy writes remain the source of truth for now; this layer only enriches the Patient File.
++  const [coreFile, setCoreFile] = useState(null);
++  const [coreLoaded, setCoreLoaded] = useState(false);
++  const [coreRequests, setCoreRequests] = useState([]);
++  const [coreImages, setCoreImages] = useState([]);
++  useEffect(() => {
++    let active = true;
++    (async () => {
++      const code = patient && patient.patientCode;
++      const sb = getSB();
++      if (!sb || !code) {
++        if (active) setCoreLoaded(false);
++        return;
++      }
++      try {
++        const { data, error } = await sb.rpc("iapp_get_patient_file_by_code", { p_patient_code: String(code) });
++        if (error) throw error;
++        if (!active) return;
++        const file = data && typeof data === "object" ? data : null;
++        setCoreFile(file);
++        setCoreLoaded(!!file);
++        const orders = Array.isArray(file?.investigation_orders) ? file.investigation_orders : [];
++        setCoreRequests(orders.map(o => ({
++          id: "core-order-" + o.id,
++          patientId: patient.id,
++          patient: file.full_name || patient.name,
++          patientCode: file.patient_code || patient.patientCode || "",
++          date: String(o.ordered_at || "").slice(0, 10) || localDateStr(),
++          time: o.ordered_at ? new Date(o.ordered_at).toTimeString().slice(0, 5) : "",
++          doctor: o.doctor_name || o.requested_by || "",
++          testType: o.investigation_type || "Investigation",
++          requestedTests: [{ id: o.id, name: o.test_name || o.investigation_type || "Investigation", name_ar: o.test_name || o.investigation_type || "Investigation", category: "Core", eye: o.eye || "OU" }],
++          notes: o.clinical_note || "",
++          status: o.status || "requested",
++          imagingOrderId: o.imaging_order_id || null,
++          _core: true
++        })));
++        const studies = Array.isArray(file?.imaging_studies) ? file.imaging_studies : [];
++        const imgs = [];
++        studies.forEach(st => {
++          const files = Array.isArray(st.files) && st.files.length ? st.files : [{
++            id: st.cloudinary_public_id || st.legacy_id || ("core-study-" + st.id),
++            public_id: st.cloudinary_public_id || "",
++            src: st.cloudinary_url || "",
++            name: st.metadata?.name || st.type_name || st.study_type || "Medical image",
++            date: st.performed_date || String(st.performed_at || "").slice(0, 10),
++            time: st.performed_time || "",
++            type: st.type_name || st.modality || st.study_type || "Medical image",
++            eye: st.eye || "OU",
++            notes: st.notes || st.report || "",
++            examId: null
++          }];
++          files.forEach(f => imgs.push({ ...f, id: f.id || f.public_id || ("core-study-" + st.id), public_id: f.public_id || st.cloudinary_public_id || "", src: f.src || st.cloudinary_url || "", _core: true }));
++        });
++        setCoreImages(imgs.filter(x => x.src));
++      } catch (e) {
++        if (active) {
++          setCoreLoaded(false);
++          setCoreFile(null);
++          setCoreRequests([]);
++          setCoreImages([]);
++        }
++        console.warn("Core Patient 360 unavailable; using legacy Patient File:", e?.message || e);
++      }
++    })();
++    return () => { active = false; };
++  }, [patient.id, patient.patientCode]);
++
+   const coreExams = (coreFile?.examinations || []).map(e => ({
+     id: e.legacy_id && /^\d+$/.test(String(e.legacy_id)) ? Number(e.legacy_id) : e.id,
+     patientId: patient.id,
+@@ -5429,75 +5498,6 @@
+     icon: "📊"
+   }];
+   const [curPatient, setCurPatient] = useState(patient);
+-  // Phase 14: Core Patient 360 is read-first with legacy fallback/merge.
+-  // Legacy writes remain the source of truth for now; this layer only enriches the Patient File.
+-  const [coreFile, setCoreFile] = useState(null);
+-  const [coreLoaded, setCoreLoaded] = useState(false);
+-  const [coreRequests, setCoreRequests] = useState([]);
+-  const [coreImages, setCoreImages] = useState([]);
+-  useEffect(() => {
+-    let active = true;
+-    (async () => {
+-      const code = patient && patient.patientCode;
+-      const sb = getSB();
+-      if (!sb || !code) {
+-        if (active) setCoreLoaded(false);
+-        return;
+-      }
+-      try {
+-        const { data, error } = await sb.rpc("iapp_get_patient_file_by_code", { p_patient_code: String(code) });
+-        if (error) throw error;
+-        if (!active) return;
+-        const file = data && typeof data === "object" ? data : null;
+-        setCoreFile(file);
+-        setCoreLoaded(!!file);
+-        const orders = Array.isArray(file?.investigation_orders) ? file.investigation_orders : [];
+-        setCoreRequests(orders.map(o => ({
+-          id: "core-order-" + o.id,
+-          patientId: patient.id,
+-          patient: file.full_name || patient.name,
+-          patientCode: file.patient_code || patient.patientCode || "",
+-          date: String(o.ordered_at || "").slice(0, 10) || localDateStr(),
+-          time: o.ordered_at ? new Date(o.ordered_at).toTimeString().slice(0, 5) : "",
+-          doctor: o.doctor_name || o.requested_by || "",
+-          testType: o.investigation_type || "Investigation",
+-          requestedTests: [{ id: o.id, name: o.test_name || o.investigation_type || "Investigation", name_ar: o.test_name || o.investigation_type || "Investigation", category: "Core", eye: o.eye || "OU" }],
+-          notes: o.clinical_note || "",
+-          status: o.status || "requested",
+-          imagingOrderId: o.imaging_order_id || null,
+-          _core: true
+-        })));
+-        const studies = Array.isArray(file?.imaging_studies) ? file.imaging_studies : [];
+-        const imgs = [];
+-        studies.forEach(st => {
+-          const files = Array.isArray(st.files) && st.files.length ? st.files : [{
+-            id: st.cloudinary_public_id || st.legacy_id || ("core-study-" + st.id),
+-            public_id: st.cloudinary_public_id || "",
+-            src: st.cloudinary_url || "",
+-            name: st.metadata?.name || st.type_name || st.study_type || "Medical image",
+-            date: st.performed_date || String(st.performed_at || "").slice(0, 10),
+-            time: st.performed_time || "",
+-            type: st.type_name || st.modality || st.study_type || "Medical image",
+-            eye: st.eye || "OU",
+-            notes: st.notes || st.report || "",
+-            examId: null
+-          }];
+-          files.forEach(f => imgs.push({ ...f, id: f.id || f.public_id || ("core-study-" + st.id), public_id: f.public_id || st.cloudinary_public_id || "", src: f.src || st.cloudinary_url || "", _core: true }));
+-        });
+-        setCoreImages(imgs.filter(x => x.src));
+-      } catch (e) {
+-        if (active) {
+-          setCoreLoaded(false);
+-          setCoreFile(null);
+-          setCoreRequests([]);
+-          setCoreImages([]);
+-        }
+-        console.warn("Core Patient 360 unavailable; using legacy Patient File:", e?.message || e);
+-      }
+-    })();
+-    return () => { active = false; };
+-  }, [patient.id, patient.patientCode]);
+-
+   const [viewImg, setViewImg] = useState(null);
+   const CLD_CLOUD = "daihhusnc";
+   const CLD_PRESET = "iapp_clinic";

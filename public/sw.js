@@ -1,5 +1,5 @@
 // I App — Service Worker
-const VERSION = "iapp-v7-20260925";
+const VERSION = "iapp-v8-vite-20260926";
 const SHELL = "iapp-shell-" + VERSION;
 const IMGS = "iapp-img-" + VERSION;
 const FONTS = "iapp-font-" + VERSION;
@@ -8,7 +8,16 @@ const MAX_IMGS = 150;
 self.addEventListener("install", event => {
   event.waitUntil(
     caches.open(SHELL)
-      .then(cache => cache.addAll(["./", "./index.html"]))
+      .then(async cache => {
+        // Vite hashes asset names, so read them from the built index.html
+        // and precache them together with the legacy runtime (offline support).
+        const urls = ["./", "./index.html", "./legacy/app-runtime.js", "./queue-display.html"];
+        try {
+          const html = await (await fetch("./index.html", { cache: "no-store" })).text();
+          for (const m of html.matchAll(/(?:src|href)="(\.\/assets\/[^"]+)"/g)) urls.push(m[1]);
+        } catch (_) {}
+        await Promise.all(urls.map(u => cache.add(u).catch(() => {})));
+      })
       .catch(() => {})
       .then(() => self.skipWaiting())
   );

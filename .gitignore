@@ -1,0 +1,7 @@
+node_modules/
+dist/
+phase41-import/
+phase42-import/
+.env
+.env.*
+!.env.example
