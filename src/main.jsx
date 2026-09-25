@@ -40,7 +40,7 @@ globalThis.IAppModules.auth = { can, ROLES };
 globalThis.IAppModules.storage = { normalizeFileMeta, resolveFileUrl };
 
 const legacyScript = document.createElement('script');
-legacyScript.src = '/legacy/app-runtime.js';
+legacyScript.src = import.meta.env.BASE_URL + 'legacy/app-runtime.js';
 legacyScript.async = false;
 legacyScript.onload = () => console.log('I-App legacy runtime loaded');
 legacyScript.onerror = (e) => console.error('I-App legacy runtime failed to load', e);
