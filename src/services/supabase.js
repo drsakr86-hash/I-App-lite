@@ -6,6 +6,7 @@ const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY ||
   'sb_publishable_tVZ1mUOyb3vOjRV1jBpq6g_P2u-xIqF';
 
 export const SUPABASE_URL = SB_URL;
+export const SUPABASE_KEY = SB_KEY;
 
 const AUTH_OPTIONS = {
   persistSession: true,

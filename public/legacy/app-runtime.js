@@ -369,6 +369,8 @@ async function authenticateStaff(email, password) {
     };
   }
   clearLoginFails(key);
+  SyncStore.set({ authError: false });
+  setTimeout(() => { if (dirtyKeys().length) flushAll(); }, 500);
   const prof = await resolveProfile(key);
   if (prof.error) {
     await sbSignOut();
@@ -1014,7 +1016,10 @@ function useSyncStatus() {
   const offline = s.online === false || s.reachable === false;
   const failedCount = Object.keys(s.errors || {}).length;
   let label, color;
-  if (offline) {
+  if (s.authError && !offline) {
+    label = s.pending > 0 ? `⚠️ الجلسة منتهية — سجّل الخروج ثم الدخول لمزامنة ${s.pending} عناصر` : "⚠️ الجلسة منتهية — سجّل الدخول من جديد";
+    color = C.danger;
+  } else if (offline) {
     label = s.pending > 0 ? `بدون اتصال · ${s.pending} عناصر معلّقة` : "بدون اتصال";
     color = C.danger;
   } else if (s.syncing) {
@@ -1104,6 +1109,17 @@ function mergeData(base, local, remote) {
   }
   return out;
 }
+// A sync must never read or write without a valid login session: RLS makes an
+// anonymous read look like an empty table, and anonymous writes are denied.
+async function ensureAuthed() {
+  const r = await window.IAppModules.auth.ensureSession();
+  if (r.ok) {
+    if (SyncStore.st.authError) SyncStore.set({ authError: false });
+  } else {
+    SyncStore.set({ authError: r.reason === "expired" || r.reason === "no-session" });
+  }
+  return r;
+}
 const flushing = {};
 async function flushKey(key) {
   if (flushing[key]) {
@@ -1127,6 +1143,12 @@ async function flushKey(key) {
         local = JSON.parse(LS.get(key));
       } catch (e) {
         SyncStore.set({ errors: { ...SyncStore.st.errors, [key]: "بيانات محلية غير صالحة" } });
+        break;
+      }
+      const authed = await ensureAuthed();
+      if (!authed.ok) {
+        ok = false;
+        SyncStore.set({ errors: { ...SyncStore.st.errors, [key]: authed.reason === "network" ? "تعذر الاتصال بالخادم" : "الجلسة منتهية — سجّل الدخول من جديد" } });
         break;
       }
       const remote = await _sbGetRaw(key);
@@ -1225,7 +1247,7 @@ if (typeof window !== "undefined" && !window.__iappSyncInit) {
       online: true,
       reachable: null
     });
-    flushAll();
+    flushAll();  // flushKey verifies/repairs the session before touching data
   });
   window.addEventListener("offline", () => {
     SyncStore.set({
@@ -1746,6 +1768,7 @@ function sbMutateLocal(key, mutator) {
   };
 }
 async function sbMutate(key, mutator, verify) {
+  if (!offlineNow() && !(await ensureAuthed()).ok) return sbMutateLocal(key, mutator);
   if (isDirty(key)) {
     const ok = await flushKey(key);
     if (!ok) return sbMutateLocal(key, mutator);

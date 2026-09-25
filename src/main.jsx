@@ -2,7 +2,8 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { createClient } from '@supabase/supabase-js';
 import './styles/legacy.css';
-import { getSupabaseClient } from './services/supabase.js';
+import { getSupabaseClient, SUPABASE_URL, SUPABASE_KEY } from './services/supabase.js';
+import { ensureSession } from './services/auth.js';
 import { rpcSafe } from './services/rpc.js';
 import { getPatient360, mapPatient360ToLegacyView } from './modules/patients/index.js';
 import { createClinicalVisit } from './modules/visits/index.js';
@@ -36,7 +37,12 @@ globalThis.IAppModules.investigations = { createInvestigationWorkflow, completeI
 globalThis.IAppModules.imaging = { createImagingStudy, studyParams: imagingStudyParams };
 
 globalThis.IAppModules.appointments = { fromRow: appointmentFromRow, toRow: appointmentToRow, diff: diffAppointments };
-globalThis.IAppModules.auth = { can, ROLES };
+globalThis.IAppModules.auth = {
+  can,
+  ROLES,
+  // Verifies (and repairs) the login session before a sync reads or writes.
+  ensureSession: () => ensureSession(getSupabaseClient(), { url: SUPABASE_URL, apiKey: SUPABASE_KEY })
+};
 globalThis.IAppModules.storage = { normalizeFileMeta, resolveFileUrl };
 
 const legacyScript = document.createElement('script');
