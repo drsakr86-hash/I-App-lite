@@ -5,6 +5,10 @@ const {
   useCallback,
   useRef
 } = React;
+if (!window.IAppModules || !window.IAppModules.rpc || !window.IAppModules.patients) {
+  document.body.innerHTML = '<p style="font:16px sans-serif;text-align:center;margin:40px">تعذر تحميل وحدات التطبيق — أعد تحميل الصفحة</p>';
+  throw new Error("IAppModules bridge is missing");
+}
 function localISO(d) {
   d = d || new Date();
   const z = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
@@ -934,8 +938,7 @@ function getSB() {
 // (timeout, in-flight dedupe for writes). Falls back to the raw client if the
 // Vite bridge is not present. Always resolves to { data, error }.
 function iappRpc(sb, name, args) {
-  const safe = window.IAppModules && window.IAppModules.rpc && window.IAppModules.rpc.safe;
-  return safe ? safe(sb, name, args) : sb.rpc(name, args);
+  return window.IAppModules.rpc.safe(sb, name, args);
 }
 const LS = {
   get(k) {
@@ -1331,109 +1334,15 @@ async function ensureKiosk() {
 const APT_KEY = "iapp_appointments";
 const APT_TABLE = "iapp_appointments";
 const APT_HISTORY_DAYS = 365;
-const aptFromRowLegacy = r => ({
-  id: Number(r.id),
-  patientId: r.patient_id == null ? null : Number(r.patient_id),
-  patient: r.patient || "",
-  phone: r.phone || "",
-  date: r.date || "",
-  time: r.time || "",
-  type: r.type || "",
-  doctor: r.doctor || "",
-  clinic: r.clinic || "",
-  notes: r.notes || "",
-  confirmed: !!r.confirmed,
-  fromPatient: !!r.from_patient,
-  cancelled: !!r.cancelled,
-  waitStatus: r.wait_status || undefined,
-  arrivedAt: r.arrived_at == null ? undefined : Number(r.arrived_at),
-  calledAt: r.called_at == null ? undefined : Number(r.called_at),
-  inAt: r.in_at == null ? undefined : Number(r.in_at),
-  doneAt: r.done_at == null ? undefined : Number(r.done_at),
-  noShowAt: r.no_show_at == null ? undefined : Number(r.no_show_at),
-  queueNumber: r.queue_number == null ? undefined : Number(r.queue_number),
-  cost: r.cost == null ? undefined : r.cost,
-  paid: !!r.paid,
-  reminded: r.reminded || undefined
-});
-const num = v => v === undefined || v === null || v === "" ? null : Number(v);
-const aptToRowLegacy = a => ({
-  id: Number(a.id),
-  patient_id: a.patientId == null ? null : Number(a.patientId),
-  patient: a.patient || "",
-  phone: a.phone || "",
-  date: a.date || null,
-  time: a.time || "",
-  type: a.type || null,
-  doctor: a.doctor || null,
-  clinic: a.clinic || null,
-  notes: a.notes || null,
-  confirmed: !!a.confirmed,
-  from_patient: !!a.fromPatient,
-  cancelled: !!a.cancelled,
-  wait_status: a.waitStatus || null,
-  arrived_at: num(a.arrivedAt),
-  called_at: num(a.calledAt),
-  in_at: num(a.inAt),
-  done_at: num(a.doneAt),
-  no_show_at: num(a.noShowAt),
-  queue_number: num(a.queueNumber),
-  cost: a.cost === undefined || a.cost === "" ? null : String(a.cost),
-  paid: !!a.paid,
-  reminded: a.reminded || null,
-  updated_at: new Date().toISOString()
-});
-// Phase 77-80: request payload builders live in src/modules/* (unit-tested).
-// The inline branches are a fallback used only if the Vite bridge is missing.
-function rxCoreParams(rx, visitId, today) {
-  const m = window.IAppModules && window.IAppModules.prescriptions;
-  if (m && m.paramsFromLegacy) return m.paramsFromLegacy(rx, { visitId, today });
-  return {
-    p_patient_id: Number(rx.patientId), p_prescription_date: rx.date || today, p_visit_id: visitId, p_eye: rx.eye || "OU",
-    p_sph_od: rx.sphR || null, p_cyl_od: rx.cylR || null, p_axis_od: rx.axisR || null,
-    p_sph_os: rx.sphL || null, p_cyl_os: rx.cylL || null, p_axis_os: rx.axisL || null,
-    p_add_power: rx.add || null,
-    p_medicines: Array.isArray(rx.medicines) ? rx.medicines : (rx.medicines ? [{ name: rx.medicines }] : []),
-    p_notes: rx.notes || null, p_legacy_id: String(rx.id), p_prescription_type: "mixed"
-  };
-}
-function imagingRequestOrderParams(o) {
-  const m = window.IAppModules && window.IAppModules.investigations;
-  if (m && m.imagingRequestParams) return m.imagingRequestParams(o);
-  const eyes = [...new Set(o.tests.map(t => t.eye).filter(Boolean))];
-  return {
-    p_patient_id: Number(o.patientId), p_visit_id: o.visitId == null ? null : o.visitId, p_investigation_type: "imaging",
-    p_test_name: o.tests.map(t => t.name || t.name_ar || t.id).join(" + "), p_eye: eyes.length === 1 ? eyes[0] : "OU",
-    p_priority: "routine", p_requested_by: o.doctorName || "", p_doctor_name: o.doctorName || "",
-    p_clinical_note: o.requestNotes || "", p_tests: o.tests, p_source_exam_legacy_id: String(o.sourceLegacyId)
-  };
-}
-function imagingSingleOrderParams(o) {
-  const m = window.IAppModules && window.IAppModules.investigations;
-  if (m && m.singleImagingOrderParams) return m.singleImagingOrderParams(o);
-  return {
-    p_patient_id: Number(o.patientId), p_visit_id: null, p_investigation_type: "imaging", p_test_name: o.typeName,
-    p_eye: o.eye || null, p_priority: "routine", p_requested_by: o.doctorName || "", p_doctor_name: o.doctorName || "",
-    p_clinical_note: String(o.notes || "").trim() || null, p_tests: [{ id: o.type, name: o.typeName, eye: o.eye }],
-    p_source_exam_legacy_id: String(o.sourceLegacyId)
-  };
-}
-function imagingStudyRpcParams(o) {
-  const m = window.IAppModules && window.IAppModules.imaging;
-  if (m && m.studyParams) return m.studyParams(o);
-  const files = o.uploaded || [];
-  return {
-    p_investigation_order_id: Number(o.orderId), p_study_type: o.typeName,
-    p_cloudinary_public_id: files[0]?.public_id || null, p_cloudinary_url: files[0]?.src || null,
-    p_report: String(o.report || "").trim() || null, p_eye: o.eye || null, p_modality: o.modality || null,
-    p_metadata: o.metadata || {}, p_files: files, p_notes: String(o.notes || "").trim() || null
-  };
-}
-const _aptMod = () => window.IAppModules && window.IAppModules.appointments;
-// Phase 76: mapping/diff live in src/modules/appointments (unit-tested).
-// The *Legacy copies stay only as a fallback until the final cleanup.
-const aptFromRow = r => _aptMod() ? _aptMod().fromRow(r) : aptFromRowLegacy(r);
-const aptToRow = a => _aptMod() ? _aptMod().toRow(a) : aptToRowLegacy(a);
+// Phase 76-80: all mapping and payload builders live in src/modules/* (unit-tested)
+// and reach the runtime through the Vite bridge (window.IAppModules).
+const _apt = () => window.IAppModules.appointments;
+const aptFromRow = r => _apt().fromRow(r);
+const aptToRow = a => _apt().toRow(a);
+const rxCoreParams = (rx, visitId, today) => window.IAppModules.prescriptions.paramsFromLegacy(rx, { visitId, today });
+const imagingRequestOrderParams = o => window.IAppModules.investigations.imagingRequestParams(o);
+const imagingSingleOrderParams = o => window.IAppModules.investigations.singleImagingOrderParams(o);
+const imagingStudyRpcParams = o => window.IAppModules.imaging.studyParams(o);
 async function aptList() {
   try {
     const sb = getSB();
@@ -1491,18 +1400,7 @@ async function aptMutate(mutator, verify) {
     error: next.abort,
     data: base
   };
-  let changed, removed;
-  if (_aptMod()) {
-    ({ changed, removed } = _aptMod().diff(base, next));
-  } else {
-    const prevById = new Map(base.map(a => [String(a.id), a]));
-    const nextById = new Map(next.map(a => [String(a.id), a]));
-    changed = next.filter(a => {
-      const p = prevById.get(String(a.id));
-      return !p || JSON.stringify(p) !== JSON.stringify(a);
-    });
-    removed = base.filter(a => !nextById.has(String(a.id)));
-  }
+  const { changed, removed } = _apt().diff(base, next);
   let ok = true;
   for (const a of changed) {
     if (!(await aptUpsert(a))) ok = false;
@@ -5243,44 +5141,9 @@ function PatientFile({
       try {
         let data = null, error = null;
         let source = "none";
-        // Phase 29: Patient 360 remains the preferred read contract, but each
-        // migration fallback gets a bounded wait so a slow/new RPC cannot stall
-        // opening the patient file indefinitely.
-        const rpcWithTimeout = (name, args, ms = 6000) => Promise.race([
-          sb.rpc(name, args),
-          new Promise((_, reject) => setTimeout(() => reject(new Error(name + " timeout")), ms))
-        ]);
-        const svc360 = window.IAppModules && window.IAppModules.patients && window.IAppModules.patients.getPatient360;
-        if (svc360) {
-          // Phase 53-56: Patient 360 comes from the extracted service.
-          data = await svc360(sb, code);
-          source = data._source || "360";
-        } else {
-        try {
-          ({ data, error } = await rpcWithTimeout("iapp_get_patient_360_timeline", { p_patient_code: String(code) }));
-          if (!error && data?.found) source = "360";
-        } catch (e) {
-          error = e;
-        }
-        if (error || !data?.found) {
-          try {
-            ({ data, error } = await rpcWithTimeout("iapp_get_patient_file_summary", { p_patient_code: String(code) }));
-            if (!error && data?.found) source = "summary";
-          } catch (e) {
-            error = e;
-          }
-        }
-        if (error || !data?.found) {
-          try {
-            const fallback = await rpcWithTimeout("iapp_get_patient_file_by_code", { p_patient_code: String(code) });
-            data = fallback.data;
-            error = fallback.error;
-            if (!error && data?.found) source = "legacy";
-          } catch (e) {
-            error = e;
-          }
-        }
-        }
+        // Phase 53-56: Patient 360 comes from the extracted service (throws when unavailable).
+        data = await window.IAppModules.patients.getPatient360(sb, code);
+        source = data._source || "360";
         if (error) throw error;
         if (!active) return;
         const rawFile = data && typeof data === "object" ? data : null;
