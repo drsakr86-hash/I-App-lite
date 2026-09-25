@@ -1383,6 +1383,52 @@ const aptToRowLegacy = a => ({
   reminded: a.reminded || null,
   updated_at: new Date().toISOString()
 });
+// Phase 77-80: request payload builders live in src/modules/* (unit-tested).
+// The inline branches are a fallback used only if the Vite bridge is missing.
+function rxCoreParams(rx, visitId, today) {
+  const m = window.IAppModules && window.IAppModules.prescriptions;
+  if (m && m.paramsFromLegacy) return m.paramsFromLegacy(rx, { visitId, today });
+  return {
+    p_patient_id: Number(rx.patientId), p_prescription_date: rx.date || today, p_visit_id: visitId, p_eye: rx.eye || "OU",
+    p_sph_od: rx.sphR || null, p_cyl_od: rx.cylR || null, p_axis_od: rx.axisR || null,
+    p_sph_os: rx.sphL || null, p_cyl_os: rx.cylL || null, p_axis_os: rx.axisL || null,
+    p_add_power: rx.add || null,
+    p_medicines: Array.isArray(rx.medicines) ? rx.medicines : (rx.medicines ? [{ name: rx.medicines }] : []),
+    p_notes: rx.notes || null, p_legacy_id: String(rx.id), p_prescription_type: "mixed"
+  };
+}
+function imagingRequestOrderParams(o) {
+  const m = window.IAppModules && window.IAppModules.investigations;
+  if (m && m.imagingRequestParams) return m.imagingRequestParams(o);
+  const eyes = [...new Set(o.tests.map(t => t.eye).filter(Boolean))];
+  return {
+    p_patient_id: Number(o.patientId), p_visit_id: o.visitId == null ? null : o.visitId, p_investigation_type: "imaging",
+    p_test_name: o.tests.map(t => t.name || t.name_ar || t.id).join(" + "), p_eye: eyes.length === 1 ? eyes[0] : "OU",
+    p_priority: "routine", p_requested_by: o.doctorName || "", p_doctor_name: o.doctorName || "",
+    p_clinical_note: o.requestNotes || "", p_tests: o.tests, p_source_exam_legacy_id: String(o.sourceLegacyId)
+  };
+}
+function imagingSingleOrderParams(o) {
+  const m = window.IAppModules && window.IAppModules.investigations;
+  if (m && m.singleImagingOrderParams) return m.singleImagingOrderParams(o);
+  return {
+    p_patient_id: Number(o.patientId), p_visit_id: null, p_investigation_type: "imaging", p_test_name: o.typeName,
+    p_eye: o.eye || null, p_priority: "routine", p_requested_by: o.doctorName || "", p_doctor_name: o.doctorName || "",
+    p_clinical_note: String(o.notes || "").trim() || null, p_tests: [{ id: o.type, name: o.typeName, eye: o.eye }],
+    p_source_exam_legacy_id: String(o.sourceLegacyId)
+  };
+}
+function imagingStudyRpcParams(o) {
+  const m = window.IAppModules && window.IAppModules.imaging;
+  if (m && m.studyParams) return m.studyParams(o);
+  const files = o.uploaded || [];
+  return {
+    p_investigation_order_id: Number(o.orderId), p_study_type: o.typeName,
+    p_cloudinary_public_id: files[0]?.public_id || null, p_cloudinary_url: files[0]?.src || null,
+    p_report: String(o.report || "").trim() || null, p_eye: o.eye || null, p_modality: o.modality || null,
+    p_metadata: o.metadata || {}, p_files: files, p_notes: String(o.notes || "").trim() || null
+  };
+}
 const _aptMod = () => window.IAppModules && window.IAppModules.appointments;
 // Phase 76: mapping/diff live in src/modules/appointments (unit-tested).
 // The *Legacy copies stay only as a fallback until the final cleanup.
@@ -5555,19 +5601,7 @@ function PatientFile({
         coreVisitId = visitId || null;
         const eyeValues = [...new Set(tests.map(t => t.eye).filter(Boolean))];
         const coreEye = eyeValues.length === 1 ? eyeValues[0] : "OU";
-        const { data, error } = await iappRpc(sb, "iapp_create_investigation_workflow_order", {
-          p_patient_id: Number(curPatient.id),
-          p_visit_id: coreVisitId,
-          p_investigation_type: "imaging",
-          p_test_name: tests.map(t => t.name || t.name_ar || t.id).join(" + "),
-          p_eye: coreEye,
-          p_priority: "routine",
-          p_requested_by: primaryDoctor?.name || "",
-          p_doctor_name: primaryDoctor?.name || "",
-          p_clinical_note: requestNotes || "",
-          p_tests: tests,
-          p_source_exam_legacy_id: String(nowId)
-        });
+        const { data, error } = await iappRpc(sb, "iapp_create_investigation_workflow_order", imagingRequestOrderParams({ patientId: curPatient.id, visitId: coreVisitId, tests, requestNotes, doctorName: primaryDoctor?.name, sourceLegacyId: nowId }));
         if (error) throw error;
         coreWorkflow = data;
         rec.coreInvestigationOrderId = data?.investigation_order_id || null;
@@ -8258,16 +8292,7 @@ function Patients({
               shadowId: `rx-visit:${changed.id}`
             });
           }
-          const { error } = await iappRpc(sb, "iapp_create_prescription_core", {
-            p_patient_id: Number(changed.patientId),
-            p_prescription_date: changed.date || localISO(),
-            p_visit_id: coreVisitId, p_eye: changed.eye || "OU",
-            p_sph_od: changed.sphR || null, p_cyl_od: changed.cylR || null, p_axis_od: changed.axisR || null,
-            p_sph_os: changed.sphL || null, p_cyl_os: changed.cylL || null, p_axis_os: changed.axisL || null,
-            p_add_power: changed.add || null,
-            p_medicines: Array.isArray(changed.medicines) ? changed.medicines : (changed.medicines ? [{ name: changed.medicines }] : []),
-            p_notes: changed.notes || null, p_legacy_id: String(changed.id), p_prescription_type: "mixed"
-          });
+          const { error } = await iappRpc(sb, "iapp_create_prescription_core", rxCoreParams(changed, coreVisitId, localISO()));
           if (error) console.warn("[core prescription sync]", error);
         }
       } catch (e) {
@@ -14337,18 +14362,7 @@ function ImagingCenter({
           const selectedCoreOrderId = selectedOrder?.coreInvestigationOrderId || selectedOrder?.investigationOrderId || null;
           if (selectedCoreOrderId) {
             coreVisitId = selectedOrder?.coreVisitId || null;
-            const { data, error } = await iappRpc(sb, "iapp_create_imaging_study", {
-              p_investigation_order_id: Number(selectedCoreOrderId),
-              p_study_type: imagingTypeName(finalType),
-              p_cloudinary_public_id: uploaded[0]?.public_id || null,
-              p_cloudinary_url: uploaded[0]?.src || null,
-              p_report: report.trim() || null,
-              p_eye: finalEye || null,
-              p_modality: finalType || null,
-              p_metadata: { patient_id: selectedPatient.id, order_id: selectedOrder?.id || null },
-              p_files: uploaded,
-              p_notes: notes.trim() || null
-            });
+            const { data, error } = await iappRpc(sb, "iapp_create_imaging_study", imagingStudyRpcParams({ orderId: selectedCoreOrderId, typeName: imagingTypeName(finalType), modality: finalType, eye: finalEye, uploaded, report, notes, metadata: { patient_id: selectedPatient.id, order_id: selectedOrder?.id || null } }));
             if (error) throw error;
             coreStudyId = data || null;
           } else if (pendingCoreOrder && pendingCoreOrder.patientId === selectedPatient.id) {
@@ -14357,34 +14371,11 @@ function ImagingCenter({
             // reuse it instead of creating a duplicate order on retry.
             coreWorkflow = pendingCoreOrder.coreWorkflow;
             coreVisitId = pendingCoreOrder.coreVisitId;
-            const { data: studyId, error: studyError } = await iappRpc(sb, "iapp_create_imaging_study", {
-              p_investigation_order_id: Number(pendingCoreOrder.investigationOrderId),
-              p_study_type: imagingTypeName(finalType),
-              p_cloudinary_public_id: uploaded[0]?.public_id || null,
-              p_cloudinary_url: uploaded[0]?.src || null,
-              p_report: report.trim() || null,
-              p_eye: finalEye || null,
-              p_modality: finalType || null,
-              p_metadata: { patient_id: selectedPatient.id, legacy_imaging_id: id },
-              p_files: uploaded,
-              p_notes: notes.trim() || null
-            });
+            const { data: studyId, error: studyError } = await iappRpc(sb, "iapp_create_imaging_study", imagingStudyRpcParams({ orderId: pendingCoreOrder.investigationOrderId, typeName: imagingTypeName(finalType), modality: finalType, eye: finalEye, uploaded, report, notes, metadata: { patient_id: selectedPatient.id, legacy_imaging_id: id } }));
             if (studyError) throw studyError;
             coreStudyId = studyId || null;
           } else {
-            const { data, error } = await iappRpc(sb, "iapp_create_investigation_workflow_order", {
-              p_patient_id: Number(selectedPatient.id),
-              p_visit_id: null,
-              p_investigation_type: "imaging",
-              p_test_name: imagingTypeName(finalType),
-              p_eye: finalEye || null,
-              p_priority: "routine",
-              p_requested_by: primary?.name || "",
-              p_doctor_name: primary?.name || "",
-              p_clinical_note: notes.trim() || null,
-              p_tests: [{ id: finalType, name: imagingTypeName(finalType), eye: finalEye }],
-              p_source_exam_legacy_id: String(id)
-            });
+            const { data, error } = await iappRpc(sb, "iapp_create_investigation_workflow_order", imagingSingleOrderParams({ patientId: selectedPatient.id, typeName: imagingTypeName(finalType), type: finalType, eye: finalEye, doctorName: primary?.name, notes, sourceLegacyId: id }));
             if (error) throw error;
             coreWorkflow = data || null;
             coreVisitId = data?.visit_id || null;
@@ -14401,18 +14392,7 @@ function ImagingCenter({
             try {
               localStorage.setItem("iapp_pending_core_imaging_order", JSON.stringify(nextPendingCoreOrder));
             } catch (_) {}
-            const { data: studyId, error: studyError } = await iappRpc(sb, "iapp_create_imaging_study", {
-              p_investigation_order_id: Number(data?.investigation_order_id),
-              p_study_type: imagingTypeName(finalType),
-              p_cloudinary_public_id: uploaded[0]?.public_id || null,
-              p_cloudinary_url: uploaded[0]?.src || null,
-              p_report: report.trim() || null,
-              p_eye: finalEye || null,
-              p_modality: finalType || null,
-              p_metadata: { patient_id: selectedPatient.id, legacy_imaging_id: id },
-              p_files: uploaded,
-              p_notes: notes.trim() || null
-            });
+            const { data: studyId, error: studyError } = await iappRpc(sb, "iapp_create_imaging_study", imagingStudyRpcParams({ orderId: data?.investigation_order_id, typeName: imagingTypeName(finalType), modality: finalType, eye: finalEye, uploaded, report, notes, metadata: { patient_id: selectedPatient.id, legacy_imaging_id: id } }));
             if (studyError) throw studyError;
             coreStudyId = studyId || null;
           }
