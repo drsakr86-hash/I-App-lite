@@ -1,6 +1,6 @@
 // I App — Service Worker: يخلّي التطبيق يفتح بدون إنترنت.
 // الصفحة نفسها (index.html) فيها كل المكتبات مضمّنة، فيكفي تخزينها.
-const VERSION = "iapp-v2";
+const VERSION = "iapp-v3-20260925";
 const SHELL = "iapp-shell-" + VERSION;
 const IMGS = "iapp-img-" + VERSION;
 const FONTS = "iapp-font-" + VERSION;
