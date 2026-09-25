@@ -45,3 +45,11 @@ legacyScript.async = false;
 legacyScript.onload = () => console.log('I-App legacy runtime loaded');
 legacyScript.onerror = (e) => console.error('I-App legacy runtime failed to load', e);
 document.body.appendChild(legacyScript);
+
+// Offline support (production build only; the dev server must not be cached).
+if (import.meta.env.PROD && 'serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register(import.meta.env.BASE_URL + 'sw.js?v=20260926')
+      .catch(e => console.warn('SW register failed', e));
+  });
+}
