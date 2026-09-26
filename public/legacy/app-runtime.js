@@ -8550,7 +8550,10 @@ function Appointments({
   const [filter, setFilter] = useState("الكل");
   const [modal, setModal] = useState(null);
   const DOCS = ["الكل", ...doctorNames];
-  const filtered = filter === "الكل" ? appointments : appointments.filter(a => a.doctor === filter);
+  const [showDone, setShowDone] = useState(false);
+  const doneCount = appointments.filter(a => a.waitStatus === "done").length;
+  const visibleApts = showDone ? appointments : appointments.filter(a => a.waitStatus !== "done");
+  const filtered = filter === "الكل" ? visibleApts : visibleApts.filter(a => a.doctor === filter);
   const latestApts = async () => {
     const remote = await sbGet("iapp_appointments");
     return Array.isArray(remote) ? remote : appointments;
@@ -8597,7 +8600,17 @@ function Appointments({
       fontWeight: 700,
       fontSize: 16
     }
-  }, "المواعيد (", appointments.length, ")"), React.createElement(Btn, {
+  }, "المواعيد (", visibleApts.length, ")", doneCount > 0 && React.createElement("span", {
+    onClick: () => setShowDone(v => !v),
+    style: {
+      marginRight: 10,
+      color: C.muted,
+      fontSize: 11,
+      fontWeight: 600,
+      cursor: "pointer",
+      textDecoration: "underline"
+    }
+  }, showDone ? "إخفاء المنتهية" : "عرض المنتهية (" + doneCount + ")")), React.createElement(Btn, {
     small: true,
     onClick: () => setModal("add")
   }, "+ موعد جديد")), React.createElement("div", {
