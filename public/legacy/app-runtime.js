@@ -3903,7 +3903,7 @@ function Dashboard({
       justifyContent: "center",
       fontSize: 22
     }
-  }, "📈"))), appointments.filter(a => a.waitStatus === "called").length > 0 && React.createElement("div", {
+  }, "📈"))), appointments.filter(a => a.date === todayStr && a.waitStatus === "called").length > 0 && React.createElement("div", {
     style: {
       background: `linear-gradient(135deg,${C.gold}22,${C.accent}12)`,
       border: `2px solid ${C.gold}`,
@@ -3935,12 +3935,12 @@ function Dashboard({
       fontWeight: 800,
       fontSize: 15
     }
-  }, appointments.filter(a => a.waitStatus === "called").map(a => a.patient).join("، ")), React.createElement("div", {
+  }, appointments.filter(a => a.date === todayStr && a.waitStatus === "called").map(a => a.patient).join("، ")), React.createElement("div", {
     style: {
       color: C.muted,
       fontSize: 10
     }
-  }, "تم الاستدعاء من السكرتارية · اضغط بدء الكشف عند دخول المريض"))), appointments.filter(a => a.waitStatus === "waiting").length > 0 && React.createElement("div", {
+  }, "تم الاستدعاء من السكرتارية · اضغط بدء الكشف عند دخول المريض"))), appointments.filter(a => a.date === todayStr && a.waitStatus === "waiting").length > 0 && React.createElement("div", {
     style: {
       background: `linear-gradient(135deg,${C.gold}15,${C.accent}10)`,
       border: `1px solid ${C.gold}44`,
@@ -3970,7 +3970,7 @@ function Dashboard({
       color: C.muted,
       fontSize: 11
     }
-  }, appointments.filter(a => a.waitStatus === "waiting").map(a => a.patient).join(" · "))), React.createElement("div", {
+  }, appointments.filter(a => a.date === todayStr && a.waitStatus === "waiting").map(a => a.patient).join(" · "))), React.createElement("div", {
     style: {
       background: C.gold,
       color: C.bg,
@@ -3983,7 +3983,7 @@ function Dashboard({
       fontWeight: 800,
       fontSize: 14
     }
-  }, appointments.filter(a => a.waitStatus === "waiting").length)), appointments.filter(a => a.waitStatus === "in").length > 0 && React.createElement("div", {
+  }, appointments.filter(a => a.date === todayStr && a.waitStatus === "waiting").length)), appointments.filter(a => a.date === todayStr && a.waitStatus === "in").length > 0 && React.createElement("div", {
     style: {
       background: `linear-gradient(135deg,${C.accent}15,${C.teal}10)`,
       border: `1px solid ${C.accent}44`,
@@ -4010,7 +4010,7 @@ function Dashboard({
       fontSize: 12,
       fontWeight: 600
     }
-  }, appointments.filter(a => a.waitStatus === "in").map(a => a.patient).join("، ")))), React.createElement("div", {
+  }, appointments.filter(a => a.date === todayStr && a.waitStatus === "in").map(a => a.patient).join("، ")))), React.createElement("div", {
     style: {
       display: "flex",
       flexWrap: "wrap",
