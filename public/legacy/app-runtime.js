@@ -1090,25 +1090,7 @@ async function tq(q, fin, ms) {
   }
 }
 function mergeData(base, local, remote) {
-  const okList = a => Array.isArray(a) && a.every(x => x && typeof x === "object" && x.id !== undefined && x.id !== null);
-  if (!okList(local) || !okList(remote) || base != null && !okList(base)) return local;
-  const mp = a => new Map((a || []).map(x => [String(x.id), x]));
-  const B = mp(base),
-    L = mp(local),
-    R = mp(remote);
-  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
-  const out = [];
-  for (const [id, l] of L) {
-    const b = B.get(id),
-      r = R.get(id);
-    if (!b) out.push(l);else if (!same(l, b)) out.push(l);else if (r) out.push(r);
-  }
-  for (const [id, r] of R) {
-    if (L.has(id)) continue;
-    const b = B.get(id);
-    if (!b) out.push(r);else if (!same(r, b)) out.push(r);
-  }
-  return out;
+  return window.IAppModules.sync.mergeData(base, local, remote);
 }
 // A sync must never read or write without a valid login session: RLS makes an
 // anonymous read look like an empty table, and anonymous writes are denied.
@@ -1121,78 +1103,33 @@ async function ensureAuthed() {
   }
   return r;
 }
-const flushing = {};
-async function flushKey(key) {
-  if (flushing[key]) {
-    flushing[key].again = true;
-    return flushing[key].p;
-  }
-  const job = {
-    again: false
-  };
-  job.p = (async () => {
-    let ok = false;
-    do {
-      job.again = false;
-      const stamp = LS.get(DIRTY_PREFIX + key);
-      if (!stamp) {
-        ok = true;
-        break;
-      }
-      let local;
-      try {
-        local = JSON.parse(LS.get(key));
-      } catch (e) {
-        SyncStore.set({ errors: { ...SyncStore.st.errors, [key]: "بيانات محلية غير صالحة" } });
-        break;
-      }
-      const authed = await ensureAuthed();
-      if (!authed.ok) {
-        ok = false;
-        SyncStore.set({ errors: { ...SyncStore.st.errors, [key]: authed.reason === "network" ? "تعذر الاتصال بالخادم" : "الجلسة منتهية — سجّل الدخول من جديد" } });
-        break;
-      }
-      const remote = await _sbGetRaw(key);
-      if (remote === undefined) {
-        ok = false;
-        SyncStore.set({ errors: { ...SyncStore.st.errors, [key]: "تعذر قراءة البيانات من الخادم" } });
-        break;
-      }
-      let base = null;
-      try {
-        const b = LS.get(BASE_PREFIX + key);
-        base = b ? JSON.parse(b) : null;
-      } catch {}
-      const merged = remote === null ? local : mergeData(base, local, remote);
-      const saved = await _sbSetRaw(key, merged);
-      if (!saved) {
-        ok = false;
-        SyncStore.set({ errors: { ...SyncStore.st.errors, [key]: "تعذر حفظ البيانات على الخادم" } });
-        break;
-      }
-      const mergedStr = JSON.stringify(merged);
-      if (LS.get(DIRTY_PREFIX + key) === stamp) {
-        LS.del(DIRTY_PREFIX + key);
-        LS.del(BASE_PREFIX + key);
-        if (NOCACHE_KEYS.includes(key)) LS.del(key);else LS.set(key, mergedStr);
-        if (mergedStr !== JSON.stringify(local)) busEmit(key, merged);
-        const nextErrors = { ...SyncStore.st.errors };
-        delete nextErrors[key];
-        SyncStore.set({ errors: nextErrors, lastSyncAt: Date.now() });
-        ok = true;
-      } else {
-        LS.set(BASE_PREFIX + key, mergedStr);
-        job.again = true;
-      }
-    } while (job.again);
-    return ok;
-  })();
-  flushing[key] = job;
-  try {
-    return await job.p;
-  } finally {
-    if (flushing[key] === job) delete flushing[key];
-  }
+let _flusher = null;
+function getFlusher() {
+  if (!_flusher) _flusher = window.IAppModules.sync.createFlusher({
+    storage: LS,
+    dirtyPrefix: DIRTY_PREFIX,
+    basePrefix: BASE_PREFIX,
+    noCacheKeys: NOCACHE_KEYS,
+    ensureAuthed,
+    readRemote: _sbGetRaw,
+    writeRemote: _sbSetRaw,
+    merge: mergeData,
+    setError: (key, msg) => SyncStore.set({ errors: { ...SyncStore.st.errors, [key]: msg } }),
+    clearError: key => {
+      const nextErrors = { ...SyncStore.st.errors };
+      delete nextErrors[key];
+      SyncStore.set({ errors: nextErrors });
+    },
+    markSynced: () => SyncStore.set({ lastSyncAt: Date.now() }),
+    emitChange: busEmit
+  });
+  return _flusher;
+}
+function flushKey(key) {
+  return getFlusher().flushKey(key);
+}
+function isFlushing(key) {
+  return getFlusher().isFlushing(key);
 }
 let _flushAllBusy = false;
 async function flushAll() {
@@ -1720,7 +1657,7 @@ async function _sbSetRaw(key, value) {
 }
 async function sbGet(key) {
   if (isDirty(key)) {
-    if (!flushing[key]) flushKey(key).then(refreshPending);
+    if (!isFlushing(key)) flushKey(key).then(refreshPending);
     const l = LS.get(key);
     if (l !== null) {
       try {
@@ -8009,6 +7946,14 @@ function Patients({
     const ex = exams.find(e => e.id === f.id);
     const next = ex ? exams.map(e => e.id === f.id ? f : e) : [...exams, f];
     const legacyResult = await setExams(next);
+    // Finishing the examination closes the patient's queue entry (called / in room -> done).
+    try {
+      const examDate = String(f.date || localISO()).slice(0, 10);
+      const examPatient = f.patient || patients.find(p => p.id === f.patientId)?.name || "";
+      sbMutate("iapp_appointments", list => window.IAppModules.appointments.finishQueue(list, {
+        patientId: f.patientId, patient: examPatient, date: examDate
+      })).catch(() => {});
+    } catch {}
     let coreSynced = false;
     let coreError = null;
     // Phase 33 fix (H1/M4): resolve the Core visit id first, then write the legacy
