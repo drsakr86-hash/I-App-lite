@@ -4005,7 +4005,7 @@ function Dashboard({
       fontSize: 14,
       marginBottom: 10
     }
-  }, "آخر المواعيد"), appointments.slice(0, 4).map(a => React.createElement("div", {
+  }, "آخر المواعيد"), appointments.filter(a => isActiveApt(a) && a.waitStatus !== "done").slice(0, 4).map(a => React.createElement("div", {
     key: a.id,
     style: {
       background: C.card,
