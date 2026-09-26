@@ -1,5 +1,5 @@
 // I App — Service Worker
-const VERSION = "iapp-v8-vite-20260926";
+const VERSION = "iapp-v9-20260927";
 const SHELL = "iapp-shell-" + VERSION;
 const IMGS = "iapp-img-" + VERSION;
 const FONTS = "iapp-font-" + VERSION;
@@ -42,7 +42,7 @@ async function pageHandler(request) {
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 4000);
-    const response = await fetch(request, { signal: controller.signal });
+    const response = await fetch(request, { signal: controller.signal, cache: "no-cache" });
     clearTimeout(timer);
     if (response && response.ok) await cache.put("./index.html", response.clone());
     return response;
@@ -90,7 +90,7 @@ self.addEventListener("fetch", event => {
     if (request.mode === "navigate") { event.respondWith(pageHandler(request)); return; }
     event.respondWith(caches.open(SHELL).then(async cache => {
       const hit = await cache.match(request);
-      const net = fetch(request).then(response => {
+      const net = fetch(request, { cache: "no-cache" }).then(response => {
         if (response && response.ok) cache.put(request, response.clone());
         return response;
       }).catch(() => null);

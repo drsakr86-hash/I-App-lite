@@ -48,7 +48,7 @@ globalThis.IAppModules.auth = {
 globalThis.IAppModules.storage = { normalizeFileMeta, resolveFileUrl };
 
 const legacyScript = document.createElement('script');
-legacyScript.src = import.meta.env.BASE_URL + 'legacy/app-runtime.js';
+legacyScript.src = import.meta.env.BASE_URL + 'legacy/app-runtime.js?v=' + __BUILD_ID__;
 legacyScript.async = false;
 legacyScript.onload = () => console.log('I-App legacy runtime loaded');
 legacyScript.onerror = (e) => console.error('I-App legacy runtime failed to load', e);
@@ -57,7 +57,7 @@ document.body.appendChild(legacyScript);
 // Offline support (production build only; the dev server must not be cached).
 if (import.meta.env.PROD && 'serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register(import.meta.env.BASE_URL + 'sw.js?v=20260926')
+    navigator.serviceWorker.register(import.meta.env.BASE_URL + 'sw.js?v=20260927')
       .catch(e => console.warn('SW register failed', e));
   });
 }
