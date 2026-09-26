@@ -15253,7 +15253,7 @@ function App() {
         setTab("patients");
       }
     }),
-    waiting: React.createElement(WaitingRoom, {
+    waiting: React.createElement(useNewScreen("WaitingRoom") ? window.IAppModules.screens.WaitingRoom : WaitingRoom, {
       apts: appointments,
       today: localISO(),
       onUpdateApt: updateSharedAppointment,
@@ -17754,6 +17754,21 @@ async function broadcastCall(a, repeat) {
       }
     });
   } catch (e) {}
+}
+// Bridge for screens migrated to src/screens (theme object is shared by reference).
+globalThis.IAppLegacy = Object.assign(globalThis.IAppLegacy || {}, {
+  C, clinicLabel, inp, broadcastCall, callChannel
+});
+// New React screens are opt-in: open the app with ?ui=react (remembered), ?ui=legacy to go back.
+function useNewScreen(name) {
+  try {
+    const q = new URLSearchParams(location.search).get("ui");
+    if (q === "react") localStorage.setItem("iapp_ui_" + name, "react");
+    if (q === "legacy") localStorage.removeItem("iapp_ui_" + name);
+    return localStorage.getItem("iapp_ui_" + name) === "react" && !!(window.IAppModules.screens || {})[name];
+  } catch {
+    return false;
+  }
 }
 function WaitingRoom({
   apts,

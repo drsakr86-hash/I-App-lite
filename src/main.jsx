@@ -14,6 +14,7 @@ import { createImagingStudy, imagingStudyParams } from './modules/imaging/index.
 import { mergeData, createFlusher } from './modules/sync/index.js';
 import { appointmentFromRow, appointmentToRow, diffAppointments, finishQueueEntries } from './modules/appointments/index.js';
 import { can, ROLES } from './app/permissions.js';
+import WaitingRoomScreen from './screens/WaitingRoom.jsx';
 import { normalizeFileMeta, resolveFileUrl } from './services/storage.js';
 
 // Migration bridge: keep the proven production runtime intact while the
@@ -45,6 +46,7 @@ globalThis.IAppModules.auth = {
   // Verifies (and repairs) the login session before a sync reads or writes.
   ensureSession: () => ensureSession(getSupabaseClient(), { url: SUPABASE_URL, apiKey: SUPABASE_KEY })
 };
+globalThis.IAppModules.screens = { WaitingRoom: WaitingRoomScreen };
 globalThis.IAppModules.storage = { normalizeFileMeta, resolveFileUrl };
 
 const legacyScript = document.createElement('script');
