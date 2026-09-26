@@ -1026,7 +1026,8 @@ function useSyncStatus() {
     label = "جاري المزامنة...";
     color = C.gold;
   } else if (s.pending > 0) {
-    label = `في انتظار المزامنة · ${s.pending} عناصر بيانات`;
+    const _errs = Object.values(s.errors || {});
+    label = `في انتظار المزامنة · ${s.pending} عناصر بيانات` + (_errs.length ? ` — ${_errs[0]}` : "");
     color = C.gold;
   } else {
     label = "متصل ومحدّث";
