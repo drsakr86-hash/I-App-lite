@@ -17846,6 +17846,11 @@ function WaitingRoom({
   const postponed = todayApts.filter(a => a.waitStatus === "postponed");
   const noShow = todayApts.filter(a => a.waitStatus === "no-show");
   const pending = todayApts.filter(a => !a.waitStatus);
+  const stale = apts.filter(a => a.date && a.date < today && ["waiting", "called", "in"].includes(a.waitStatus));
+  const closeStale = async () => {
+    if (!window.confirm(`إغلاق ${stale.length} حالة منسية من أيام سابقة؟`)) return;
+    for (const a of stale) await onUpdateApt({ ...a, waitStatus: undefined });
+  };
   const priorityWaiting = waiting.filter(a => priorityDoctor && a.doctor === priorityDoctor);
   const otherWaiting = waiting.filter(a => !priorityDoctor || a.doctor !== priorityDoctor);
   const orderedWaiting = [...priorityWaiting, ...otherWaiting];
@@ -17882,7 +17887,38 @@ function WaitingRoom({
       padding: "12px 16px 100px",
       animation: "slideUp 0.25s ease"
     }
+  }, stale.length > 0 && React.createElement("div", {
+    style: {
+      background: C.gold + "18",
+      border: `1px solid ${C.gold}66`,
+      borderRadius: 12,
+      padding: "10px 12px",
+      marginBottom: 12,
+      display: "flex",
+      alignItems: "center",
+      gap: 8
+    }
   }, React.createElement("div", {
+    style: {
+      flex: 1,
+      color: C.text,
+      fontSize: 12,
+      fontWeight: 700
+    }
+  }, `⚠️ ${stale.length} حالة منسية من أيام سابقة: ${stale.map(a => a.patient).join("، ")}`), React.createElement("button", {
+    onClick: closeStale,
+    style: {
+      background: C.gold + "33",
+      border: `1px solid ${C.gold}88`,
+      borderRadius: 9,
+      padding: "8px 12px",
+      color: C.gold,
+      fontSize: 11,
+      fontWeight: 800,
+      cursor: "pointer",
+      fontFamily: "inherit"
+    }
+  }, "إغلاق الكل")), React.createElement("div", {
     style: {
       background: C.card,
       border: `1px solid ${priorityDoctor ? C.accent : C.border}`,
