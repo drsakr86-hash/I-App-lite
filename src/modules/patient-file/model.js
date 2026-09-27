@@ -2,14 +2,14 @@
 // Each function reproduces an expression that used to live inline in the
 // legacy PatientFile JSX, so results must stay identical to that code.
 
-// Clinical summary card: newest exam by date + time.
+// Newest exam by date + time (clinical summary and latest-exam cards).
 export function latestExamByDateTime(exams) {
   return [...exams].sort((a, b) => (String(b.date || "") + String(b.time || "")).localeCompare(String(a.date || "") + String(a.time || "")))[0];
 }
 
-// "Latest examination" card in the overview: newest exam by date only.
-export function latestExamByDate(exams) {
-  return [...exams].sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")))[0];
+// Age for display: "58 سنة", or "—" when blank / null / NaN (0 is a valid age).
+export function ageLabel(age) {
+  return age || age === 0 ? age + " سنة" : "—";
 }
 
 // Comparison tab: exams with at least one VA/IOP value, oldest first.

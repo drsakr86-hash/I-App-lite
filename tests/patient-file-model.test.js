@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  latestExamByDateTime, latestExamByDate, compareRows, buildTimelineEvents, timelineSourceEvents, filterTimeline
+  latestExamByDateTime, ageLabel, compareRows, buildTimelineEvents, timelineSourceEvents, filterTimeline
 } from '../src/modules/patient-file/model.js';
 
 const C = { teal: '#t', gold: '#g', accent: '#a', purple: '#p' };
@@ -18,14 +18,14 @@ test('latestExamByDateTime uses date+time and does not mutate input', () => {
   assert.equal(latestExamByDateTime([{ id: 9 }]).id, 9);
 });
 
-test('latestExamByDate ignores time (stable: first of equal dates wins)', () => {
-  const ex = [
-    { id: 1, date: '2026-01-01', time: '09:00' },
-    { id: 2, date: '2026-01-01', time: '10:00' },
-    { id: 3, date: '2025-05-05' }
-  ];
-  assert.equal(latestExamByDate(ex).id, 1);
-  assert.equal(latestExamByDate([]), undefined);
+test('ageLabel shows "—" for blank/null/undefined/NaN, keeps 0', () => {
+  assert.equal(ageLabel(58), '58 سنة');
+  assert.equal(ageLabel('7'), '7 سنة');
+  assert.equal(ageLabel(0), '0 سنة');
+  assert.equal(ageLabel(''), '—');
+  assert.equal(ageLabel(null), '—');
+  assert.equal(ageLabel(undefined), '—');
+  assert.equal(ageLabel(NaN), '—');
 });
 
 test('compareRows keeps exams with VA/IOP only, oldest first', () => {
@@ -66,6 +66,9 @@ test('timelineSourceEvents prefers the Core 360 journey only when non-empty', ()
   assert.equal(timelineSourceEvents({ coreSource: '360', coreJourneyEvents: journey, ...arrays }, C), journey);
   assert.equal(timelineSourceEvents({ coreSource: '360', coreJourneyEvents: [], ...arrays }, C).length, 1);
   assert.equal(timelineSourceEvents({ coreSource: 'summary', coreJourneyEvents: journey, ...arrays }, C)[0].type, 'زيارة');
+  // requests alone still count as events (empty-state message must not show)
+  assert.equal(timelineSourceEvents({ coreSource: 'none', requests: [{ requestedTests: [] }] }, C).length, 1);
+  assert.equal(timelineSourceEvents({ coreSource: 'none' }, C).length, 0);
 });
 
 test('filterTimeline filters by type and search, newest first then by time', () => {

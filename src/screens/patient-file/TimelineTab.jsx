@@ -8,11 +8,8 @@ const L = () => globalThis.IAppLegacy;
 export default function TimelineTab({ ctx }) {
   const { C, inp } = L();
   const { coreJourneyCount, coreJourneyEvents, coreSource, exams, images, requests, rxList, setTimelineFilter, setTimelineSearch, timelineFilter, timelineSearch, visits } = ctx;
-  const events = filterTimeline(
-    timelineSourceEvents({ coreSource, coreJourneyEvents, visits, requests, exams, rxList, images }, C),
-    timelineFilter,
-    timelineSearch
-  );
+  const allEvents = timelineSourceEvents({ coreSource, coreJourneyEvents, visits, requests, exams, rxList, images }, C);
+  const events = filterTimeline(allEvents, timelineFilter, timelineSearch);
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       <div style={{ color: C.text, fontWeight: 800, fontSize: 14 }}>السجل الطبي الزمني</div>
@@ -69,7 +66,7 @@ export default function TimelineTab({ ctx }) {
           </div>
         </div>
       ))}
-      {visits.length + exams.length + rxList.length + images.length === 0 && (<div style={{ color: C.muted, textAlign: "center", padding: 35 }}>لا توجد أحداث مسجلة بعد</div>)}
+      {allEvents.length === 0 && (<div style={{ color: C.muted, textAlign: "center", padding: 35 }}>لا توجد أحداث مسجلة بعد</div>)}
     </div>
   );
 }

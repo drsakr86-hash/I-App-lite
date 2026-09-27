@@ -5086,6 +5086,10 @@ function PatientFile({
     icon: "📊"
   }];
   const [curPatient, setCurPatient] = useState(patient);
+  // Keep the open file in sync when the patient record changes elsewhere (sync, other screens).
+  useEffect(() => {
+    setCurPatient(prev => prev === patient || JSON.stringify(prev) === JSON.stringify(patient) ? prev : patient);
+  }, [patient]);
   // Phase 18: Core Patient 360 state is declared above before derived values.
   useEffect(() => {
     let active = true;
@@ -5100,12 +5104,11 @@ function PatientFile({
         return;
       }
       try {
-        let data = null, error = null;
+        let data = null;
         let source = "none";
         // Phase 53-56: Patient 360 comes from the extracted service (throws when unavailable).
         data = await window.IAppModules.patients.getPatient360(sb, code);
         source = data._source || "360";
-        if (error) throw error;
         if (!active) return;
         const rawFile = data && typeof data === "object" ? data : null;
         const file = rawFile ? { ...rawFile, ...(rawFile.patient || {}) } : null;
@@ -5586,7 +5589,7 @@ function PatientFile({
       color: C.muted,
       fontSize: 12
     }
-  }, curPatient.age, " سنة · ", curPatient.gender, " · ", curPatient.phone), React.createElement("div", {
+  }, curPatient.age || curPatient.age === 0 ? curPatient.age + " سنة" : "—", " · ", curPatient.gender, " · ", curPatient.phone), React.createElement("div", {
     style: {
       display: "flex",
       gap: 6,
@@ -5922,7 +5925,7 @@ function PatientFile({
       marginTop: 5,
       whiteSpace: "pre-wrap"
     }
-  }, String(e.detail).slice(0, 500))))), visits.length + exams.length + rxList.length + images.length === 0 && React.createElement("div", {
+  }, String(e.detail).slice(0, 500))))), (coreSource === "360" && coreJourneyEvents.length ? coreJourneyEvents.length : visits.length + requests.length + exams.length + rxList.length + images.length) === 0 && React.createElement("div", {
     style: {
       color: C.muted,
       textAlign: "center",
@@ -5944,7 +5947,7 @@ function PatientFile({
   }, React.createElement(SecHead, {
     icon: "📋",
     label: "البيانات الأساسية"
-  }), [["رقم الملف", curPatient.patientCode || "—"], ["الاسم", curPatient.name], ["العمر", curPatient.age + " سنة"], ["الجنس", curPatient.gender], ["فصيلة الدم", curPatient.bloodType || "-"], ["الهاتف", curPatient.phone], ["المهنة", curPatient.occupation || "-"], ["العنوان", curPatient.address]].map(([k, v]) => React.createElement("div", {
+  }), [["رقم الملف", curPatient.patientCode || "—"], ["الاسم", curPatient.name], ["العمر", curPatient.age || curPatient.age === 0 ? curPatient.age + " سنة" : "—"], ["الجنس", curPatient.gender], ["فصيلة الدم", curPatient.bloodType || "-"], ["الهاتف", curPatient.phone], ["المهنة", curPatient.occupation || "-"], ["العنوان", curPatient.address]].map(([k, v]) => React.createElement("div", {
     key: k,
     style: {
       display: "flex",
@@ -5998,7 +6001,7 @@ function PatientFile({
       textAlign: "left"
     }
   }, v)))), exams.length > 0 && (() => {
-    const latest = [...exams].sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")))[0];
+    const latest = [...exams].sort((a, b) => (String(b.date || "") + String(b.time || "")).localeCompare(String(a.date || "") + String(a.time || "")))[0];
     return React.createElement("div", {
       style: {
         background: C.accent + "0d",
@@ -6107,7 +6110,7 @@ function PatientFile({
       gridTemplateColumns: "1fr 1fr 1fr",
       gap: 10
     }
-  }, [["🩺", exams.length, "Examination"], [" 🗓", visits.length, "زيارة"], ["💰", totalSpent.toLocaleString(), "ج.م"]].map(([ico, val, lbl], i) => React.createElement("div", {
+  }, [["🩺", exams.length, "Examination"], ["🗓", visits.length, "زيارة"], ["💰", totalSpent.toLocaleString(), "ج.م"]].map(([ico, val, lbl], i) => React.createElement("div", {
     key: i,
     style: {
       background: C.card,
@@ -7737,7 +7740,7 @@ function PatientFile({
     rx: modal.printRx,
     patient: curPatient,
     primaryDoctor: primaryDoctor,
-    clinic: {},
+    clinic: clinic,
     onClose: () => setModal(null)
   }), delTarget && React.createElement(Confirm, {
     msg: `هل تريد حذف هذا ${delTarget.type === "visit" ? "السجل" : "الفحص"} نهائياً؟`,

@@ -1,4 +1,5 @@
 import React from 'react';
+import { ageLabel } from '../modules/patient-file/model.js';
 import InfoSummary from './patient-file/InfoSummary.jsx';
 import InfoDetails from './patient-file/InfoDetails.jsx';
 import TimelineTab from './patient-file/TimelineTab.jsx';
@@ -89,8 +90,8 @@ export default function PatientFile({ ctx }) {
             </span>
           </div>
           <div style={{ color: C.muted, fontSize: 12 }}>
-            {curPatient.age}
-            {" سنة · "}
+            {ageLabel(curPatient.age)}
+            {" · "}
             {curPatient.gender}
             {" · "}
             {curPatient.phone}
@@ -270,7 +271,7 @@ export default function PatientFile({ ctx }) {
           rx={modal.printRx}
           patient={curPatient}
           primaryDoctor={primaryDoctor}
-          clinic={{}}
+          clinic={clinic}
           onClose={() => setModal(null)}
         />
       )}

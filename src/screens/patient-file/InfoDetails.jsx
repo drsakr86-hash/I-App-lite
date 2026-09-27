@@ -1,5 +1,5 @@
 import React from 'react';
-import { latestExamByDate } from '../../modules/patient-file/model.js';
+import { latestExamByDateTime, ageLabel } from '../../modules/patient-file/model.js';
 
 const L = () => globalThis.IAppLegacy;
 
@@ -12,7 +12,7 @@ export default function InfoDetails({ ctx }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: 14 }}>
         <SecHead icon="📋" label="البيانات الأساسية"/>
-        {[["رقم الملف", curPatient.patientCode || "—"], ["الاسم", curPatient.name], ["العمر", curPatient.age + " سنة"], ["الجنس", curPatient.gender], ["فصيلة الدم", curPatient.bloodType || "-"], ["الهاتف", curPatient.phone], ["المهنة", curPatient.occupation || "-"], ["العنوان", curPatient.address]].map(([k, v]) => (
+        {[["رقم الملف", curPatient.patientCode || "—"], ["الاسم", curPatient.name], ["العمر", ageLabel(curPatient.age)], ["الجنس", curPatient.gender], ["فصيلة الدم", curPatient.bloodType || "-"], ["الهاتف", curPatient.phone], ["المهنة", curPatient.occupation || "-"], ["العنوان", curPatient.address]].map(([k, v]) => (
           <div
             key={k}
             style={{
@@ -47,7 +47,7 @@ export default function InfoDetails({ ctx }) {
         ))}
       </div>
       {exams.length > 0 && (() => {
-        const latest = latestExamByDate(exams);
+        const latest = latestExamByDateTime(exams);
         return (
           <div style={{ background: C.accent + "0d", border: `1px solid ${C.accent}33`, borderRadius: 12, padding: 12 }}>
             <SecHead icon="🩺" label="Latest Examination" color={C.accent}/>
@@ -89,7 +89,7 @@ export default function InfoDetails({ ctx }) {
         </div>
       )}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
-        {[["🩺", exams.length, "Examination"], [" 🗓", visits.length, "زيارة"], ["💰", totalSpent.toLocaleString(), "ج.م"]].map(([ico, val, lbl], i) => (
+        {[["🩺", exams.length, "Examination"], ["🗓", visits.length, "زيارة"], ["💰", totalSpent.toLocaleString(), "ج.م"]].map(([ico, val, lbl], i) => (
           <div
             key={i}
             style={{
