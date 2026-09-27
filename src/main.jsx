@@ -16,6 +16,7 @@ import { appointmentFromRow, appointmentToRow, diffAppointments, finishQueueEntr
 import { can, ROLES } from './app/permissions.js';
 import WaitingRoomScreen from './screens/WaitingRoom.jsx';
 import AppointmentsScreen from './screens/Appointments.jsx';
+import DashboardScreen from './screens/Dashboard.jsx';
 import { normalizeFileMeta, resolveFileUrl } from './services/storage.js';
 
 // Migration bridge: keep the proven production runtime intact while the
@@ -47,7 +48,7 @@ globalThis.IAppModules.auth = {
   // Verifies (and repairs) the login session before a sync reads or writes.
   ensureSession: () => ensureSession(getSupabaseClient(), { url: SUPABASE_URL, apiKey: SUPABASE_KEY })
 };
-globalThis.IAppModules.screens = { WaitingRoom: WaitingRoomScreen, Appointments: AppointmentsScreen };
+globalThis.IAppModules.screens = { WaitingRoom: WaitingRoomScreen, Appointments: AppointmentsScreen, Dashboard: DashboardScreen };
 globalThis.IAppModules.storage = { normalizeFileMeta, resolveFileUrl };
 
 const legacyScript = document.createElement('script');

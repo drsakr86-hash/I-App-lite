@@ -15197,7 +15197,7 @@ function App() {
     }
   }, "جاري التحميل...")));
   const screens = {
-    dashboard: React.createElement(Dashboard, {
+    dashboard: React.createElement(useNewScreen("Dashboard") ? window.IAppModules.screens.Dashboard : Dashboard, {
       patients: patients,
       appointments: appointments,
       visits: visits,
@@ -17758,7 +17758,8 @@ async function broadcastCall(a, repeat) {
 // Bridge for screens migrated to src/screens (theme object is shared by reference).
 globalThis.IAppLegacy = Object.assign(globalThis.IAppLegacy || {}, {
   C, clinicLabel, inp, broadcastCall, callChannel,
-  Btn, Modal, Confirm, AptForm, sbGet, trashPut, logAudit
+  Btn, Modal, Confirm, AptForm, sbGet, trashPut, logAudit,
+  localISO, useSyncStatus
 });
 // New React screens are opt-in: open the app with ?ui=react (remembered), ?ui=legacy to go back.
 function useNewScreen(name) {
