@@ -73,7 +73,7 @@ export default function Patients({
                     fontSize: 10, fontWeight: 700, letterSpacing: 1
                   }}>{p.patientCode || '—'}</span>
                 </div>
-                <div style={{ color: C.muted, fontSize: 11 }}>{p.age} سنة · {p.condition || '—'}</div>
+                <div style={{ color: C.muted, fontSize: 11 }}>{(p.age || p.age === 0) ? p.age : '—'} سنة · {p.condition || '—'}</div>
               </div>
               <Tag label={p.status} color={SC[p.status] || C.muted} />
             </div>

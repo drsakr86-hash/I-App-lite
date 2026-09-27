@@ -2387,7 +2387,7 @@ function _getPatientFileHTMLRaw(patient, visits, exams, prescriptions, primary, 
   </div>
   <div class="patient-card">
     <div class="info"><span>الاسم</span><b>${p.name}</b></div>
-    <div class="info"><span>العمر</span><b>${p.age} سنة</b></div>
+    <div class="info"><span>العمر</span><b>${p.age ? p.age + " سنة" : "—"}</b></div>
     <div class="info"><span>الجنس</span><b>${p.gender}</b></div>
     <div class="info"><span>الهاتف</span><b>${p.phone || "—"}</b></div>
     <div class="info"><span>فصيلة الدم</span><b>${p.bloodType || "—"}</b></div>
@@ -4953,7 +4953,7 @@ function PatientEditForm({
     full: true,
     onClick: () => onSave({
       ...f,
-      age: Number(f.age)
+      age: f.age === "" || f.age == null ? "" : Number(f.age)
     })
   }, "✓ حفظ التعديلات")));
 }
@@ -7841,7 +7841,7 @@ function PatientForm({
     full: true,
     onClick: () => f.name && onSave({
       ...f,
-      age: Number(f.age)
+      age: f.age === "" || f.age == null ? "" : Number(f.age)
     })
   }, "حفظ")));
 }
@@ -8352,7 +8352,7 @@ function Patients({
       color: C.muted,
       fontSize: 11
     }
-  }, p.age, " سنة · ", p.condition || "—")), React.createElement(Tag, {
+  }, (p.age || p.age === 0 ? p.age : "—"), " سنة · ", p.condition || "—")), React.createElement(Tag, {
     label: p.status,
     color: SC[p.status] || C.muted
   })), React.createElement("div", {
