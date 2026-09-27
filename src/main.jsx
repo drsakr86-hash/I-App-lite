@@ -14,6 +14,11 @@ import { createImagingStudy, imagingStudyParams } from './modules/imaging/index.
 import { mergeData, createFlusher } from './modules/sync/index.js';
 import { appointmentFromRow, appointmentToRow, diffAppointments, finishQueueEntries } from './modules/appointments/index.js';
 import { can, ROLES } from './app/permissions.js';
+import {
+  STAFF_ROLES, SESSION_TTL_REMEMBER, SESSION_TTL_TEMP, publicUser, buildCompactSession,
+  isStaffRole, isInvalidStaffSession, isSessionExpired, sessionExpiry,
+  mergeFreshStaffSession, staffSessionDrifted, buildStaffSessionRecord, buildPatientSessionRecord
+} from './modules/auth/session.js';
 import WaitingRoomScreen from './screens/WaitingRoom.jsx';
 import AppointmentsScreen from './screens/Appointments.jsx';
 import DashboardScreen from './screens/Dashboard.jsx';
@@ -53,7 +58,14 @@ globalThis.IAppModules.auth = {
   can,
   ROLES,
   // Verifies (and repairs) the login session before a sync reads or writes.
-  ensureSession: () => ensureSession(getSupabaseClient(), { url: SUPABASE_URL, apiKey: SUPABASE_KEY })
+  ensureSession: () => ensureSession(getSupabaseClient(), { url: SUPABASE_URL, apiKey: SUPABASE_KEY }),
+  // Pure session/role decisions used by the legacy UnifiedRouter — see
+  // src/modules/auth/session.js. These do not change today's login/session
+  // behavior; they only move the logic out of app-runtime.js so it is
+  // unit-tested and ready for the eventual standalone auth flow.
+  STAFF_ROLES, SESSION_TTL_REMEMBER, SESSION_TTL_TEMP, publicUser, buildCompactSession,
+  isStaffRole, isInvalidStaffSession, isSessionExpired, sessionExpiry,
+  mergeFreshStaffSession, staffSessionDrifted, buildStaffSessionRecord, buildPatientSessionRecord
 };
 globalThis.IAppModules.screens = { WaitingRoom: WaitingRoomScreen, Appointments: AppointmentsScreen, Dashboard: DashboardScreen, Patients: PatientsScreen, PatientFile: PatientFileScreen, Prescriptions: PrescriptionsScreen, Radiology: RadiologyScreen, ImagingCenter: ImagingCenterScreen, Accounting: AccountingScreen, Settings: SettingsScreen };
 globalThis.IAppModules.storage = { normalizeFileMeta, resolveFileUrl };

@@ -197,14 +197,9 @@ async function verifyPassword(user, pw) {
   }
   return typeof user.password === "string" && user.password === pw;
 }
-const publicUser = u => u ? {
-  id: u.id,
-  username: u.username,
-  email: u.email || "",
-  name: u.name,
-  role: u.role,
-  mustChange: !!u.mustChange
-} : null;
+// Pure logic moved to src/modules/auth/session.js (unit-tested there);
+// this just delegates so behavior stays byte-identical.
+const publicUser = u => window.IAppModules.auth.publicUser(u);
 const ROLE_LABEL = {
   admin: "مدير",
   doctor: "طبيب",
@@ -20202,9 +20197,11 @@ function UnifiedLogin({
     }
   }, "صلاحيات كل مستخدم تحدد الواجهة المتاحة له")));
 }
-const SESSION_TTL_REMEMBER = 30 * 24 * 3600 * 1000;
-const SESSION_TTL_TEMP = 12 * 3600 * 1000;
-const STAFF_ROLES = ["admin", "doctor", "secretary", "employee"];
+// Pure logic moved to src/modules/auth/session.js (unit-tested there);
+// these just delegate so behavior stays byte-identical.
+const SESSION_TTL_REMEMBER = window.IAppModules.auth.SESSION_TTL_REMEMBER;
+const SESSION_TTL_TEMP = window.IAppModules.auth.SESSION_TTL_TEMP;
+const STAFF_ROLES = window.IAppModules.auth.STAFF_ROLES;
 function clearAllSessions() {
   ["iapp_unified_session", "iapp_session"].forEach(k => {
     try {
@@ -20232,7 +20229,8 @@ function loadValidSession() {
     s = null;
   }
   if (!s) return null;
-  if (!s.exp || Date.now() > s.exp) {
+  // Delegates to src/modules/auth/session.js (unit-tested); behavior unchanged.
+  if (window.IAppModules.auth.isSessionExpired(s)) {
     clearAllSessions();
     return null;
   }
@@ -20242,20 +20240,11 @@ function loadValidSession() {
       clearAllSessions();
       return null;
     }
-    const fresh = {
-      ...s,
-      ...publicUser(u),
-      kind: "staff"
-    };
-    if (fresh.role !== s.role || fresh.name !== s.name || fresh.username !== s.username || fresh.mustChange !== s.mustChange) {
+    const fresh = window.IAppModules.auth.mergeFreshStaffSession(s, u);
+    if (window.IAppModules.auth.staffSessionDrifted(fresh, s)) {
       try {
         store.setItem("iapp_unified_session", JSON.stringify(fresh));
-        store.setItem("iapp_session", JSON.stringify({
-          id: fresh.id,
-          username: fresh.username,
-          name: fresh.name,
-          role: fresh.role
-        }));
+        store.setItem("iapp_session", JSON.stringify(window.IAppModules.auth.buildCompactSession(fresh)));
       } catch {}
     }
     return fresh;
@@ -20501,37 +20490,24 @@ function UnifiedRouter() {
       logAudit("تسجيل دخول", payload.user.email || payload.user.username || "");
     }
     const store = remember ? localStorage : sessionStorage;
-    const exp = Date.now() + (remember ? SESSION_TTL_REMEMBER : SESSION_TTL_TEMP);
+    // Delegates to src/modules/auth/session.js (unit-tested); behavior unchanged.
+    const exp = window.IAppModules.auth.sessionExpiry(remember);
     clearAllSessions();
     let s;
     if (payload.kind === "staff") {
-      const u = publicUser(payload.user);
-      s = {
-        kind: "staff",
-        ...u,
-        exp
-      };
+      s = window.IAppModules.auth.buildStaffSessionRecord(payload.user, exp);
       try {
-        store.setItem("iapp_session", JSON.stringify({
-          id: u.id,
-          username: u.username,
-          name: u.name,
-          role: u.role
-        }));
+        store.setItem("iapp_session", JSON.stringify(window.IAppModules.auth.buildCompactSession(publicUser(payload.user))));
       } catch {}
     } else {
-      s = {
-        kind: "patient",
-        patient: payload.patient,
-        exp
-      };
+      s = window.IAppModules.auth.buildPatientSessionRecord(payload.patient, exp);
     }
     try {
       store.setItem("iapp_unified_session", JSON.stringify(s));
     } catch {}
     setSession(s);
   };
-  const invalidRole = !!session && session.kind === "staff" && !STAFF_ROLES.includes(session.role);
+  const invalidRole = window.IAppModules.auth.isInvalidStaffSession(session);
   useEffect(() => {
     if (invalidRole) logout();
   }, [invalidRole, logout]);
