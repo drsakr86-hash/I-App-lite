@@ -8169,6 +8169,19 @@ function Patients({
       customTests: customTests
     });
   }
+  // List mode only: the patient file and all save/sync logic above stay here.
+  if (useNewScreen("Patients")) return React.createElement(window.IAppModules.screens.Patients, {
+    patients: patients,
+    search: search,
+    setSearch: setSearch,
+    addP: addP,
+    updP: updP,
+    delP: delP,
+    onOpenFile: setOpenFile,
+    session: session,
+    initNewName: initNewName,
+    onInitDone: onInitDone
+  });
   return React.createElement("div", {
     style: {
       padding: "16px 16px 90px"
@@ -17759,7 +17772,8 @@ async function broadcastCall(a, repeat) {
 globalThis.IAppLegacy = Object.assign(globalThis.IAppLegacy || {}, {
   C, clinicLabel, inp, broadcastCall, callChannel,
   Btn, Modal, Confirm, AptForm, sbGet, trashPut, logAudit,
-  localISO, useSyncStatus
+  localISO, useSyncStatus,
+  SC, Tag, PatientForm
 });
 // New React screens are opt-in: open the app with ?ui=react (remembered), ?ui=legacy to go back.
 function useNewScreen(name) {
