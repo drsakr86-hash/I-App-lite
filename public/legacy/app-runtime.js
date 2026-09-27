@@ -15344,7 +15344,7 @@ function App() {
       primary: primary,
       clinic: clinic
     }),
-    accounting: React.createElement(Accounting, {
+    accounting: React.createElement(useNewScreen("Accounting") ? window.IAppModules.screens.Accounting : Accounting, {
       visits: visits,
       expenses: expenses,
       setExpenses: setExpenses,
@@ -17828,7 +17828,8 @@ globalThis.IAppLegacy = Object.assign(globalThis.IAppLegacy || {}, {
   XRAY_ICON, IMAGING_ORDER_STATUSES, getPatientFileHTML, getRadiologyHTML, printDoc,
   DEFAULT_TESTS, CAT_COLORS,
   sbSet, getSB, iappRpc, offlineNow, localDateStr, localTimeStr,
-  IMAGING_TYPES, IMAGING_EYES, IMAGING_REPORT_TEMPLATES, imagingTypeName, imagingStudyRpcParams, imagingSingleOrderParams
+  IMAGING_TYPES, IMAGING_EYES, IMAGING_REPORT_TEMPLATES, imagingTypeName, imagingStudyRpcParams, imagingSingleOrderParams,
+  CLINICS, CLINIC_FILTERS, EXP_CATS, ExpenseForm, RecurringExpenseForm, getAccountingReportHTML
 });
 // New React screens are opt-in: open the app with ?ui=react (remembered), ?ui=legacy to go back.
 function useNewScreen(name) {
