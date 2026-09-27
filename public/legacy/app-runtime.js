@@ -17825,7 +17825,9 @@ globalThis.IAppLegacy = Object.assign(globalThis.IAppLegacy || {}, {
   sbSet, getSB, iappRpc, offlineNow, localDateStr, localTimeStr,
   IMAGING_TYPES, IMAGING_EYES, IMAGING_REPORT_TEMPLATES, imagingTypeName, imagingStudyRpcParams, imagingSingleOrderParams,
   CLINICS, CLINIC_FILTERS, EXP_CATS, ExpenseForm, RecurringExpenseForm, getAccountingReportHTML,
-  DoctorForm, PriceForm, UserForm, DataTools, getUsers, newId, emailKey, ROLE_LABEL, MIN_PW_LEN, GUARD_KEY, saveAutoBackup
+  DoctorForm, PriceForm, UserForm, DataTools, getUsers, newId, emailKey, ROLE_LABEL, MIN_PW_LEN, GUARD_KEY, saveAutoBackup,
+  sbMutate, BOOKING_TABLE, LoginScreen, SecretaryAptForm, CollectModal, RemindersModal, Toast, ThemeToggle,
+  waOpen, waReminderText, CLINICS_LIST, WaitingRoom, useNewScreen
 });
 // New React screens are opt-in: open the app with ?ui=react (remembered), ?ui=legacy to go back.
 function useNewScreen(name) {
@@ -20536,7 +20538,7 @@ function UnifiedRouter() {
     onLogout: logout,
     onDone: () => setSession(loadValidSession())
   });
-  if (session.role === "secretary" || session.role === "employee") return React.createElement(SecretaryApp, {
+  if (session.role === "secretary" || session.role === "employee") return React.createElement(useNewScreen("SecretaryApp") ? window.IAppModules.screens.SecretaryApp : SecretaryApp, {
     key: "sec-" + session.id + "-" + session.role
   });
   return React.createElement(App, {
