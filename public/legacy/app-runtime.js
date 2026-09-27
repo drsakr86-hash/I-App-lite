@@ -17827,7 +17827,8 @@ globalThis.IAppLegacy = Object.assign(globalThis.IAppLegacy || {}, {
   CLINICS, CLINIC_FILTERS, EXP_CATS, ExpenseForm, RecurringExpenseForm, getAccountingReportHTML,
   DoctorForm, PriceForm, UserForm, DataTools, getUsers, newId, emailKey, ROLE_LABEL, MIN_PW_LEN, GUARD_KEY, saveAutoBackup,
   sbMutate, BOOKING_TABLE, LoginScreen, SecretaryAptForm, CollectModal, RemindersModal, Toast, ThemeToggle,
-  waOpen, waReminderText, CLINICS_LIST, WaitingRoom, useNewScreen
+  waOpen, waReminderText, CLINICS_LIST, WaitingRoom, useNewScreen,
+  BookingForm, PATIENT_CLINICS, CLINIC_CODE, clinicDisplay
 });
 // New React screens are opt-in: open the app with ?ui=react (remembered), ?ui=legacy to go back.
 function useNewScreen(name) {
@@ -20528,7 +20529,7 @@ function UnifiedRouter() {
     onLogin: login
   });
   CURRENT_USER = session.kind === "staff" ? session : null;
-  if (session.kind === "patient") return React.createElement(PatientApp, {
+  if (session.kind === "patient") return React.createElement(useNewScreen("PatientApp") ? window.IAppModules.screens.PatientApp : PatientApp, {
     patient: session.patient,
     onLogout: logout
   });

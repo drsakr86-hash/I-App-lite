@@ -30,6 +30,7 @@ import ImagingCenterScreen from './screens/ImagingCenter.jsx';
 import AccountingScreen from './screens/Accounting.jsx';
 import SettingsScreen from './screens/Settings.jsx';
 import SecretaryAppScreen from './screens/SecretaryApp.jsx';
+import PatientAppScreen from './screens/PatientApp.jsx';
 import { normalizeFileMeta, resolveFileUrl } from './services/storage.js';
 
 // Migration bridge: keep the proven production runtime intact while the
@@ -68,7 +69,7 @@ globalThis.IAppModules.auth = {
   isStaffRole, isInvalidStaffSession, isSessionExpired, sessionExpiry,
   mergeFreshStaffSession, staffSessionDrifted, buildStaffSessionRecord, buildPatientSessionRecord
 };
-globalThis.IAppModules.screens = { WaitingRoom: WaitingRoomScreen, Appointments: AppointmentsScreen, Dashboard: DashboardScreen, Patients: PatientsScreen, PatientFile: PatientFileScreen, Prescriptions: PrescriptionsScreen, Radiology: RadiologyScreen, ImagingCenter: ImagingCenterScreen, Accounting: AccountingScreen, Settings: SettingsScreen, SecretaryApp: SecretaryAppScreen };
+globalThis.IAppModules.screens = { WaitingRoom: WaitingRoomScreen, Appointments: AppointmentsScreen, Dashboard: DashboardScreen, Patients: PatientsScreen, PatientFile: PatientFileScreen, Prescriptions: PrescriptionsScreen, Radiology: RadiologyScreen, ImagingCenter: ImagingCenterScreen, Accounting: AccountingScreen, Settings: SettingsScreen, SecretaryApp: SecretaryAppScreen, PatientApp: PatientAppScreen };
 globalThis.IAppModules.storage = { normalizeFileMeta, resolveFileUrl };
 
 const legacyScript = document.createElement('script');

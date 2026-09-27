@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node --test tests/appointments.test.js tests/clinical-builders.test.js tests/session.test.js tests/queue.test.js tests/queue-model.test.js tests/appointments-list.test.js tests/dashboard-model.test.js tests/patients-list.test.js tests/patient-file-model.test.js tests/sync.test.js tests/prescriptions-list.test.js tests/radiology-model.test.js tests/imaging-model.test.js tests/accounting-model.test.js tests/settings-model.test.js tests/auth-session.test.js tests/secretary-app-model.test.js"
+    "test": "node --test tests/appointments.test.js tests/clinical-builders.test.js tests/session.test.js tests/queue.test.js tests/queue-model.test.js tests/appointments-list.test.js tests/dashboard-model.test.js tests/patients-list.test.js tests/patient-file-model.test.js tests/sync.test.js tests/prescriptions-list.test.js tests/radiology-model.test.js tests/imaging-model.test.js tests/accounting-model.test.js tests/settings-model.test.js tests/auth-session.test.js tests/secretary-app-model.test.js tests/patient-app-model.test.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",
