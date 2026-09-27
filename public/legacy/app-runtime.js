@@ -15331,7 +15331,7 @@ function App() {
       primaryDoctor: primary,
       clinic: clinic
     }),
-    radiology: React.createElement(Radiology, {
+    radiology: React.createElement(useNewScreen("Radiology") ? window.IAppModules.screens.Radiology : Radiology, {
       patients: patients,
       customTests: customTests,
       setCustomTests: setCustomTests,
@@ -17825,7 +17825,8 @@ globalThis.IAppLegacy = Object.assign(globalThis.IAppLegacy || {}, {
   localISO, useSyncStatus,
   SC, Tag, PatientForm,
   TopBar, SecHead, Field, InjectionsSection, PatientEditForm, VisitForm, ExamForm, RxForm, PrintModal,
-  XRAY_ICON, IMAGING_ORDER_STATUSES, getPatientFileHTML, getRadiologyHTML, printDoc
+  XRAY_ICON, IMAGING_ORDER_STATUSES, getPatientFileHTML, getRadiologyHTML, printDoc,
+  DEFAULT_TESTS, CAT_COLORS
 });
 // New React screens are opt-in: open the app with ?ui=react (remembered), ?ui=legacy to go back.
 function useNewScreen(name) {
