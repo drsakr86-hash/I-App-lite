@@ -15353,7 +15353,7 @@ function App() {
       doctors: doctors,
       clinic: clinic
     }),
-    settings: React.createElement(Settings, {
+    settings: React.createElement(useNewScreen("Settings") ? window.IAppModules.screens.Settings : Settings, {
       patients: patients,
       appointments: appointments,
       prescriptions: prescriptions,
@@ -17829,7 +17829,8 @@ globalThis.IAppLegacy = Object.assign(globalThis.IAppLegacy || {}, {
   DEFAULT_TESTS, CAT_COLORS,
   sbSet, getSB, iappRpc, offlineNow, localDateStr, localTimeStr,
   IMAGING_TYPES, IMAGING_EYES, IMAGING_REPORT_TEMPLATES, imagingTypeName, imagingStudyRpcParams, imagingSingleOrderParams,
-  CLINICS, CLINIC_FILTERS, EXP_CATS, ExpenseForm, RecurringExpenseForm, getAccountingReportHTML
+  CLINICS, CLINIC_FILTERS, EXP_CATS, ExpenseForm, RecurringExpenseForm, getAccountingReportHTML,
+  DoctorForm, PriceForm, UserForm, DataTools, getUsers, newId, emailKey, ROLE_LABEL, MIN_PW_LEN, GUARD_KEY, saveAutoBackup
 });
 // New React screens are opt-in: open the app with ?ui=react (remembered), ?ui=legacy to go back.
 function useNewScreen(name) {
