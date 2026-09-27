@@ -15238,7 +15238,7 @@ function App() {
       session: session,
       customTests: customTests
     }),
-    appointments: React.createElement(Appointments, {
+    appointments: React.createElement(useNewScreen("Appointments") ? window.IAppModules.screens.Appointments : Appointments, {
       appointments: appointments,
       setAppointments: setAppointments,
       doctorNames: doctorNames,
@@ -17757,7 +17757,8 @@ async function broadcastCall(a, repeat) {
 }
 // Bridge for screens migrated to src/screens (theme object is shared by reference).
 globalThis.IAppLegacy = Object.assign(globalThis.IAppLegacy || {}, {
-  C, clinicLabel, inp, broadcastCall, callChannel
+  C, clinicLabel, inp, broadcastCall, callChannel,
+  Btn, Modal, Confirm, AptForm, sbGet, trashPut, logAudit
 });
 // New React screens are opt-in: open the app with ?ui=react (remembered), ?ui=legacy to go back.
 function useNewScreen(name) {
