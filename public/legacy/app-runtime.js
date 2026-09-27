@@ -15339,7 +15339,7 @@ function App() {
       primary: primary,
       clinic: clinic
     }),
-    imaging: React.createElement(ImagingCenter, {
+    imaging: React.createElement(useNewScreen("ImagingCenter") ? window.IAppModules.screens.ImagingCenter : ImagingCenter, {
       patients: patients,
       primary: primary,
       clinic: clinic
@@ -17826,7 +17826,9 @@ globalThis.IAppLegacy = Object.assign(globalThis.IAppLegacy || {}, {
   SC, Tag, PatientForm,
   TopBar, SecHead, Field, InjectionsSection, PatientEditForm, VisitForm, ExamForm, RxForm, PrintModal,
   XRAY_ICON, IMAGING_ORDER_STATUSES, getPatientFileHTML, getRadiologyHTML, printDoc,
-  DEFAULT_TESTS, CAT_COLORS
+  DEFAULT_TESTS, CAT_COLORS,
+  sbSet, getSB, iappRpc, offlineNow, localDateStr, localTimeStr,
+  IMAGING_TYPES, IMAGING_EYES, IMAGING_REPORT_TEMPLATES, imagingTypeName, imagingStudyRpcParams, imagingSingleOrderParams
 });
 // New React screens are opt-in: open the app with ?ui=react (remembered), ?ui=legacy to go back.
 function useNewScreen(name) {
