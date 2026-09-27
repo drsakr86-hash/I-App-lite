@@ -72,6 +72,19 @@ test('blankBookForm: isNew mirrors isGuest (undefined for registered patients)',
   assert.ok('isNew' in f);
 });
 
+test('blankBookForm: FIX — registered patients get their own name/phone prefilled, guests stay blank', () => {
+  const f = blankBookForm(PATIENT);
+  assert.equal(f.newName, PATIENT.name);
+  assert.equal(f.newPhone, PATIENT.phone);
+  // A registered patient with no phone on file still gets an empty string
+  // (not undefined/null), so bookFormError still gates correctly on it.
+  assert.equal(blankBookForm({ ...PATIENT, phone: undefined }).newName, PATIENT.name);
+  assert.equal(blankBookForm({ ...PATIENT, phone: undefined }).newPhone, '');
+  // Guests are unaffected — they still type their own name/phone in.
+  assert.equal(blankBookForm(GUEST).newName, '');
+  assert.equal(blankBookForm(GUEST).newPhone, '');
+});
+
 test('isMyApt: guests / id-less sessions never match', () => {
   assert.equal(isMyApt(GUEST, { patientId: null, patient: 'زائر' }), false);
   assert.equal(isMyApt({ ...PATIENT, isGuest: true }, { patientId: 501 }), false);
@@ -177,8 +190,11 @@ test('bookFormError: clinic → date → time → name → phone', () => {
   assert.equal(bookFormError({ ...full, newPhone: undefined }), 'اكتب رقم هاتفك');
   assert.equal(bookFormError({ ...full, newPhone: ' ' }), 'اكتب رقم هاتفك');
   assert.equal(bookFormError(full), null);
-  // QUIRK: a registered patient's blank form stops at the name check.
-  assert.equal(bookFormError({ ...blankBookForm(PATIENT), clinic: full.clinic, date: full.date, time: full.time }), 'اكتب اسمك');
+  // FIX: a registered patient's blank form now passes (name/phone come
+  // prefilled from their own record), and a phone-less patient still blocks
+  // on the phone check specifically, not the name check.
+  assert.equal(bookFormError({ ...blankBookForm(PATIENT), clinic: full.clinic, date: full.date, time: full.time }), null);
+  assert.equal(bookFormError({ ...blankBookForm({ ...PATIENT, phone: '' }), clinic: full.clinic, date: full.date, time: full.time }), 'اكتب رقم هاتفك');
 });
 
 test('buildBookingRow: exact payload shape', () => {

@@ -67,6 +67,16 @@ export function patientTabs(isGuest) {
 }
 
 // The empty booking form (initial state and the "حجز موعد آخر" reset).
+//
+// FIX (bug found during the PatientApp migration, confirmed pre-existing):
+// a registered patient's booking form has no name/phone step (BookingForm only
+// shows "بياناتك" for guests), yet bookFormError() requires both — so every
+// registered patient's booking used to dead-end on "اكتب اسمك". We now prefill
+// newName/newPhone from the patient's own record for non-guests, exactly like
+// a guest who had already typed them in. A patient with no phone on file still
+// has to be reachable, so an empty stored phone still blocks with "اكتب رقم
+// هاتفك" — same message as always, just now correctly gated on missing data
+// rather than firing unconditionally.
 export function blankBookForm(patient) {
   return {
     clinic: '',
@@ -75,8 +85,8 @@ export function blankBookForm(patient) {
     type: DEFAULT_VISIT_TYPE,
     notes: '',
     isNew: patient.isGuest,
-    newName: '',
-    newPhone: ''
+    newName: patient.isGuest ? '' : (patient.name || ''),
+    newPhone: patient.isGuest ? '' : (patient.phone || '')
   };
 }
 
@@ -134,10 +144,10 @@ export const shouldAutoPromptRating = (unrated, patient) => !!(unrated && !patie
 // ---- Booking ---------------------------------------------------------------
 
 // First failing check, in the legacy order (clinic → date → time → name →
-// phone), or null when the form may be submitted.
-// QUIRK: name/phone are required for everyone, but the booking form only asks
-// for them in the guest flow — a registered patient's newName/newPhone stay ""
-// so their booking always stops at "اكتب اسمك".
+// phone), or null when the form may be submitted. Name/phone are required for
+// everyone, but only guests type them in — for a registered patient they now
+// come prefilled from the patient record by blankBookForm() (see the FIX note
+// there), so this only blocks a registered patient who has no phone on file.
 export function bookFormError(f) {
   if (!f.clinic) return BOOK_MSG_CLINIC;
   if (!f.date) return BOOK_MSG_DATE;

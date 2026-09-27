@@ -16284,6 +16284,11 @@ function PatientApp({
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(null);
   const [toast, setToast] = useState(null);
+  // FIX: a registered patient's booking form has no name/phone step (only
+  // guests get one), yet the save check below requires both — so a
+  // registered patient's booking used to dead-end on "اكتب اسمك" every time.
+  // Prefill from the patient's own record instead, exactly as if a guest had
+  // typed them in. A patient with no phone on file still blocks on that check.
   const [bookForm, setBookForm] = useState({
     clinic: "",
     date: "",
@@ -16291,8 +16296,8 @@ function PatientApp({
     type: "فحص روتيني",
     notes: "",
     isNew: patient.isGuest,
-    newName: "",
-    newPhone: ""
+    newName: patient.isGuest ? "" : (patient.name || ""),
+    newPhone: patient.isGuest ? "" : (patient.phone || "")
   });
   const [booking, setBooking] = useState(false);
   const [bookDone, setBookDone] = useState(false);
@@ -16836,8 +16841,8 @@ function PatientApp({
         type: "فحص روتيني",
         notes: "",
         isNew: patient.isGuest,
-        newName: "",
-        newPhone: ""
+        newName: patient.isGuest ? "" : (patient.name || ""),
+        newPhone: patient.isGuest ? "" : (patient.phone || "")
       });
     },
     style: {
