@@ -5468,6 +5468,53 @@ function PatientFile({
     setCurPatient(updated);
     setModal(null);
   };
+  // Opt-in React view (src/screens/PatientFile.jsx): all state, effects and
+  // handlers above stay here; only the rendering moves. The four handlers
+  // below are the inline JSX handlers of the legacy tree, kept in this file.
+  if (useNewScreen("PatientFile")) return React.createElement(window.IAppModules.screens.PatientFile, {
+    ctx: {
+      TABS, aiAnalysis, allRequestTests, analyzeImage, clinic, coreJourneyCount, coreJourneyEvents,
+      coreSource, curPatient, cycleRequestEye, delImage, delTarget, doctorNames, exams,
+      handleImgUpload, handlePatientSave, imageEye, imageFilter, imageType, images, imagingOrders,
+      imgError, imgLoading, modal, onClose, onSaveExam, onSaveVisit, patient, patientRecords,
+      prices, primaryDoctor, requestEye, requestNotes, requestSaved, requestTests, requests,
+      rxList, savePatientRadiologyRequest, setAiAnalysis, setDelTarget, setImageEye,
+      setImageFilter, setImageType, setImgError, setModal, setRequestEye, setRequestNotes, setTab,
+      setTimelineFilter, setTimelineSearch, setViewImg, tab, timelineFilter, timelineSearch,
+      toggleRequestTest, totalSpent, updateImgNotes, uploadProgress, viewImg, visits,
+      onDeleteRx: rx => {
+        if (window.confirm("نقل هذه الوصفة إلى سلة المحذوفات؟")) {
+          trashPut("iapp_prescriptions", rx, "روشتة");
+          logAudit("حذف روشتة", (rx.date || "") + " · " + (curPatient && curPatient.name || ""));
+          const updated = (allRx || []).filter(r => r.id !== rx.id);
+          if (onSaveRx) onSaveRx(updated);
+        }
+      },
+      onAddRxSave: rx => {
+        const updated = [...(allRx || []), {
+          ...rx,
+          id: Date.now(),
+          patientId: curPatient.id,
+          patient: curPatient.name
+        }];
+        if (onSaveRx) onSaveRx(updated);
+        setModal(null);
+      },
+      onEditRxSave: rx => {
+        const updated = (allRx || []).map(r => r.id === rx.id ? {
+          ...rx,
+          patientId: curPatient.id,
+          patient: curPatient.name
+        } : r);
+        if (onSaveRx) onSaveRx(updated);
+        setModal(null);
+      },
+      onConfirmDelete: () => {
+        delTarget.type === "visit" ? onDelVisit(delTarget.id) : onDelExam(delTarget.id);
+        setDelTarget(null);
+      }
+    }
+  });
   return React.createElement("div", {
     style: {
       position: "fixed",
@@ -17773,7 +17820,9 @@ globalThis.IAppLegacy = Object.assign(globalThis.IAppLegacy || {}, {
   C, clinicLabel, inp, broadcastCall, callChannel,
   Btn, Modal, Confirm, AptForm, sbGet, trashPut, logAudit,
   localISO, useSyncStatus,
-  SC, Tag, PatientForm
+  SC, Tag, PatientForm,
+  TopBar, SecHead, Field, InjectionsSection, PatientEditForm, VisitForm, ExamForm, RxForm, PrintModal,
+  XRAY_ICON, IMAGING_ORDER_STATUSES, getPatientFileHTML, getRadiologyHTML, printDoc
 });
 // New React screens are opt-in: open the app with ?ui=react (remembered), ?ui=legacy to go back.
 function useNewScreen(name) {
