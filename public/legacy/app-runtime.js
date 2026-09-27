@@ -15323,7 +15323,7 @@ function App() {
       onCollect: () => {},
       doctorNames: doctorNames
     }),
-    prescriptions: React.createElement(Prescriptions, {
+    prescriptions: React.createElement(useNewScreen("Prescriptions") ? window.IAppModules.screens.Prescriptions : Prescriptions, {
       prescriptions: prescriptions,
       setRx: setRx,
       patients: patients,
