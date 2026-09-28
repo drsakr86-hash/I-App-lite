@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { listPatients, isNewToday } from '../modules/patients/list.js';
 import { Modal, Confirm, Btn } from '../components/common.jsx';
+import { PatientForm } from '../components/forms/index.js';
 
 const L = () => globalThis.IAppLegacy;
 
@@ -10,7 +11,7 @@ const L = () => globalThis.IAppLegacy;
 export default function Patients({
   patients = [], search = '', setSearch, addP, updP, delP, onOpenFile, session, initNewName, onInitDone
 }) {
-  const { C, SC, Tag, PatientForm } = L();
+  const { C, SC, Tag } = L();
   const [modal, setModal] = useState(null);
   const filtered = listPatients(patients, search);
   const close = () => setModal(null);

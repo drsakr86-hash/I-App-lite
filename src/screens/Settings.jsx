@@ -6,6 +6,7 @@ import {
   LAST_ADMIN_DELETE_ALERT
 } from '../modules/settings/model.js';
 import { Modal, Confirm, Btn } from '../components/common.jsx';
+import { DoctorForm, PriceForm, UserForm } from '../components/forms/index.js';
 
 const L = () => globalThis.IAppLegacy;
 
@@ -15,7 +16,7 @@ export default function Settings({
 }) {
   const {
     C, Field, inp, logAudit, getSB, localISO,
-    DoctorForm, PriceForm, UserForm, DataTools, getUsers, newId, emailKey,
+    DataTools, getUsers, newId, emailKey,
     ROLE_LABEL, MIN_PW_LEN, GUARD_KEY, saveAutoBackup
   } = L();
 
