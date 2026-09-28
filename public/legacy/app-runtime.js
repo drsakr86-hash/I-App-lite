@@ -17311,6 +17311,15 @@ globalThis.IAppLegacy = Object.assign(globalThis.IAppLegacy || {}, {
   useTheme, setTheme, MedicinesStep,
   authenticateStaff, getGlassesHTML, getRxHTML
 });
+// Additive bridge extension for the doctor-app shell migration (Phase 6, batch 1):
+// exposes legacy pieces App() needs (its own state/effects/data hooks stay in
+// app-runtime.js; only the already-side-effect-free/legacy-component pieces are
+// exposed here). Nothing above is modified or removed.
+globalThis.IAppLegacy = Object.assign(globalThis.IAppLegacy, {
+  useDB, SEED, saveUsers, refreshPending, getDailyReportHTML,
+  Dashboard, Appointments, Prescriptions, Radiology, ImagingCenter, Accounting, Settings, Patients,
+  BottomNav, FollowUpCentre, GlobalSearch
+});
 // New React screens are opt-in: open the app with ?ui=react (remembered), ?ui=legacy to go back.
 function useNewScreen(name) {
   try {
@@ -20029,7 +20038,7 @@ function UnifiedRouter() {
   if (routeView === "secretary") return React.createElement(useNewScreen("SecretaryApp") ? window.IAppModules.screens.SecretaryApp : SecretaryApp, {
     key: "sec-" + session.id + "-" + session.role
   });
-  return React.createElement(App, {
+  return React.createElement(useNewScreen("App") ? window.IAppModules.screens.App : App, {
     key: "doc-" + session.id + "-" + session.role
   });
 }
