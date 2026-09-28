@@ -1008,33 +1008,14 @@ function useSyncStatus() {
       SyncStore.subs.delete(setS);
     };
   }, []);
-  const offline = s.online === false || s.reachable === false;
-  const failedCount = Object.keys(s.errors || {}).length;
-  let label, color;
-  if (s.authError && !offline) {
-    label = s.pending > 0 ? `⚠️ الجلسة منتهية — سجّل الخروج ثم الدخول لمزامنة ${s.pending} عناصر` : "⚠️ الجلسة منتهية — سجّل الدخول من جديد";
-    color = C.danger;
-  } else if (offline) {
-    label = s.pending > 0 ? `بدون اتصال · ${s.pending} عناصر معلّقة` : "بدون اتصال";
-    color = C.danger;
-  } else if (s.syncing) {
-    label = "جاري المزامنة...";
-    color = C.gold;
-  } else if (s.pending > 0) {
-    const _errs = Object.values(s.errors || {});
-    label = `في انتظار المزامنة · ${s.pending} عناصر بيانات` + (_errs.length ? ` — ${_errs[0]}` : "");
-    color = C.gold;
-  } else {
-    label = "متصل ومحدّث";
-    color = C.success;
-  }
+  const view = window.IAppModules.sync.syncStatusView(s);
   return {
     ...s,
-    offline,
-    failedCount,
-    label,
-    color,
-    busy: offline || s.syncing || s.pending > 0
+    offline: view.offline,
+    failedCount: view.failedCount,
+    label: view.label,
+    color: C[view.colorKey],
+    busy: view.busy
   };
 }
 const dbBus = {};

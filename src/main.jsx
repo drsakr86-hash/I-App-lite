@@ -11,7 +11,7 @@ import { syncExaminationCore } from './modules/examinations/index.js';
 import { createPrescriptionCore, prescriptionParamsFromLegacy } from './modules/prescriptions/index.js';
 import { createInvestigationWorkflow, completeInvestigation, imagingRequestParams, singleImagingOrderParams } from './modules/investigations/index.js';
 import { createImagingStudy, imagingStudyParams } from './modules/imaging/index.js';
-import { mergeData, createFlusher } from './modules/sync/index.js';
+import { mergeData, createFlusher, syncStatusView } from './modules/sync/index.js';
 import { appointmentFromRow, appointmentToRow, diffAppointments, finishQueueEntries } from './modules/appointments/index.js';
 import { can, ROLES } from './app/permissions.js';
 import {
@@ -54,7 +54,7 @@ globalThis.IAppModules.prescriptions = { createPrescriptionCore, paramsFromLegac
 globalThis.IAppModules.investigations = { createInvestigationWorkflow, completeInvestigation, imagingRequestParams, singleImagingOrderParams };
 globalThis.IAppModules.imaging = { createImagingStudy, studyParams: imagingStudyParams };
 
-globalThis.IAppModules.sync = { mergeData, createFlusher };
+globalThis.IAppModules.sync = { mergeData, createFlusher, syncStatusView };
 globalThis.IAppModules.appointments = { fromRow: appointmentFromRow, toRow: appointmentToRow, diff: diffAppointments, finishQueue: finishQueueEntries };
 globalThis.IAppModules.auth = {
   can,
