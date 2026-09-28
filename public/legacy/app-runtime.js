@@ -19254,7 +19254,8 @@ function UnifiedLogin({
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const choose = m => {
-    setMode(PATIENT_FILE_LOGIN ? m : m === "patient" ? "guest" : m);
+    // Delegates to src/modules/auth/unified-login-view.js (unit-tested); behavior unchanged.
+    setMode(window.IAppModules.auth.nextLoginMode(PATIENT_FILE_LOGIN, m));
     setError("");
   };
   const submit = async e => {
@@ -19262,7 +19263,8 @@ function UnifiedLogin({
     setError("");
     if (loading) return;
     if (mode === "staff") {
-      if (!username.trim() || !password) {
+      // Delegates to src/modules/auth/unified-login-view.js (unit-tested); behavior unchanged.
+      if (window.IAppModules.auth.staffLoginFieldsMissing(username, password)) {
         setError("❌ أدخل البريد الإلكتروني وكلمة المرور");
         return;
       }
@@ -19279,11 +19281,12 @@ function UnifiedLogin({
         user: r.user
       }, remember);
     } else if (mode === "patient") {
-      if (!code.trim() || !name.trim()) {
+      // Delegates to src/modules/auth/unified-login-view.js (unit-tested); behavior unchanged.
+      if (window.IAppModules.auth.patientLoginFieldsMissing(code, name)) {
         setError("❌ أدخل رقم الملف والاسم الكامل");
         return;
       }
-      const pkey = "patient:" + code.trim().toUpperCase();
+      const pkey = window.IAppModules.auth.patientLoginLockKey(code);
       const wait = lockRemaining(pkey);
       if (wait) {
         setError("⏳ محاولات خاطئة كثيرة — حاول بعد " + fmtWait(wait));
@@ -19297,8 +19300,7 @@ function UnifiedLogin({
         setError(KIOSK_EMAIL ? "❌ تعذر الاتصال بقاعدة البيانات" : "❌ بوابة المريض غير مفعّلة حالياً — تواصل مع العيادة للحجز");
         return;
       }
-      const codeKey = code.trim().toUpperCase().replace(/^P-?/, "").replace(/^0+/, "");
-      const p = patients.find(x => String(x.patientCode || "").toUpperCase().replace(/^P-?/, "").replace(/^0+/, "") === codeKey && normArabic(x.name) === normArabic(name));
+      const p = window.IAppModules.auth.findPatientByCodeAndName(patients, code, name);
       if (!p) {
         const w = registerLoginFail(pkey);
         setError(w ? "⏳ تم إيقاف الدخول مؤقتاً — حاول بعد " + fmtWait(w) : "❌ رقم الملف أو الاسم غير صحيح");
@@ -20010,17 +20012,21 @@ function UnifiedRouter() {
     onLogin: login
   });
   CURRENT_USER = session.kind === "staff" ? session : null;
-  if (session.kind === "patient") return React.createElement(useNewScreen("PatientApp") ? window.IAppModules.screens.PatientApp : PatientApp, {
+  // Delegates to src/modules/auth/router-view.js (unit-tested); behavior unchanged.
+  // ready/session are already known truthy here, so this only ever resolves
+  // to one of: patient, blocked, force-password-change, secretary, doctor.
+  const routeView = window.IAppModules.auth.routeViewFor({ ready, session, invalidRole });
+  if (routeView === "patient") return React.createElement(useNewScreen("PatientApp") ? window.IAppModules.screens.PatientApp : PatientApp, {
     patient: session.patient,
     onLogout: logout
   });
-  if (invalidRole) return null;
-  if (session.mustChange && !session.email) return React.createElement(ForcePasswordChange, {
+  if (routeView === "blocked") return null;
+  if (routeView === "force-password-change") return React.createElement(ForcePasswordChange, {
     user: session,
     onLogout: logout,
     onDone: () => setSession(loadValidSession())
   });
-  if (session.role === "secretary" || session.role === "employee") return React.createElement(useNewScreen("SecretaryApp") ? window.IAppModules.screens.SecretaryApp : SecretaryApp, {
+  if (routeView === "secretary") return React.createElement(useNewScreen("SecretaryApp") ? window.IAppModules.screens.SecretaryApp : SecretaryApp, {
     key: "sec-" + session.id + "-" + session.role
   });
   return React.createElement(App, {

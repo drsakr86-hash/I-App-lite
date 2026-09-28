@@ -23,6 +23,11 @@ import {
   isStaffRole, isInvalidStaffSession, isSessionExpired, sessionExpiry,
   mergeFreshStaffSession, staffSessionDrifted, buildStaffSessionRecord, buildPatientSessionRecord
 } from './modules/auth/session.js';
+import { routeViewFor } from './modules/auth/router-view.js';
+import {
+  nextLoginMode, staffLoginFieldsMissing, patientLoginFieldsMissing,
+  findPatientByCodeAndName, patientLoginLockKey
+} from './modules/auth/unified-login-view.js';
 import WaitingRoomScreen from './screens/WaitingRoom.jsx';
 import AppointmentsScreen from './screens/Appointments.jsx';
 import DashboardScreen from './screens/Dashboard.jsx';
@@ -75,7 +80,14 @@ globalThis.IAppModules.auth = {
   // unit-tested and ready for the eventual standalone auth flow.
   STAFF_ROLES, SESSION_TTL_REMEMBER, SESSION_TTL_TEMP, publicUser, buildCompactSession,
   isStaffRole, isInvalidStaffSession, isSessionExpired, sessionExpiry,
-  mergeFreshStaffSession, staffSessionDrifted, buildStaffSessionRecord, buildPatientSessionRecord
+  mergeFreshStaffSession, staffSessionDrifted, buildStaffSessionRecord, buildPatientSessionRecord,
+  // Pure routing/login-form decisions used by the legacy UnifiedRouter and
+  // UnifiedLogin (Phase 5, part A) — see src/modules/auth/router-view.js and
+  // unified-login-view.js. resolveProfile's auto-admin-provisioning and every
+  // actual network/Supabase/localStorage call stay untouched in the legacy
+  // runtime; nothing here changes today's login/session behavior.
+  routeViewFor, nextLoginMode, staffLoginFieldsMissing, patientLoginFieldsMissing,
+  findPatientByCodeAndName, patientLoginLockKey
 };
 globalThis.IAppModules.screens = { WaitingRoom: WaitingRoomScreen, Appointments: AppointmentsScreen, Dashboard: DashboardScreen, Patients: PatientsScreen, PatientFile: PatientFileScreen, Prescriptions: PrescriptionsScreen, Radiology: RadiologyScreen, ImagingCenter: ImagingCenterScreen, Accounting: AccountingScreen, Settings: SettingsScreen, SecretaryApp: SecretaryAppScreen, PatientApp: PatientAppScreen };
 globalThis.IAppModules.storage = { normalizeFileMeta, resolveFileUrl };
