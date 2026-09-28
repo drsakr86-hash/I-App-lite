@@ -43,6 +43,7 @@ import SecretaryAppScreen from './screens/SecretaryApp.jsx';
 import PatientAppScreen from './screens/PatientApp.jsx';
 import AppScreen from './screens/App.jsx';
 import { normalizeFileMeta, resolveFileUrl } from './services/storage.js';
+import { screenPreferenceToStore, isNewScreenPreferred } from './modules/ui/screen-preference.js';
 
 // Migration bridge: keep the proven production runtime intact while the
 // build system and service layer move to Vite. The legacy runtime reaches the
@@ -103,6 +104,9 @@ globalThis.IAppModules.auth = {
 };
 globalThis.IAppModules.screens = { WaitingRoom: WaitingRoomScreen, Appointments: AppointmentsScreen, Dashboard: DashboardScreen, Patients: PatientsScreen, PatientFile: PatientFileScreen, Prescriptions: PrescriptionsScreen, Radiology: RadiologyScreen, ImagingCenter: ImagingCenterScreen, Accounting: AccountingScreen, Settings: SettingsScreen, SecretaryApp: SecretaryAppScreen, PatientApp: PatientAppScreen, App: AppScreen };
 globalThis.IAppModules.storage = { normalizeFileMeta, resolveFileUrl };
+// Phase 7 — pure decision logic behind useNewScreen()'s default flip; see
+// src/modules/ui/screen-preference.js.
+globalThis.IAppModules.ui = { screenPreferenceToStore, isNewScreenPreferred };
 
 const legacyScript = document.createElement('script');
 legacyScript.src = import.meta.env.BASE_URL + 'legacy/app-runtime.js?v=' + __BUILD_ID__;
@@ -114,7 +118,7 @@ document.body.appendChild(legacyScript);
 // Offline support (production build only; the dev server must not be cached).
 if (import.meta.env.PROD && 'serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register(import.meta.env.BASE_URL + 'sw.js?v=20260927')
+    navigator.serviceWorker.register(import.meta.env.BASE_URL + 'sw.js?v=20260928')
       .catch(e => console.warn('SW register failed', e));
   });
 }

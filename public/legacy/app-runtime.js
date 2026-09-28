@@ -17323,13 +17323,21 @@ globalThis.IAppLegacy = Object.assign(globalThis.IAppLegacy, {
   Dashboard, Appointments, Prescriptions, Radiology, ImagingCenter, Accounting, Settings, Patients,
   BottomNav, FollowUpCentre, GlobalSearch
 });
-// New React screens are opt-in: open the app with ?ui=react (remembered), ?ui=legacy to go back.
+// Phase 7: React is now the DEFAULT UI for everyone (staff and patients),
+// per screen. ?ui=legacy is the opt-out (remembered per device, exactly
+// mirroring how ?ui=react used to be the remembered opt-in) — anyone who
+// hits a problem can add ?ui=legacy once to fall back to the old screen on
+// that device. A device that already stored an explicit "react" choice from
+// earlier testing keeps behaving exactly as before (no change for it).
+// Delegates to src/modules/ui/screen-preference.js (unit-tested); only the
+// actual URL/localStorage reads and writes stay here.
 function useNewScreen(name) {
   try {
     const q = new URLSearchParams(location.search).get("ui");
-    if (q === "react") localStorage.setItem("iapp_ui_" + name, "react");
-    if (q === "legacy") localStorage.removeItem("iapp_ui_" + name);
-    return localStorage.getItem("iapp_ui_" + name) === "react" && !!(window.IAppModules.screens || {})[name];
+    const key = "iapp_ui_" + name;
+    const toStore = window.IAppModules.ui.screenPreferenceToStore(q);
+    if (toStore) localStorage.setItem(key, toStore);
+    return window.IAppModules.ui.isNewScreenPreferred(localStorage.getItem(key)) && !!(window.IAppModules.screens || {})[name];
   } catch {
     return false;
   }

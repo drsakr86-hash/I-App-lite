@@ -1,5 +1,5 @@
 // I App — Service Worker
-const VERSION = "iapp-v9-20260927";
+const VERSION = "iapp-v10-20260928"; // Phase 7: React default for everyone — clean cache slate
 const SHELL = "iapp-shell-" + VERSION;
 const IMGS = "iapp-img-" + VERSION;
 const FONTS = "iapp-font-" + VERSION;
