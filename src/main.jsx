@@ -12,6 +12,10 @@ import { createPrescriptionCore, prescriptionParamsFromLegacy } from './modules/
 import { createInvestigationWorkflow, completeInvestigation, imagingRequestParams, singleImagingOrderParams } from './modules/investigations/index.js';
 import { createImagingStudy, imagingStudyParams } from './modules/imaging/index.js';
 import { mergeData, createFlusher, syncStatusView } from './modules/sync/index.js';
+import {
+  getDailyReportHTML, getPatientFileHTML, getRxHTML, getGlassesHTML,
+  getRadiologyHTML, getAccountingReportHTML
+} from './modules/print/index.js';
 import { appointmentFromRow, appointmentToRow, diffAppointments, finishQueueEntries } from './modules/appointments/index.js';
 import { can, ROLES } from './app/permissions.js';
 import {
@@ -55,6 +59,10 @@ globalThis.IAppModules.investigations = { createInvestigationWorkflow, completeI
 globalThis.IAppModules.imaging = { createImagingStudy, studyParams: imagingStudyParams };
 
 globalThis.IAppModules.sync = { mergeData, createFlusher, syncStatusView };
+globalThis.IAppModules.print = {
+  getDailyReportHTML, getPatientFileHTML, getRxHTML, getGlassesHTML,
+  getRadiologyHTML, getAccountingReportHTML
+};
 globalThis.IAppModules.appointments = { fromRow: appointmentFromRow, toRow: appointmentToRow, diff: diffAppointments, finishQueue: finishQueueEntries };
 globalThis.IAppModules.auth = {
   can,
