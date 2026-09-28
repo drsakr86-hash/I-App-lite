@@ -13,6 +13,7 @@ import ImagesTab from './patient-file/ImagesTab.jsx';
 import ImageViewer from './patient-file/ImageViewer.jsx';
 import { Modal, Confirm } from '../components/common.jsx';
 import { PatientEditForm, RxForm, VisitForm, ExamForm } from '../components/forms/index.js';
+import { PrintModal } from '../components/modals/index.js';
 
 const L = () => globalThis.IAppLegacy;
 
@@ -20,11 +21,10 @@ const L = () => globalThis.IAppLegacy;
 // the Core 360 load, uploads, saves and deletes stay in the legacy
 // PatientFile function, which passes its values and handlers in `ctx`.
 // Child forms (VisitForm, ExamForm, RxForm, PatientEditForm) come from
-// src/components/forms; PrintModal is still the legacy component, reached
-// through globalThis.IAppLegacy.
+// src/components/forms and PrintModal from src/components/modals.
 export default function PatientFile({ ctx }) {
   const {
-    C, SC, Tag, TopBar, PrintModal,
+    C, SC, Tag, TopBar,
     XRAY_ICON, getPatientFileHTML, printDoc
   } = L();
   const {

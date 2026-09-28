@@ -17834,7 +17834,8 @@ globalThis.IAppLegacy = Object.assign(globalThis.IAppLegacy || {}, {
   sbMutate, BOOKING_TABLE, LoginScreen, SecretaryAptForm, CollectModal, RemindersModal, Toast, ThemeToggle,
   waOpen, waReminderText, CLINICS_LIST, WaitingRoom, useNewScreen,
   BookingForm, PATIENT_CLINICS, CLINIC_CODE, clinicDisplay,
-  useTheme, setTheme, MedicinesStep
+  useTheme, setTheme, MedicinesStep,
+  authenticateStaff, getGlassesHTML, getRxHTML
 });
 // New React screens are opt-in: open the app with ?ui=react (remembered), ?ui=legacy to go back.
 function useNewScreen(name) {

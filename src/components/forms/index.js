@@ -10,3 +10,7 @@ export { default as RxForm } from './RxForm.jsx';
 export { default as PriceForm } from './PriceForm.jsx';
 export { default as DoctorForm } from './DoctorForm.jsx';
 export { default as UserForm } from './UserForm.jsx';
+export { default as LoginScreen } from './LoginScreen.jsx';
+export { default as SecretaryAptForm } from './SecretaryAptForm.jsx';
+export { default as CollectModal } from './CollectModal.jsx';
+export { default as BookingForm } from './BookingForm.jsx';

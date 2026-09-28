@@ -8,6 +8,8 @@ import {
   todayDoctorNames, collectedToday, unpaidTodayCount, clinicStats, typeStats, requestsTabLabel, waCardHref
 } from "../modules/secretary-app/model.js";
 import { Modal, Toast, ThemeToggle } from "../components/common.jsx";
+import { LoginScreen, SecretaryAptForm, CollectModal } from "../components/forms/index.js";
+import { RemindersModal } from "../components/modals/index.js";
 
 const L = () => globalThis.IAppLegacy;
 
@@ -40,7 +42,6 @@ export default function SecretaryApp() {
   const {
     C, inp, localISO, useSyncStatus, clinicLabel,
     sbGet, sbMutate, getSB, trashPut, logAudit, newId, BOOKING_TABLE,
-    LoginScreen, SecretaryAptForm, CollectModal, RemindersModal,
     waOpen, waReminderText, CLINICS_LIST, WaitingRoom, useNewScreen
   } = L();
   const [session, setSession] = useState(() => {

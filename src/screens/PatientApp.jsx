@@ -9,6 +9,7 @@ import {
   headerAvatar, headerName, headerSub, firstName, nextAptPlace, clinicWaHref, rxMedicineLines, examVitals
 } from "../modules/patient-app/model.js";
 import { Modal, Toast } from "../components/common.jsx";
+import { BookingForm } from "../components/forms/index.js";
 
 const L = () => globalThis.IAppLegacy;
 
@@ -102,7 +103,7 @@ function RatingPrompt({ visit, patient, onDone }) {
 export default function PatientApp({ patient, onLogout }) {
   const {
     C, localISO, sbGet, sbMutate, getSB, BOOKING_TABLE,
-    BookingForm, PATIENT_CLINICS, CLINIC_CODE, clinicDisplay
+    PATIENT_CLINICS, CLINIC_CODE, clinicDisplay
   } = L();
   const [tab, setTab] = useState(initialTab(patient));
   const [appointments, setAppointments] = useState([]);
