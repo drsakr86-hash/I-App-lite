@@ -4,11 +4,12 @@ import {
   toggleSelection, cycleEyeValue, selectAllInCategory, addCustomTest, removeCustomTest,
   filterVisibleTests, filterPatientResults, buildRequestedTests, buildExamRecord
 } from '../modules/radiology/model.js';
+import { Btn } from '../components/common.jsx';
 
 const L = () => globalThis.IAppLegacy;
 
 export default function Radiology({ patients, customTests, setCustomTests, setExams, primary, clinic }) {
-  const { C, Btn, Field, inp, sbGet, localISO, getRadiologyHTML, printDoc } = L();
+  const { C, Field, inp, sbGet, localISO, getRadiologyHTML, printDoc } = L();
   const CAT_COLORS = {
     'شبكية': C.accent,
     'جلوكوما': C.teal,

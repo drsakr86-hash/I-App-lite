@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ALL_DOCTORS, listAppointments, countDone, findPatientForApt, whatsappReminderUrl } from '../modules/appointments/index.js';
+import { Modal, Confirm, Btn } from '../components/common.jsx';
 
 const L = () => globalThis.IAppLegacy;
 
@@ -10,7 +11,7 @@ const iconBox = (C, bg, extra = {}) => ({
 });
 
 export default function Appointments({ appointments, setAppointments, doctorNames = [], patients = [], onPatientClick, session }) {
-  const { C, clinicLabel, Btn, Modal, Confirm, AptForm, sbGet, trashPut, logAudit } = L();
+  const { C, clinicLabel, AptForm, sbGet, trashPut, logAudit } = L();
   const [filter, setFilter] = useState(ALL_DOCTORS);
   const [showDone, setShowDone] = useState(false);
   const [modal, setModal] = useState(null);

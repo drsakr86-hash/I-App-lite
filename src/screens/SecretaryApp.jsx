@@ -7,6 +7,7 @@ import {
   countPendingFromPatient, countWaitingToday, countToday, countConfirmed, filterSecretaryApts,
   todayDoctorNames, collectedToday, unpaidTodayCount, clinicStats, typeStats, requestsTabLabel, waCardHref
 } from "../modules/secretary-app/model.js";
+import { Modal, Toast, ThemeToggle } from "../components/common.jsx";
 
 const L = () => globalThis.IAppLegacy;
 
@@ -37,9 +38,9 @@ const badge = (bg, color) => ({ background: bg, color, borderRadius: 6, padding:
 
 export default function SecretaryApp() {
   const {
-    C, Modal, inp, localISO, useSyncStatus, clinicLabel,
+    C, inp, localISO, useSyncStatus, clinicLabel,
     sbGet, sbMutate, getSB, trashPut, logAudit, newId, BOOKING_TABLE,
-    LoginScreen, SecretaryAptForm, CollectModal, RemindersModal, Toast, ThemeToggle,
+    LoginScreen, SecretaryAptForm, CollectModal, RemindersModal,
     waOpen, waReminderText, CLINICS_LIST, WaitingRoom, useNewScreen
   } = L();
   const [session, setSession] = useState(() => {

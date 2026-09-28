@@ -8,6 +8,7 @@ import {
   markVisitRatedIn, canSubmitRating, buildRatingRecord, appendRating,
   headerAvatar, headerName, headerSub, firstName, nextAptPlace, clinicWaHref, rxMedicineLines, examVitals
 } from "../modules/patient-app/model.js";
+import { Modal, Toast } from "../components/common.jsx";
 
 const L = () => globalThis.IAppLegacy;
 
@@ -100,7 +101,7 @@ function RatingPrompt({ visit, patient, onDone }) {
 
 export default function PatientApp({ patient, onLogout }) {
   const {
-    C, Modal, Toast, localISO, sbGet, sbMutate, getSB, BOOKING_TABLE,
+    C, localISO, sbGet, sbMutate, getSB, BOOKING_TABLE,
     BookingForm, PATIENT_CLINICS, CLINIC_CODE, clinicDisplay
   } = L();
   const [tab, setTab] = useState(initialTab(patient));

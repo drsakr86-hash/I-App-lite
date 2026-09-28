@@ -5,6 +5,7 @@ import {
   primaryDoctor, passwordFormError, buildDatabaseSummaryRows, STATIC_INFO_ROWS,
   LAST_ADMIN_DELETE_ALERT
 } from '../modules/settings/model.js';
+import { Modal, Confirm, Btn } from '../components/common.jsx';
 
 const L = () => globalThis.IAppLegacy;
 
@@ -13,7 +14,7 @@ export default function Settings({
   clinic, setClinic, onReset, users, setUsers, session, onLogout
 }) {
   const {
-    C, Btn, Modal, Confirm, Field, inp, logAudit, getSB, localISO,
+    C, Field, inp, logAudit, getSB, localISO,
     DoctorForm, PriceForm, UserForm, DataTools, getUsers, newId, emailKey,
     ROLE_LABEL, MIN_PW_LEN, GUARD_KEY, saveAutoBackup
   } = L();

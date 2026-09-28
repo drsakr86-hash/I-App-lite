@@ -3,12 +3,13 @@ import {
   filterImagingPatients, filterStudies, pendingOrdersForPatient, findImagingType, buildTypeFilters,
   resolveStudyTarget, buildStudyRecord, buildImageMeta, buildImagingExamRecord
 } from "../modules/imaging/model.js";
+import { Modal, Btn } from "../components/common.jsx";
 
 const L = () => globalThis.IAppLegacy;
 
 export default function ImagingCenter({ patients, primary, clinic }) {
   const {
-    C, Btn, Modal, Field, inp, SecHead, Tag, printDoc,
+    C, Field, inp, SecHead, Tag, printDoc,
     sbGet, sbSet, getSB, iappRpc, offlineNow, trashPut, logAudit,
     localDateStr, localTimeStr,
     IMAGING_TYPES, IMAGING_EYES, IMAGING_REPORT_TEMPLATES, IMAGING_ORDER_STATUSES,

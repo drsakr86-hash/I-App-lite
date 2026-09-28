@@ -17833,7 +17833,8 @@ globalThis.IAppLegacy = Object.assign(globalThis.IAppLegacy || {}, {
   DoctorForm, PriceForm, UserForm, DataTools, getUsers, newId, emailKey, ROLE_LABEL, MIN_PW_LEN, GUARD_KEY, saveAutoBackup,
   sbMutate, BOOKING_TABLE, LoginScreen, SecretaryAptForm, CollectModal, RemindersModal, Toast, ThemeToggle,
   waOpen, waReminderText, CLINICS_LIST, WaitingRoom, useNewScreen,
-  BookingForm, PATIENT_CLINICS, CLINIC_CODE, clinicDisplay
+  BookingForm, PATIENT_CLINICS, CLINIC_CODE, clinicDisplay,
+  useTheme, setTheme
 });
 // New React screens are opt-in: open the app with ?ui=react (remembered), ?ui=legacy to go back.
 function useNewScreen(name) {

@@ -11,6 +11,7 @@ import TreatmentTab from './patient-file/TreatmentTab.jsx';
 import RxTab from './patient-file/RxTab.jsx';
 import ImagesTab from './patient-file/ImagesTab.jsx';
 import ImageViewer from './patient-file/ImageViewer.jsx';
+import { Modal, Confirm } from '../components/common.jsx';
 
 const L = () => globalThis.IAppLegacy;
 
@@ -21,7 +22,7 @@ const L = () => globalThis.IAppLegacy;
 // legacy components, reached through globalThis.IAppLegacy.
 export default function PatientFile({ ctx }) {
   const {
-    C, SC, Tag, TopBar, Modal, Confirm, PatientEditForm, RxForm, VisitForm, ExamForm, PrintModal,
+    C, SC, Tag, TopBar, PatientEditForm, RxForm, VisitForm, ExamForm, PrintModal,
     XRAY_ICON, getPatientFileHTML, printDoc
   } = L();
   const {

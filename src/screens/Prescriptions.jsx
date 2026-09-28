@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { findPatientForRx, eyeRows } from '../modules/prescriptions/index.js';
+import { Modal, Confirm, Btn } from '../components/common.jsx';
 
 const L = () => globalThis.IAppLegacy;
 
@@ -9,7 +10,7 @@ const iconBtn = (bg, color, extra = {}) => ({
 });
 
 export default function Prescriptions({ prescriptions, setRx, patients, doctorNames = [], primaryDoctor, clinic }) {
-  const { C, Btn, Modal, Confirm, RxForm, PrintModal, trashPut, logAudit } = L();
+  const { C, RxForm, PrintModal, trashPut, logAudit } = L();
   const [modal, setModal] = useState(null);
   const [viewRx, setViewRx] = useState(null);
   const [printRx, setPrintRx] = useState(null);
