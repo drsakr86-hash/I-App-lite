@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { routeViewFor } from '../src/modules/auth/router-view.js';
+import { routeViewFor, pathForRouteView } from '../src/modules/auth/router-view.js';
 
 test('router view: not ready yet -> loading', () => {
   assert.equal(routeViewFor({ ready: false, session: null, invalidRole: false }), 'loading');
@@ -38,4 +38,20 @@ test('router view: secretary and employee roles both route to secretary', () => 
 test('router view: admin/doctor roles fall through to the doctor app', () => {
   assert.equal(routeViewFor({ ready: true, session: { kind: 'staff', role: 'admin' }, invalidRole: false }), 'doctor');
   assert.equal(routeViewFor({ ready: true, session: { kind: 'staff', role: 'doctor' }, invalidRole: false }), 'doctor');
+});
+
+// ---- pathForRouteView ----
+test('pathForRouteView: every known routeViewFor() result maps to its own path', () => {
+  assert.equal(pathForRouteView('loading'), '/loading');
+  assert.equal(pathForRouteView('login'), '/login');
+  assert.equal(pathForRouteView('patient'), '/patient');
+  assert.equal(pathForRouteView('blocked'), '/blocked');
+  assert.equal(pathForRouteView('force-password-change'), '/force-password-change');
+  assert.equal(pathForRouteView('secretary'), '/secretary');
+  assert.equal(pathForRouteView('doctor'), '/doctor');
+});
+
+test('pathForRouteView: an unrecognized key falls back to /login rather than throwing', () => {
+  assert.equal(pathForRouteView('something-unexpected'), '/login');
+  assert.equal(pathForRouteView(undefined), '/login');
 });

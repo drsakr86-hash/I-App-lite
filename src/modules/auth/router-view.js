@@ -13,3 +13,23 @@ export function routeViewFor({ ready, session, invalidRole }) {
   if (session.role === 'secretary' || session.role === 'employee') return 'secretary';
   return 'doctor';
 }
+
+// Phase 6, batch 2 (real routing, part A): maps a routeViewFor() result to a
+// URL path so UnifiedRouter can keep the address bar (a HashRouter hash) in
+// sync with the session-derived view. This is purely a URL reflection of
+// state — it does not change which component renders for a given state, and
+// an unknown/unexpected key safely falls back to '/login' rather than
+// throwing or exposing a blank route.
+const ROUTE_PATH = {
+  loading: '/loading',
+  login: '/login',
+  patient: '/patient',
+  blocked: '/blocked',
+  'force-password-change': '/force-password-change',
+  secretary: '/secretary',
+  doctor: '/doctor'
+};
+
+export function pathForRouteView(routeView) {
+  return ROUTE_PATH[routeView] || '/login';
+}

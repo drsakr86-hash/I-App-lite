@@ -1,5 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import { HashRouter, useNavigate, useLocation } from 'react-router-dom';
 import { createClient } from '@supabase/supabase-js';
 import './styles/legacy.css';
 import { getSupabaseClient, SUPABASE_URL, SUPABASE_KEY } from './services/supabase.js';
@@ -23,7 +24,7 @@ import {
   isStaffRole, isInvalidStaffSession, isSessionExpired, sessionExpiry,
   mergeFreshStaffSession, staffSessionDrifted, buildStaffSessionRecord, buildPatientSessionRecord
 } from './modules/auth/session.js';
-import { routeViewFor } from './modules/auth/router-view.js';
+import { routeViewFor, pathForRouteView } from './modules/auth/router-view.js';
 import {
   nextLoginMode, staffLoginFieldsMissing, patientLoginFieldsMissing,
   findPatientByCodeAndName, patientLoginLockKey
@@ -49,6 +50,12 @@ import { normalizeFileMeta, resolveFileUrl } from './services/storage.js';
 // fallback to its own inline implementation if a module is missing.
 globalThis.React = React;
 globalThis.ReactDOM = ReactDOM;
+// Phase 6, batch 2 (real routing, part A): HashRouter needs no server-side
+// rewrite rules, so it works as-is on GitHub Pages (unlike a path-based
+// BrowserRouter, which would 404 on a hard refresh/direct link without one).
+globalThis.HashRouter = HashRouter;
+globalThis.useNavigate = useNavigate;
+globalThis.useLocation = useLocation;
 globalThis.supabase = { createClient };
 // One shared Supabase client (legacy getSB() reuses this instance).
 getSupabaseClient();
@@ -88,7 +95,11 @@ globalThis.IAppModules.auth = {
   // actual network/Supabase/localStorage call stay untouched in the legacy
   // runtime; nothing here changes today's login/session behavior.
   routeViewFor, nextLoginMode, staffLoginFieldsMissing, patientLoginFieldsMissing,
-  findPatientByCodeAndName, patientLoginLockKey
+  findPatientByCodeAndName, patientLoginLockKey,
+  // Phase 6, batch 2 (real routing, part A) — maps routeViewFor()'s result to
+  // a URL path so UnifiedRouter can keep the address bar in sync with the
+  // session-derived view. Doesn't change which component renders.
+  pathForRouteView
 };
 globalThis.IAppModules.screens = { WaitingRoom: WaitingRoomScreen, Appointments: AppointmentsScreen, Dashboard: DashboardScreen, Patients: PatientsScreen, PatientFile: PatientFileScreen, Prescriptions: PrescriptionsScreen, Radiology: RadiologyScreen, ImagingCenter: ImagingCenterScreen, Accounting: AccountingScreen, Settings: SettingsScreen, SecretaryApp: SecretaryAppScreen, PatientApp: PatientAppScreen, App: AppScreen };
 globalThis.IAppModules.storage = { normalizeFileMeta, resolveFileUrl };

@@ -5,6 +5,9 @@ const {
   useCallback,
   useRef
 } = React;
+// Phase 6, batch 2 (real routing, part A): exposed on window by src/main.jsx
+// alongside React/ReactDOM, same pattern.
+const { useNavigate, useLocation } = window;
 if (!window.IAppModules || !window.IAppModules.rpc || !window.IAppModules.patients) {
   document.body.innerHTML = '<p style="font:16px sans-serif;text-align:center;margin:40px">تعذر تحميل وحدات التطبيق — أعد تحميل الصفحة</p>';
   throw new Error("IAppModules bridge is missing");
@@ -20006,7 +20009,24 @@ function UnifiedRouter() {
   useEffect(() => {
     if (invalidRole) logout();
   }, [invalidRole, logout]);
-  if (!ready) return React.createElement("div", {
+  // Delegates to src/modules/auth/router-view.js (unit-tested); behavior unchanged.
+  // routeViewFor already covers every (ready, session) combination — including
+  // "loading" and "login" — so it's now computed unconditionally, up front,
+  // instead of only after separate `!ready`/`!session` early returns.
+  const routeView = window.IAppModules.auth.routeViewFor({ ready, session, invalidRole });
+  // Phase 6, batch 2 (real routing, part A): keep the URL (a HashRouter hash)
+  // in sync with the session-derived view. This only reflects state in the
+  // address bar — it does not change which component renders for a given
+  // state, and does not let a manually-typed URL bypass the real session
+  // check above (routeView is still derived from `session`/`ready`, not from
+  // the URL).
+  const navigate = useNavigate();
+  const location = useLocation();
+  useEffect(() => {
+    const path = window.IAppModules.auth.pathForRouteView(routeView);
+    if (location.pathname !== path) navigate(path, { replace: true });
+  }, [routeView, location.pathname, navigate]);
+  if (routeView === "loading") return React.createElement("div", {
     style: {
       minHeight: "100vh",
       background: C.bg,
@@ -20017,14 +20037,10 @@ function UnifiedRouter() {
       fontFamily: "'Segoe UI','Tahoma',Arial,sans-serif"
     }
   }, "⏳");
-  if (!session) return React.createElement(UnifiedLogin, {
+  if (routeView === "login") return React.createElement(UnifiedLogin, {
     onLogin: login
   });
   CURRENT_USER = session.kind === "staff" ? session : null;
-  // Delegates to src/modules/auth/router-view.js (unit-tested); behavior unchanged.
-  // ready/session are already known truthy here, so this only ever resolves
-  // to one of: patient, blocked, force-password-change, secretary, doctor.
-  const routeView = window.IAppModules.auth.routeViewFor({ ready, session, invalidRole });
   if (routeView === "patient") return React.createElement(useNewScreen("PatientApp") ? window.IAppModules.screens.PatientApp : PatientApp, {
     patient: session.patient,
     onLogout: logout
@@ -20076,4 +20092,7 @@ class UnifiedErrorBoundary extends React.Component {
   }
 }
 const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(React.createElement(ThemeRoot, null));
+// Phase 6, batch 2 (real routing, part A): HashRouter is the only thing new
+// here — ThemeRoot/UnifiedErrorBoundary/UnifiedRouter underneath are otherwise
+// unchanged in structure.
+root.render(React.createElement(window.HashRouter, null, React.createElement(ThemeRoot, null)));
