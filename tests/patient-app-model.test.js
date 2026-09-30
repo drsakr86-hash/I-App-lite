@@ -12,6 +12,10 @@ import {
   markVisitRatedIn, canSubmitRating, buildRatingRecord, appendRating, RATING_STARS,
   headerAvatar, headerName, headerSub, firstName, nextAptPlace, clinicWaHref, rxMedicineLines, examVitals
 } from '../src/modules/patient-app/model.js';
+// CLINIC_CODE/clinicDisplay moved out of app-runtime.js in Phase 8, batch 2
+// (src/modules/constants/clinics.js is now their one source of truth), so
+// they're imported directly rather than scraped from the legacy source text.
+import { CLINIC_CODE, clinicDisplay } from '../src/modules/constants/clinics.js';
 
 // Legacy constants/helpers pulled straight from the runtime so these tests
 // fail if the runtime and the module ever drift apart.
@@ -21,12 +25,8 @@ const legacy = new Function(
   grab(/function normArabic\(s\) \{[\s\S]*?\n\}/) + '\n' +
   grab(/const normPhone = .*;/) + '\n' +
   grab(/const isActiveApt = .*;/) + '\n' +
-  grab(/const CLINIC_CODE = \{[\s\S]*?\n\};/) + '\n' +
-  grab(/const SHORT_TO_NAME = \{[\s\S]*?\n\};/) + '\n' +
-  grab(/const clinicDisplay = .*;/) + '\n' +
-  'return { normArabic, normPhone, isActiveApt, CLINIC_CODE, clinicDisplay };'
+  'return { normArabic, normPhone, isActiveApt };'
 )();
-const { CLINIC_CODE, clinicDisplay } = legacy;
 
 const PATIENT = { id: 501, name: 'أحمد محمود السيد', patientCode: 'P-0501', phone: '01011112222' };
 const GUEST = { id: null, name: 'زائر', patientCode: null, isGuest: true };

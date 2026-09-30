@@ -604,17 +604,9 @@ const SC = {
     return C.danger;
   }
 };
-const CLINICS = [{
-  v: "دمنهور",
-  l: "عيادة دمنهور"
-}, {
-  v: "الرحمانية",
-  l: "عيادة الرحمانية"
-}, {
-  v: "مركز دمنهور للعيون",
-  l: "مركز دمنهور للعيون"
-}];
-const clinicLabel = v => (CLINICS.find(c => c.v === v) || {}).l || v || "—";
+// Phase 8, batch 2: clinic-related constants and lookups moved to
+// src/modules/constants/clinics.js — delegates below instead of redefining.
+const { CLINICS, clinicLabel } = window.IAppModules.constants;
 const SEED = {
   patients: [{
     id: 1,
@@ -847,11 +839,9 @@ const SEED = {
   }],
   recurringExpenses: []
 };
-const EXP_CATS = [["رواتب", "👤"], ["إيجار", "🏢"], ["مستلزمات طبية", "💊"], ["فواتير وخدمات", "🧾"], ["صيانة", "🔧"], ["تسويق", "📣"], ["أخرى", "📦"]];
-const CLINIC_FILTERS = [{
-  v: "",
-  l: "كل العيادات"
-}, ...CLINICS];
+// Phase 8, batch 2: EXP_CATS moved to src/modules/constants/accounting.js,
+// CLINIC_FILTERS to src/modules/constants/clinics.js — delegates below.
+const { EXP_CATS, CLINIC_FILTERS } = window.IAppModules.constants;
 const SB_URL = "https://mofdveiwlaymlabvsypu.supabase.co";
 const SB_KEY = "sb_publishable_tVZ1mUOyb3vOjRV1jBpq6g_P2u-xIqF";
 let _sb = null;
@@ -1134,7 +1124,8 @@ const DEFAULT_ROLES = {
     name: "سكرتارية 3"
   }
 };
-const BOOKING_TABLE = "iapp_booking_requests";
+// Phase 8, batch 2: moved to src/modules/constants/misc.js — delegates below.
+const { BOOKING_TABLE } = window.IAppModules.constants;
 const SLOTS_VIEW = "iapp_slots_taken";
 const KIOSK_EMAIL = "";
 const KIOSK_PASSWORD = "";
@@ -10063,75 +10054,10 @@ function Prescriptions({
     onClose: () => setPrintRx(null)
   }));
 }
-const DEFAULT_TESTS = [{
-  id: "oct",
-  name: "OCT",
-  name_ar: "تصوير الشبكية المقطعي",
-  cat: "شبكية"
-}, {
-  id: "ffa",
-  name: "FFA",
-  name_ar: "تصوير الأوعية بالفلوريسين",
-  cat: "شبكية"
-}, {
-  id: "optos",
-  name: "Optos",
-  name_ar: "تصوير قاع العين الواسع",
-  cat: "شبكية"
-}, {
-  id: "octa",
-  name: "OCT Angio",
-  name_ar: "أنجيوغرافيا OCT",
-  cat: "شبكية"
-}, {
-  id: "vf",
-  name: "Visual Field",
-  name_ar: "مجال الإبصار",
-  cat: "جلوكوما"
-}, {
-  id: "penta",
-  name: "Pentacam",
-  name_ar: "خريطة القرنية",
-  cat: "قرنية"
-}, {
-  id: "topo",
-  name: "Topography",
-  name_ar: "طبوغرافيا القرنية",
-  cat: "قرنية"
-}, {
-  id: "pachy",
-  name: "Pachymetry",
-  name_ar: "قياس سماكة القرنية",
-  cat: "قرنية"
-}, {
-  id: "bio",
-  name: "Biometry",
-  name_ar: "قياسات ما قبل الجراحة",
-  cat: "جراحة"
-}, {
-  id: "echo",
-  name: "B-Scan",
-  name_ar: "سونار العين",
-  cat: "أخرى"
-}, {
-  id: "erg",
-  name: "ERG",
-  name_ar: "كهربية الشبكية",
-  cat: "أخرى"
-}, {
-  id: "ep",
-  name: "VEP",
-  name_ar: "استجابة القشرة البصرية",
-  cat: "أخرى"
-}];
-const CAT_COLORS = {
-  "شبكية": C.accent,
-  "جلوكوما": C.teal,
-  "قرنية": C.gold,
-  "جراحة": C.purple,
-  "أخرى": C.muted,
-  "مخصص": C.success
-};
+// Phase 8, batch 2: moved to src/modules/constants/exams.js — delegates
+// below instead of redefining. (CAT_COLORS still only snapshots C at load
+// time, same as before — see that module's comment.)
+const { DEFAULT_TESTS, CAT_COLORS } = window.IAppModules.constants;
 // Moved to src/modules/print/templates.js (getRadiologyHTMLRaw), wrapped
 // with safeTemplate there and exposed via the bridge — same output, no behavior change.
 const { getRadiologyHTML } = window.IAppModules.print;
@@ -13446,90 +13372,13 @@ function Settings({
     onNo: () => setConfirm(false)
   }));
 }
-const IMAGING_TYPES = [{
-  id: "oct",
-  name: "OCT",
-  icon: "🧬",
-  hint: "Macular / RNFL / ONH"
-}, {
-  id: "octa",
-  name: "OCT Angio",
-  icon: "🩸",
-  hint: "OCTA / WF-OCTA"
-}, {
-  id: "ffa",
-  name: "FFA",
-  icon: "💉",
-  hint: "Fluorescein angiography"
-}, {
-  id: "fundus",
-  name: "Fundus Photography",
-  icon: "📷",
-  hint: "Color / Red-free / UWF"
-}, {
-  id: "pentacam",
-  name: "Pentacam",
-  icon: "🔵",
-  hint: "Corneal tomography"
-}, {
-  id: "erg",
-  name: "ERG",
-  icon: "📈",
-  hint: "Electroretinography"
-}, {
-  id: "vf",
-  name: "Visual Field",
-  icon: "◉",
-  hint: "Perimetry"
-}, {
-  id: "optos",
-  name: "Optos",
-  icon: "🌐",
-  hint: "Ultra-widefield"
-}, {
-  id: "other",
-  name: "Other",
-  icon: "📄",
-  hint: "Other imaging / test"
-}];
-const IMAGING_EYES = [{
-  v: "OU",
-  l: "OU — كلتا العينين"
-}, {
-  v: "OD",
-  l: "OD — اليمنى"
-}, {
-  v: "OS",
-  l: "OS — اليسرى"
-}];
-const IMAGING_REPORT_TEMPLATES = {
-  oct: `Vitreomacular Interface:\nFoveal Contour:\nCentral Foveal Thickness OD:\nCentral Foveal Thickness OS:\nRetinal Layers:\nChoroid:\nImpression:`,
-  octa: `Scan / Area:\nSuperficial Plexus:\nDeep Plexus:\nFAZ:\nNon-perfusion / Capillary Dropout:\nNeovascularization:\nImpression:`,
-  ffa: `Arm-Retina Circulation:\nArterial Filling:\nVenous Emptying:\nCapillary Dropout:\nFAZ:\nLeakage / Staining / Blockage:\nImpression:`,
-  fundus: `OD:\nOS:\nDisc:\nMacula:\nVessels:\nPeripheral Retina:\nImpression:`,
-  pentacam: `Anterior Corneal Surface:\nPosterior Elevation:\nKeratometry:\nPachymetry:\nAstigmatism:\nImpression:`,
-  erg: `Protocol:\nOD Response:\nOS Response:\nAmplitude:\nImplicit Time:\nImpression:`,
-  vf: `Test Strategy:\nReliability Indices:\nMD / PSD:\nCentral Field:\nOD:\nOS:\nImpression:`,
-  optos: `OD:\nOS:\nMacula:\nDisc:\nVessels:\nPeripheral Retina / 360°:\nImpression:`,
-  other: `Findings:\nImpression:`
-};
-const IMAGING_ORDER_STATUSES = {
-  requested: "مطلوب",
-  scheduled: "مجدول",
-  in_progress: "جارٍ التنفيذ",
-  completed: "تم التنفيذ",
-  reported: "تم التقرير",
-  cancelled: "ملغى"
-};
-const localDateStr = () => {
-  const d = new Date();
-  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
-};
-const localTimeStr = () => {
-  const d = new Date();
-  return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
-};
-const imagingTypeName = id => (IMAGING_TYPES.find(x => x.id === id) || {}).name || id || "";
+// Phase 8, batch 2: imaging constants moved to
+// src/modules/constants/imaging.js, localDateStr/localTimeStr to
+// src/modules/constants/misc.js — delegates below instead of redefining.
+const {
+  IMAGING_TYPES, IMAGING_EYES, IMAGING_REPORT_TEMPLATES, IMAGING_ORDER_STATUSES, imagingTypeName,
+  localDateStr, localTimeStr
+} = window.IAppModules.constants;
 function ImagingCenter({
   patients,
   primary,
@@ -14840,61 +14689,9 @@ function App() {
     onDone: () => setToast(null)
   })));
 }
-const PATIENT_CLINICS = [{
-  id: "damnhour",
-  name: "عيادة دمنهور",
-  address: "برج المنتزه بجوار حديقة الجمهورية",
-  phone: "0453333313",
-  icon: "🏥",
-  days: [0, 1, 3, 4, 6],
-  dayNames: ["الأحد", "الاثنين", "الأربعاء", "الخميس", "السبت"],
-  sessions: [{
-    slots: ["20:00", "20:30", "21:00", "21:30", "22:00"]
-  }]
-}, {
-  id: "rahmania",
-  name: "عيادة الرحمانية",
-  address: "ش أحمد محمود بجوار فرع we",
-  phone: "01111480137",
-  icon: "🏨",
-  days: [6, 1, 3],
-  dayNames: ["السبت", "الاثنين", "الأربعاء"],
-  sessions: [{
-    slots: ["16:00", "16:30", "17:00", "17:30", "18:00"]
-  }]
-}, {
-  id: "center",
-  name: "مركز دمنهور للعيون",
-  address: "دمنهور",
-  phone: "0453333313",
-  icon: "👁",
-  schedule: {
-    0: {
-      slots: ["13:00", "13:30", "14:00", "14:30", "15:00", "15:30"]
-    },
-    1: {
-      slots: ["13:00", "13:30", "14:00", "14:30", "15:00", "15:30"]
-    },
-    2: {
-      slots: ["15:00", "15:30", "16:00", "16:30", "17:00", "17:30", "18:00", "18:30", "19:00", "19:30", "20:00", "20:30"]
-    },
-    4: {
-      slots: ["09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "12:00", "12:30", "13:00", "13:30", "14:00", "14:30"]
-    }
-  },
-  dayNames: ["الأحد", "الاثنين", "الثلاثاء", "الخميس"]
-}];
-const CLINIC_CODE = {
-  "عيادة دمنهور": "دمنهور",
-  "عيادة الرحمانية": "الرحمانية",
-  "مركز دمنهور للعيون": "مركز دمنهور للعيون"
-};
-const SHORT_TO_NAME = {
-  "دمنهور": "عيادة دمنهور",
-  "الرحمانية": "عيادة الرحمانية",
-  "مركز دمنهور للعيون": "مركز دمنهور للعيون"
-};
-const clinicDisplay = v => SHORT_TO_NAME[v] || v || "";
+// Phase 8, batch 2: PATIENT_CLINICS/CLINIC_CODE/clinicDisplay moved to
+// src/modules/constants/clinics.js — delegates below instead of redefining.
+const { PATIENT_CLINICS, CLINIC_CODE, clinicDisplay } = window.IAppModules.constants;
 function getAvailableDates(c) {
   const dates = [];
   const now = new Date();
@@ -16719,7 +16516,10 @@ function PatientApp({
     onDone: () => setToast(null)
   }));
 }
-const CLINICS_LIST = ["دمنهور", "الرحمانية", "مركز دمنهور للعيون"];
+// Phase 8, batch 2: moved to src/modules/constants/clinics.js — delegates below.
+const { CLINICS_LIST } = window.IAppModules.constants;
+// Pre-existing dead code (defined, never referenced anywhere in this file) —
+// left in place untouched, not part of this batch's scope.
 const CLINIC_LABELS = {
   "دمنهور": "عيادة دمنهور",
   "الرحمانية": "عيادة الرحمانية",

@@ -9,10 +9,12 @@ import {
 } from '../src/components/forms/booking-form-model.js';
 import { blankBookForm, bookFormError } from '../src/modules/patient-app/model.js';
 import { legacyFunctionSource, legacyConst } from './forms-legacy-source.js';
+// PATIENT_CLINICS/CLINIC_CODE moved out of app-runtime.js in Phase 8, batch 2
+// (src/modules/constants/clinics.js is now their one source of truth), so
+// they're imported directly rather than scraped from the legacy source text.
+import { PATIENT_CLINICS, CLINIC_CODE } from '../src/modules/constants/clinics.js';
 
 const SRC = legacyFunctionSource('BookingForm');
-const PATIENT_CLINICS = legacyConst('PATIENT_CLINICS');
-const CLINIC_CODE = legacyConst('CLINIC_CODE');
 // The runtime's localISO, verbatim.
 function localISO(d) {
   d = d || new Date();

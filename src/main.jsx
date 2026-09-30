@@ -45,6 +45,7 @@ import AppScreen from './screens/App.jsx';
 import { normalizeFileMeta, resolveFileUrl } from './services/storage.js';
 import { screenPreferenceToStore, isNewScreenPreferred } from './modules/ui/screen-preference.js';
 import { THEMES, C, applyTheme, setTheme, useTheme, getTheme } from './modules/theme/index.js';
+import * as sharedConstants from './modules/constants/index.js';
 
 // Migration bridge: keep the proven production runtime intact while the
 // build system and service layer move to Vite. The legacy runtime reaches the
@@ -114,6 +115,12 @@ globalThis.IAppModules.ui = { screenPreferenceToStore, isNewScreenPreferred };
 // (legacy closures and every React screen reading it via the IAppLegacy
 // bridge) — nothing about how a component reads or toggles the theme changes.
 globalThis.IAppModules.theme = { THEMES, C, applyTheme, setTheme, useTheme, getTheme };
+// Phase 8, batch 2 — shared domain constants (clinics, imaging, exam
+// catalog, accounting categories, a couple of small standalone helpers)
+// that used to be defined inline in app-runtime.js; see
+// src/modules/constants/. Spread as one object so the legacy runtime can
+// destructure whichever names each spot needs, same as the other bridges.
+globalThis.IAppModules.constants = { ...sharedConstants };
 
 const legacyScript = document.createElement('script');
 legacyScript.src = import.meta.env.BASE_URL + 'legacy/app-runtime.js?v=' + __BUILD_ID__;
