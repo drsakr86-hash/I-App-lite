@@ -46,6 +46,7 @@ import { normalizeFileMeta, resolveFileUrl } from './services/storage.js';
 import { screenPreferenceToStore, isNewScreenPreferred } from './modules/ui/screen-preference.js';
 import { THEMES, C, applyTheme, setTheme, useTheme, getTheme } from './modules/theme/index.js';
 import * as sharedConstants from './modules/constants/index.js';
+import { SC, inp, Field, SecHead, Tag, XRAY_ICON } from './modules/ui/atoms.jsx';
 
 // Migration bridge: keep the proven production runtime intact while the
 // build system and service layer move to Vite. The legacy runtime reaches the
@@ -108,7 +109,14 @@ globalThis.IAppModules.screens = { WaitingRoom: WaitingRoomScreen, Appointments:
 globalThis.IAppModules.storage = { normalizeFileMeta, resolveFileUrl };
 // Phase 7 — pure decision logic behind useNewScreen()'s default flip; see
 // src/modules/ui/screen-preference.js.
-globalThis.IAppModules.ui = { screenPreferenceToStore, isNewScreenPreferred };
+// Phase 8, batch 3 — a handful of dependency-light shared UI atoms (a status-
+// color lookup, an input-style helper, and three small presentational
+// components) that used to be defined inline in app-runtime.js; see
+// src/modules/ui/atoms.jsx / atoms-model.js. The legacy runtime now
+// delegates to these instead of redefining them, so legacy and every React
+// screen reading them via the IAppLegacy bridge share the exact same
+// functions/objects.
+globalThis.IAppModules.ui = { screenPreferenceToStore, isNewScreenPreferred, SC, inp, Field, SecHead, Tag, XRAY_ICON };
 // Phase 8, batch 1 — the shared color theme (was legacy's own C/_theme/
 // themeSubs singleton); see src/modules/theme/index.js. The legacy runtime
 // now delegates to this module, so `C` is the exact same object everywhere

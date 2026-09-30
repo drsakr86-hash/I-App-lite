@@ -593,17 +593,9 @@ function ThemeRoot() {
   useTheme();
   return React.createElement(UnifiedErrorBoundary, null, React.createElement(UnifiedRouter, null));
 }
-const SC = {
-  get "مكتمل"() {
-    return C.success;
-  },
-  get "متابعة"() {
-    return C.gold;
-  },
-  get "طارئ"() {
-    return C.danger;
-  }
-};
+// Phase 8, batch 3: SC (the status-color lookup) moved to
+// src/modules/ui/atoms-model.js — delegate below instead of redefining.
+const { SC } = window.IAppModules.ui;
 // Phase 8, batch 2: clinic-related constants and lookups moved to
 // src/modules/constants/clinics.js — delegates below instead of redefining.
 const { CLINICS, clinicLabel } = window.IAppModules.constants;
@@ -1768,31 +1760,10 @@ function genCode(patients) {
   const next = Math.max(0, ...nums) + 1;
   return "P-" + String(next).padStart(4, "0");
 }
-const inp = (ex = {}) => ({
-  width: "100%",
-  background: C.bg,
-  border: `1px solid ${C.border}`,
-  borderRadius: 10,
-  padding: "10px 12px",
-  color: C.text,
-  fontSize: 13,
-  outline: "none",
-  boxSizing: "border-box",
-  direction: "rtl",
-  fontFamily: "inherit",
-  ...ex
-});
-const Field = ({
-  label,
-  children
-}) => React.createElement("div", null, React.createElement("label", {
-  style: {
-    color: C.muted,
-    fontSize: 11,
-    display: "block",
-    marginBottom: 5
-  }
-}, label), children);
+// Phase 8, batch 3: inp (the text-input style helper) and Field (the labeled
+// form-field wrapper) moved to src/modules/ui/atoms-model.js / atoms.jsx —
+// delegates below instead of redefining them.
+const { inp, Field } = window.IAppModules.ui;
 function Btn({
   children,
   onClick,
@@ -1900,45 +1871,10 @@ function Confirm({
     onClick: onOk
   }, "تأكيد")));
 }
-function SecHead({
-  icon,
-  label,
-  color
-}) {
-  return React.createElement("div", {
-    style: {
-      display: "flex",
-      alignItems: "center",
-      gap: 8,
-      marginBottom: 10
-    }
-  }, React.createElement("span", {
-    style: {
-      fontSize: 14
-    }
-  }, icon), React.createElement("span", {
-    style: {
-      color: color || C.accent,
-      fontWeight: 700,
-      fontSize: 13
-    }
-  }, label));
-}
-function Tag({
-  label,
-  color
-}) {
-  return React.createElement("span", {
-    style: {
-      background: color + "22",
-      color,
-      borderRadius: 8,
-      padding: "3px 10px",
-      fontSize: 11,
-      fontWeight: 600
-    }
-  }, label);
-}
+// Phase 8, batch 3: SecHead (section header) and Tag (colored pill label)
+// moved to src/modules/ui/atoms.jsx — delegates below instead of redefining
+// them.
+const { SecHead, Tag } = window.IAppModules.ui;
 function Toast({
   msg,
   onDone
@@ -3356,7 +3292,10 @@ function TopBar({
     }
   }, ini)));
 }
-const XRAY_ICON = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#0a1628"/><!-- Screen --><rect x="28" y="4" width="32" height="24" rx="3" fill="#1a2a40" stroke="#00C2FF" stroke-width="1.2"/><!-- Screen content colormap --><rect x="30" y="6" width="28" height="20" rx="2" fill="#0d1f35"/><ellipse cx="44" cy="13" rx="7" ry="5" fill="#00aaff" opacity="0.5"/><ellipse cx="44" cy="13" rx="4" ry="3" fill="#00ffcc" opacity="0.6"/><ellipse cx="44" cy="13" rx="2" ry="1.5" fill="#ffcc00" opacity="0.8"/><rect x="30" y="19" width="28" height="5" rx="1" fill="#050e1a"/><path d="M30 22 Q36 19 42 21 Q48 23 58 20" fill="none" stroke="#00C2FF" stroke-width="1" opacity="0.8"/><!-- Screen stand --><rect x="42" y="28" width="4" height="5" fill="#1a2a40"/><!-- Machine body --><rect x="4" y="30" width="26" height="28" rx="5" fill="#c8d4e0" stroke="#a0b0c0" stroke-width="1"/><!-- Machine top arch --><rect x="7" y="22" width="20" height="14" rx="4" fill="#b8c8d8" stroke="#90a0b0" stroke-width="1"/><!-- Lens/camera hole --><circle cx="17" cy="27" r="4" fill="#2a3a50"/><circle cx="17" cy="27" r="2.5" fill="#0a1628"/><circle cx="17" cy="27" r="1.2" fill="#00C2FF" opacity="0.8"/><!-- Handle --><rect x="24" y="24" width="5" height="10" rx="2.5" fill="#7a9ab8" stroke="#6080a0" stroke-width="0.8"/><!-- Blue accent strip --><rect x="4" y="38" width="5" height="14" rx="2" fill="#00C2FF" opacity="0.7"/><!-- Base --><rect x="2" y="55" width="30" height="5" rx="3" fill="#a0b0c0" stroke="#809090" stroke-width="0.8"/><!-- Colormap dots on screen --><circle cx="35" cy="10" r="1.5" fill="#ff4444" opacity="0.8"/><circle cx="39" cy="8" r="1.5" fill="#ff8800" opacity="0.8"/><circle cx="50" cy="9" r="1.5" fill="#00cc44" opacity="0.8"/><circle cx="54" cy="11" r="1.5" fill="#0088ff" opacity="0.8"/></svg>')}`;
+// Phase 8, batch 3: XRAY_ICON (the imaging-center machine illustration)
+// moved to src/modules/ui/atoms-model.js — delegate below instead of
+// redefining it.
+const { XRAY_ICON } = window.IAppModules.ui;
 const NAV = [{
   id: "dashboard",
   label: "الرئيسية",
