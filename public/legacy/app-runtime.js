@@ -821,147 +821,22 @@ const { EXP_CATS, CLINIC_FILTERS } = window.IAppModules.constants;
 // wrapper) moved to src/modules/data-access/index.js — delegate below
 // instead of redefining them.
 const { getSB, iappRpc } = window.IAppModules.db;
-const LS = {
-  get(k) {
-    try {
-      return localStorage.getItem(k);
-    } catch {
-      return null;
-    }
-  },
-  set(k, v) {
-    try {
-      localStorage.setItem(k, v);
-      return true;
-    } catch {
-      return false;
-    }
-  },
-  del(k) {
-    try {
-      localStorage.removeItem(k);
-    } catch {}
-  }
-};
-const DIRTY_PREFIX = "iapp_dirty_";
-const BASE_PREFIX = "iapp_base_";
-const NOCACHE_KEYS = ["iapp_audit", "iapp_trash", "iapp_backups"];
-const SYNC_KEY_LABELS = {
-  patients: "المرضى",
-  visits: "الزيارات",
-  exams: "الفحوصات",
-  prescriptions: "الوصفات الطبية",
-  appointments: "المواعيد",
-  expenses: "المصروفات",
-  recurring_expenses: "المصروفات المتكررة",
-  imaging: "الفحوصات والصور",
-  imaging_studies: "دراسات الصور",
-  audit: "سجل المراجعة",
-  backups: "النسخ الاحتياطية",
-  trash: "المحذوفات"
-};
-function syncKeyLabel(key) {
-  return SYNC_KEY_LABELS[key] || key;
-}
-const offlineNow = () => typeof navigator !== "undefined" && navigator.onLine === false;
-const SyncStore = {
-  st: {
-    online: !offlineNow(),
-    reachable: null,
-    pending: 0,
-    pendingKeys: [],
-    syncing: false,
-    errors: {},
-    lastSyncAt: null
-  },
-  subs: new Set(),
-  set(p) {
-    this.st = {
-      ...this.st,
-      ...p
-    };
-    this.subs.forEach(f => f(this.st));
-  }
-};
-function useSyncStatus() {
-  const [s, setS] = useState(SyncStore.st);
-  useEffect(() => {
-    SyncStore.subs.add(setS);
-    setS(SyncStore.st);
-    return () => {
-      SyncStore.subs.delete(setS);
-    };
-  }, []);
-  const view = window.IAppModules.sync.syncStatusView(s);
-  return {
-    ...s,
-    offline: view.offline,
-    failedCount: view.failedCount,
-    label: view.label,
-    color: C[view.colorKey],
-    busy: view.busy
-  };
-}
-const dbBus = {};
-function busOn(key, fn) {
-  (dbBus[key] = dbBus[key] || new Set()).add(fn);
-  return () => {
-    dbBus[key].delete(fn);
-  };
-}
-function busEmit(key, val) {
-  if (dbBus[key]) dbBus[key].forEach(fn => fn(val));
-}
-const isDirty = key => LS.get(DIRTY_PREFIX + key) !== null;
-function dirtyKeys() {
-  const out = [];
-  try {
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i);
-      if (k && k.startsWith(DIRTY_PREFIX)) out.push(k.slice(DIRTY_PREFIX.length));
-    }
-  } catch {}
-  return out;
-}
-function refreshPending() {
-  const keys = dirtyKeys();
-  SyncStore.set({
-    pending: keys.length,
-    pendingKeys: keys
-  });
-}
-async function tq(q, fin, ms) {
-  const c = new AbortController();
-  const t = setTimeout(() => c.abort(), ms || 12000);
-  try {
-    let b = q.abortSignal(c.signal).retry(false);
-    if (fin) b = fin(b);
-    const r = await b;
-    if (r && r.error) {
-      SyncStore.set({
-        reachable: r.error.code ? true : false
-      });
-    } else SyncStore.set({
-      reachable: true
-    });
-    return r;
-  } finally {
-    clearTimeout(t);
-  }
-}
+// Phase 8, batch 8: the generic sync-status/dirty-tracking layer (LS,
+// DIRTY_PREFIX/BASE_PREFIX/NOCACHE_KEYS, the Arabic status labels, SyncStore,
+// useSyncStatus, the dbBus pub/sub, dirty-key bookkeeping, ensureAuthed, and
+// the tq() query-timeout wrapper) moved to src/modules/sync/engine.js —
+// delegate below instead of redefining them. This is NOT the part that
+// actually reads/writes Supabase rows (sbGet/sbSet/sbMutate, the per-table
+// "Core" read/write, and the flusher's wiring to those) -- that stays here
+// for now; see the roadmap for why this was split into its own batch.
+const {
+  LS, DIRTY_PREFIX, BASE_PREFIX, NOCACHE_KEYS,
+  SYNC_KEY_LABELS, syncKeyLabel, offlineNow,
+  SyncStore, useSyncStatus, busOn, busEmit,
+  isDirty, dirtyKeys, refreshPending, ensureAuthed, tq
+} = window.IAppModules.sync;
 function mergeData(base, local, remote) {
   return window.IAppModules.sync.mergeData(base, local, remote);
-}
-// A sync must never read or write without a valid login session: RLS makes an
-// anonymous read look like an empty table, and anonymous writes are denied.
-async function ensureAuthed() {
-  const r = await window.IAppModules.auth.ensureSession();
-  if (r.ok) {
-    if (SyncStore.st.authError) SyncStore.set({ authError: false });
-  } else {
-    SyncStore.set({ authError: r.reason === "expired" || r.reason === "no-session" });
-  }
-  return r;
 }
 let _flusher = null;
 function getFlusher() {

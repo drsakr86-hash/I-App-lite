@@ -12,7 +12,13 @@ import { syncExaminationCore } from './modules/examinations/index.js';
 import { createPrescriptionCore, prescriptionParamsFromLegacy } from './modules/prescriptions/index.js';
 import { createInvestigationWorkflow, completeInvestigation, imagingRequestParams, singleImagingOrderParams } from './modules/investigations/index.js';
 import { createImagingStudy, imagingStudyParams } from './modules/imaging/index.js';
-import { mergeData, createFlusher, syncStatusView } from './modules/sync/index.js';
+import {
+  mergeData, createFlusher, syncStatusView,
+  LS, DIRTY_PREFIX, BASE_PREFIX, NOCACHE_KEYS,
+  SYNC_KEY_LABELS, syncKeyLabel, offlineNow,
+  SyncStore, useSyncStatus, busOn, busEmit,
+  isDirty, dirtyKeys, refreshPending, ensureAuthed, tq
+} from './modules/sync/index.js';
 import {
   getDailyReportHTML, getPatientFileHTML, getRxHTML, getGlassesHTML,
   getRadiologyHTML, getAccountingReportHTML
@@ -77,7 +83,19 @@ globalThis.IAppModules.prescriptions = { createPrescriptionCore, paramsFromLegac
 globalThis.IAppModules.investigations = { createInvestigationWorkflow, completeInvestigation, imagingRequestParams, singleImagingOrderParams };
 globalThis.IAppModules.imaging = { createImagingStudy, studyParams: imagingStudyParams };
 
-globalThis.IAppModules.sync = { mergeData, createFlusher, syncStatusView };
+globalThis.IAppModules.sync = {
+  mergeData, createFlusher, syncStatusView,
+  // Phase 8, batch 8 — the generic sync-status/dirty-tracking layer (state,
+  // subscriptions, the Arabic status labels, dirty-key bookkeeping). This is
+  // NOT the part that actually reads/writes Supabase rows (sbGet/sbSet/
+  // sbMutate, the per-table "Core" read/write, and the flusher's wiring to
+  // those) -- that stays in app-runtime.js for now; see the roadmap for why
+  // this was split into its own batch.
+  LS, DIRTY_PREFIX, BASE_PREFIX, NOCACHE_KEYS,
+  SYNC_KEY_LABELS, syncKeyLabel, offlineNow,
+  SyncStore, useSyncStatus, busOn, busEmit,
+  isDirty, dirtyKeys, refreshPending, ensureAuthed, tq
+};
 globalThis.IAppModules.print = {
   getDailyReportHTML, getPatientFileHTML, getRxHTML, getGlassesHTML,
   getRadiologyHTML, getAccountingReportHTML
