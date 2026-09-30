@@ -48,6 +48,7 @@ import { THEMES, C, applyTheme, setTheme, useTheme, getTheme } from './modules/t
 import * as sharedConstants from './modules/constants/index.js';
 import { SC, inp, Field, SecHead, Tag, XRAY_ICON } from './modules/ui/atoms.jsx';
 import { getSB, iappRpc } from './modules/data-access/index.js';
+import { Btn, Modal, Confirm, Toast, ThemeToggle } from './components/common.jsx';
 
 // Migration bridge: keep the proven production runtime intact while the
 // build system and service layer move to Vite. The legacy runtime reaches the
@@ -139,6 +140,13 @@ globalThis.IAppModules.constants = { ...sharedConstants };
 // (SyncStore, the flusher, the dirty/base localStorage caching scheme) that
 // Phase 3 deliberately left alone for the same reason -- see the roadmap.
 globalThis.IAppModules.db = { getSB, iappRpc };
+// Phase 8, batch 6 — Btn/Modal/Confirm/Toast/ThemeToggle used to be defined
+// twice: once inline in app-runtime.js, once in src/components/common.jsx
+// for the React screens (Phase 2, batch 1), kept in sync by hand. The legacy
+// runtime now delegates to this single copy instead of redefining them, so
+// there is exactly one function/object for each, shared by every screen
+// (legacy or React) and every form/modal that renders them via either bridge.
+globalThis.IAppModules.common = { Btn, Modal, Confirm, Toast, ThemeToggle };
 
 const legacyScript = document.createElement('script');
 legacyScript.src = import.meta.env.BASE_URL + 'legacy/app-runtime.js?v=' + __BUILD_ID__;

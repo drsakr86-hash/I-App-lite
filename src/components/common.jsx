@@ -2,16 +2,20 @@ import React, { useEffect } from 'react';
 import {
   isWarnToast, toastDuration, toastText, btnStyle, nextTheme, themeToggleTitle, themeToggleIcon
 } from './common-model.js';
+import { C, useTheme, setTheme } from '../modules/theme/index.js';
 
-// Shared UI atoms for the React screens: exact copies of the legacy runtime's
-// Btn / Modal / Confirm / Toast / ThemeToggle (public/legacy/app-runtime.js),
-// which stay in place for the legacy screens and forms that still call them.
-// The theme object C and the theme store (useTheme/setTheme) are single shared
-// instances owned by the legacy runtime, so they are read from the bridge.
-const L = () => globalThis.IAppLegacy;
+// Shared UI atoms for both the React screens and the legacy runtime.
+// Phase 8, batch 6: these used to be duplicated — one copy here, one copy
+// defined inline in public/legacy/app-runtime.js, kept behaviorally in sync
+// by hand. The legacy runtime now delegates to this single copy via the
+// bridge (window.IAppModules.common) instead of redefining them, so there is
+// exactly one Btn/Modal/Confirm/Toast/ThemeToggle function shared everywhere.
+// C/useTheme/setTheme come straight from the theme module (Phase 8, batch 1)
+// rather than through the IAppLegacy bridge, since that module is already the
+// single source of truth for the theme and importing it directly removes the
+// last runtime dependency these components had on the legacy script.
 
 export function Btn({ children, onClick, danger, full, small, outline, color }) {
-  const { C } = L();
   return (
     <button onClick={onClick} style={btnStyle(C, { danger, full, small, outline, color })}>{children}</button>
   );
@@ -20,7 +24,6 @@ export function Btn({ children, onClick, danger, full, small, outline, color }) 
 // Bottom sheet. Closes on backdrop click and on "×" (no Escape-key handling,
 // same as legacy); clicks inside the sheet do not reach the backdrop.
 export function Modal({ title, onClose, children }) {
-  const { C } = L();
   return (
     <div
       style={{
@@ -59,7 +62,6 @@ export function Modal({ title, onClose, children }) {
 
 // Backdrop click and "×" both call onNo (it is the Modal's onClose).
 export function Confirm({ msg, onOk, onNo }) {
-  const { C } = L();
   return (
     <Modal title="تأكيد" onClose={onNo}>
       <p style={{ color: C.muted, fontSize: 13, marginBottom: 20 }}>{msg}</p>
@@ -75,7 +77,6 @@ export function Confirm({ msg, onOk, onNo }) {
 // restarts only when msg changes (legacy deps [msg]; onDone is the one from
 // the render that started it). Extra props (e.g. `color`) are ignored.
 export function Toast({ msg, onDone }) {
-  const { C } = L();
   const warn = isWarnToast(msg);
   useEffect(() => {
     const t = setTimeout(onDone, toastDuration(warn));
@@ -106,7 +107,6 @@ export function Toast({ msg, onDone }) {
 // Uses the legacy theme store, so toggling here re-themes the whole app
 // (ThemeRoot subscribes to the same store) and persists to iapp_theme.
 export function ThemeToggle() {
-  const { C, useTheme, setTheme } = L();
   const t = useTheme();
   return (
     <div

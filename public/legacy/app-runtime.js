@@ -569,26 +569,9 @@ const newId = () => Date.now() + Math.floor(Math.random() * 997);
 // so nothing here needs to re-run that; getTheme() replaces the old local
 // `_theme` variable for the one place below that reads it directly.
 const { THEMES, C, applyTheme, setTheme, useTheme, getTheme } = window.IAppModules.theme;
-function ThemeToggle() {
-  const t = useTheme();
-  return React.createElement("div", {
-    onClick: () => setTheme(t === "dark" ? "light" : "dark"),
-    title: t === "dark" ? "الوضع النهاري" : "الوضع الليلي",
-    style: {
-      width: 34,
-      height: 34,
-      borderRadius: 10,
-      background: C.card,
-      border: `1px solid ${C.border}`,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      cursor: "pointer",
-      fontSize: 15,
-      flexShrink: 0
-    }
-  }, t === "dark" ? "☀️" : "🌙");
-}
+// Phase 8, batch 6: ThemeToggle (like Btn/Modal/Confirm/Toast below) moved to
+// src/components/common.jsx — delegate below instead of redefining it.
+const { ThemeToggle } = window.IAppModules.common;
 function ThemeRoot() {
   useTheme();
   return React.createElement(UnifiedErrorBoundary, null, React.createElement(UnifiedRouter, null));
@@ -1744,145 +1727,15 @@ function genCode(patients) {
 // form-field wrapper) moved to src/modules/ui/atoms-model.js / atoms.jsx —
 // delegates below instead of redefining them.
 const { inp, Field } = window.IAppModules.ui;
-function Btn({
-  children,
-  onClick,
-  danger,
-  full,
-  small,
-  outline,
-  color
-}) {
-  const bg = color || C.accent;
-  return React.createElement("button", {
-    onClick: onClick,
-    style: {
-      background: outline ? "transparent" : danger ? `linear-gradient(135deg,${C.danger},#aa0020)` : `linear-gradient(135deg,${bg},${C.teal})`,
-      border: outline ? `1px solid ${C.border}` : "none",
-      borderRadius: 10,
-      padding: small ? "6px 14px" : "11px 18px",
-      color: outline ? C.muted : C.bg,
-      fontWeight: 700,
-      fontSize: small ? 11 : 13,
-      cursor: "pointer",
-      width: full ? "100%" : "auto",
-      whiteSpace: "nowrap",
-      fontFamily: "inherit"
-    }
-  }, children);
-}
-function Modal({
-  title,
-  onClose,
-  children
-}) {
-  return React.createElement("div", {
-    style: {
-      position: "fixed",
-      inset: 0,
-      background: "rgba(0,0,0,0.8)",
-      zIndex: 400,
-      display: "flex",
-      alignItems: "flex-end",
-      justifyContent: "center"
-    },
-    onClick: onClose
-  }, React.createElement("div", {
-    onClick: e => e.stopPropagation(),
-    style: {
-      background: C.surface,
-      borderRadius: "20px 20px 0 0",
-      padding: "20px 16px 44px",
-      width: "100%",
-      maxWidth: 480,
-      maxHeight: "92vh",
-      overflowY: "auto",
-      border: `1px solid ${C.border}`
-    }
-  }, React.createElement("div", {
-    style: {
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      marginBottom: 18
-    }
-  }, React.createElement("span", {
-    style: {
-      color: C.text,
-      fontWeight: 700,
-      fontSize: 15
-    }
-  }, title), React.createElement("span", {
-    onClick: onClose,
-    style: {
-      color: C.muted,
-      fontSize: 28,
-      cursor: "pointer",
-      lineHeight: 1
-    }
-  }, "×")), children));
-}
-function Confirm({
-  msg,
-  onOk,
-  onNo
-}) {
-  return React.createElement(Modal, {
-    title: "تأكيد",
-    onClose: onNo
-  }, React.createElement("p", {
-    style: {
-      color: C.muted,
-      fontSize: 13,
-      marginBottom: 20
-    }
-  }, msg), React.createElement("div", {
-    style: {
-      display: "flex",
-      gap: 10
-    }
-  }, React.createElement(Btn, {
-    outline: true,
-    full: true,
-    onClick: onNo
-  }, "إلغاء"), React.createElement(Btn, {
-    danger: true,
-    full: true,
-    onClick: onOk
-  }, "تأكيد")));
-}
 // Phase 8, batch 3: SecHead (section header) and Tag (colored pill label)
 // moved to src/modules/ui/atoms.jsx — delegates below instead of redefining
 // them.
 const { SecHead, Tag } = window.IAppModules.ui;
-function Toast({
-  msg,
-  onDone
-}) {
-  const warn = typeof msg === "string" && msg.startsWith("⚠");
-  useEffect(() => {
-    const t = setTimeout(onDone, warn ? 4000 : 2200);
-    return () => clearTimeout(t);
-  }, [msg]);
-  return React.createElement("div", {
-    style: {
-      position: "fixed",
-      bottom: 80,
-      left: "50%",
-      transform: "translateX(-50%)",
-      background: warn ? C.gold : C.success,
-      color: C.bg,
-      borderRadius: 14,
-      padding: "10px 22px",
-      fontWeight: 700,
-      fontSize: 13,
-      zIndex: 999,
-      whiteSpace: "nowrap",
-      boxShadow: `0 4px 20px ${warn ? C.gold : C.success}66`,
-      animation: "toastIn 0.3s ease"
-    }
-  }, warn ? msg : "✓ " + msg);
-}
+// Phase 8, batch 6: Btn/Modal/Confirm/Toast used to be defined twice — once
+// here, once in src/components/common.jsx for the React screens (Phase 2,
+// batch 1) — kept in sync by hand. Delegate below instead of redefining them,
+// so legacy and every React screen share the exact same functions.
+const { Btn, Modal, Confirm, Toast } = window.IAppModules.common;
 const DEFAULT_USERS = [];
 function getUsers() {
   try {
