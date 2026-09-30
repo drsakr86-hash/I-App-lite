@@ -17,7 +17,9 @@ import {
   LS, DIRTY_PREFIX, BASE_PREFIX, NOCACHE_KEYS,
   SYNC_KEY_LABELS, syncKeyLabel, offlineNow,
   SyncStore, useSyncStatus, busOn, busEmit,
-  isDirty, dirtyKeys, refreshPending, ensureAuthed, tq
+  isDirty, dirtyKeys, refreshPending, ensureAuthed, tq,
+  sbGetStore, sbSetStore,
+  setRawIO, flushKey, isFlushing, flushAll, queueLocal, queueSave
 } from './modules/sync/index.js';
 import {
   getDailyReportHTML, getPatientFileHTML, getRxHTML, getGlassesHTML,
@@ -86,15 +88,20 @@ globalThis.IAppModules.imaging = { createImagingStudy, studyParams: imagingStudy
 globalThis.IAppModules.sync = {
   mergeData, createFlusher, syncStatusView,
   // Phase 8, batch 8 — the generic sync-status/dirty-tracking layer (state,
-  // subscriptions, the Arabic status labels, dirty-key bookkeeping). This is
-  // NOT the part that actually reads/writes Supabase rows (sbGet/sbSet/
-  // sbMutate, the per-table "Core" read/write, and the flusher's wiring to
-  // those) -- that stays in app-runtime.js for now; see the roadmap for why
-  // this was split into its own batch.
+  // subscriptions, the Arabic status labels, dirty-key bookkeeping).
   LS, DIRTY_PREFIX, BASE_PREFIX, NOCACHE_KEYS,
   SYNC_KEY_LABELS, syncKeyLabel, offlineNow,
   SyncStore, useSyncStatus, busOn, busEmit,
-  isDirty, dirtyKeys, refreshPending, ensureAuthed, tq
+  isDirty, dirtyKeys, refreshPending, ensureAuthed, tq,
+  // Phase 8, batch 9 — the generic key/value Supabase I/O against the
+  // `iapp_store` table (sbGetStore/sbSetStore), and the flusher's
+  // orchestration (setRawIO/flushKey/isFlushing/flushAll/queueLocal/
+  // queueSave). This is NOT the per-table "Core" read/write for
+  // appointments/visits/exams/... (_sbGetRaw/_sbSetRaw and everything they
+  // dispatch to) -- that stays in app-runtime.js for now; see the roadmap
+  // for why this was split into its own batch.
+  sbGetStore, sbSetStore,
+  setRawIO, flushKey, isFlushing, flushAll, queueLocal, queueSave
 };
 globalThis.IAppModules.print = {
   getDailyReportHTML, getPatientFileHTML, getRxHTML, getGlassesHTML,

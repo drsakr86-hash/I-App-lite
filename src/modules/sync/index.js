@@ -7,3 +7,5 @@ export {
   SyncStore, useSyncStatus, busOn, busEmit,
   isDirty, dirtyKeys, refreshPending, ensureAuthed, tq
 } from './engine.js';
+export { sbGetStore, sbSetStore } from './store-io.js';
+export { setRawIO, flushKey, isFlushing, flushAll, queueLocal, queueSave } from './wiring.js';

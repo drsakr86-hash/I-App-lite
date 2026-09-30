@@ -825,116 +825,28 @@ const { getSB, iappRpc } = window.IAppModules.db;
 // DIRTY_PREFIX/BASE_PREFIX/NOCACHE_KEYS, the Arabic status labels, SyncStore,
 // useSyncStatus, the dbBus pub/sub, dirty-key bookkeeping, ensureAuthed, and
 // the tq() query-timeout wrapper) moved to src/modules/sync/engine.js —
-// delegate below instead of redefining them. This is NOT the part that
-// actually reads/writes Supabase rows (sbGet/sbSet/sbMutate, the per-table
-// "Core" read/write, and the flusher's wiring to those) -- that stays here
-// for now; see the roadmap for why this was split into its own batch.
+// delegate below instead of redefining them.
 const {
   LS, DIRTY_PREFIX, BASE_PREFIX, NOCACHE_KEYS,
   SYNC_KEY_LABELS, syncKeyLabel, offlineNow,
   SyncStore, useSyncStatus, busOn, busEmit,
   isDirty, dirtyKeys, refreshPending, ensureAuthed, tq
 } = window.IAppModules.sync;
-function mergeData(base, local, remote) {
-  return window.IAppModules.sync.mergeData(base, local, remote);
-}
-let _flusher = null;
-function getFlusher() {
-  if (!_flusher) _flusher = window.IAppModules.sync.createFlusher({
-    storage: LS,
-    dirtyPrefix: DIRTY_PREFIX,
-    basePrefix: BASE_PREFIX,
-    noCacheKeys: NOCACHE_KEYS,
-    ensureAuthed,
-    readRemote: _sbGetRaw,
-    writeRemote: _sbSetRaw,
-    merge: mergeData,
-    setError: (key, msg) => SyncStore.set({ errors: { ...SyncStore.st.errors, [key]: msg } }),
-    clearError: key => {
-      const nextErrors = { ...SyncStore.st.errors };
-      delete nextErrors[key];
-      SyncStore.set({ errors: nextErrors });
-    },
-    markSynced: () => SyncStore.set({ lastSyncAt: Date.now() }),
-    emitChange: busEmit
-  });
-  return _flusher;
-}
-function flushKey(key) {
-  return getFlusher().flushKey(key);
-}
-function isFlushing(key) {
-  return getFlusher().isFlushing(key);
-}
-let _flushAllBusy = false;
-async function flushAll() {
-  if (_flushAllBusy) return;
-  const keys = dirtyKeys();
-  if (!keys.length) {
-    SyncStore.set({
-      pending: 0,
-      pendingKeys: [],
-      syncing: false
-    });
-    return;
-  }
-  _flushAllBusy = true;
-  SyncStore.set({
-    syncing: true,
-    pending: keys.length
-  });
-  try {
-    for (const k of keys) {
-      await flushKey(k);
-    }
-  } finally {
-    _flushAllBusy = false;
-    const remaining = dirtyKeys();
-    SyncStore.set({
-      syncing: false,
-      pending: remaining.length,
-      pendingKeys: remaining
-    });
-  }
-}
-function queueLocal(key, val) {
-  if (!isDirty(key)) {
-    const prev = LS.get(key);
-    if (prev !== null) LS.set(BASE_PREFIX + key, prev);else LS.del(BASE_PREFIX + key);
-  }
-  if (!LS.set(key, JSON.stringify(val))) return false;
-  LS.set(DIRTY_PREFIX + key, Date.now() + "-" + Math.random());
-  refreshPending();
-  return true;
-}
-async function queueSave(key, val) {
-  if (!queueLocal(key, val)) return await _sbSetRaw(key, val);
-  const ok = await flushKey(key);
-  refreshPending();
-  return ok;
-}
-if (typeof window !== "undefined" && !window.__iappSyncInit) {
-  window.__iappSyncInit = true;
-  window.addEventListener("online", () => {
-    SyncStore.set({
-      online: true,
-      reachable: null
-    });
-    flushAll();  // flushKey verifies/repairs the session before touching data
-  });
-  window.addEventListener("offline", () => {
-    SyncStore.set({
-      online: false
-    });
-  });
-  document.addEventListener("visibilitychange", () => {
-    if (!document.hidden && dirtyKeys().length) flushAll();
-  });
-  setInterval(() => {
-    if (dirtyKeys().length) flushAll();else if (SyncStore.st.reachable === false && !offlineNow()) _sbGetRaw("iapp_ping");
-  }, 20000);
-  refreshPending();
-}
+// Phase 8, batch 9: the flusher's orchestration (getFlusher/flushKey/
+// isFlushing/flushAll/queueLocal/queueSave) and the background flush
+// lifecycle (online/offline/visibility/interval) moved to
+// src/modules/sync/wiring.js -- delegate below instead of redefining them.
+// The flusher's actual remote read/write (_sbGetRaw/_sbSetRaw, defined
+// further down) still dispatches to the per-table "Core" sync system
+// (appointments, visits, exams, ...) that hasn't moved out of this file yet,
+// so the module version can't import them directly; instead they are
+// registered with the module via setRawIO() right after they're defined
+// below, right where the old readRemote/writeRemote wiring used to be. This
+// keeps the flusher's actual behavior byte-identical to before -- same
+// _sbGetRaw/_sbSetRaw functions, just wired in instead of closed over.
+const {
+  flushKey, isFlushing, flushAll, queueLocal, queueSave
+} = window.IAppModules.sync;
 const ADMIN_EMAILS = ["admin@sakr.clinic"];
 const DEFAULT_ROLES = {
   "admin@sakr.clinic": {
@@ -1312,63 +1224,10 @@ async function rowMutate(key, mutator, verify) {
     data: next
   };
 }
-async function _sbGetStore(key) {
-  try {
-    const sb = getSB();
-    if (!sb) return undefined;
-    const {
-      data,
-      error
-    } = await tq(sb.from("iapp_store").select("value").eq("key", key), b => b.maybeSingle(), 10000);
-    if (error) {
-      console.warn("sbGet error:", error.message);
-      return undefined;
-    }
-    if (!data) return null;
-    const val = data.value;
-    if (val === null || val === undefined) return null;
-    if (typeof val === "string" || typeof val === "number" || typeof val === "boolean") return val;
-    if (Array.isArray(val) || typeof val === "object") {
-      try {
-        return JSON.parse(JSON.stringify(val));
-      } catch {
-        return val;
-      }
-    }
-    return val;
-  } catch (e) {
-    console.warn("sbGet exception:", e.message || e);
-    SyncStore.set({
-      reachable: false
-    });
-    return undefined;
-  }
-}
-async function _sbSetStore(key, value) {
-  try {
-    const sb = getSB();
-    if (!sb) return false;
-    const {
-      error
-    } = await tq(sb.from("iapp_store").upsert({
-      key,
-      value
-    }, {
-      onConflict: "key"
-    }), null, 15000);
-    if (error) {
-      console.warn("sbSet error:", error.message);
-      return false;
-    }
-    return true;
-  } catch (e) {
-    console.warn("sbSet exception:", e);
-    SyncStore.set({
-      reachable: false
-    });
-    return false;
-  }
-}
+// Phase 8, batch 9: _sbGetStore/_sbSetStore (the generic key/value Supabase
+// I/O against the `iapp_store` table) moved to src/modules/sync/store-io.js
+// -- delegate below instead of redefining them.
+const { sbGetStore: _sbGetStore, sbSetStore: _sbSetStore } = window.IAppModules.sync;
 async function _sbGetRaw(key) {
   if (offlineNow()) {
     SyncStore.set({
@@ -1391,6 +1250,9 @@ async function _sbSetRaw(key, value) {
   if (ROW_TABLES[key]) return (await rowMutate(key, () => Array.isArray(value) ? value : [])).ok;
   return await _sbSetStore(key, value);
 }
+// Phase 8, batch 9: register the two functions above as the moved flusher's
+// actual remote read/write (see the comment near flushKey/flushAll above).
+window.IAppModules.sync.setRawIO({ readRemote: _sbGetRaw, writeRemote: _sbSetRaw });
 async function sbGet(key) {
   if (isDirty(key)) {
     if (!isFlushing(key)) flushKey(key).then(refreshPending);
