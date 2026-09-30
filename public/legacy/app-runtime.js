@@ -16907,31 +16907,19 @@ function WaitingRoom({
   const priorityWaiting = waiting.filter(a => priorityDoctor && a.doctor === priorityDoctor);
   const otherWaiting = waiting.filter(a => !priorityDoctor || a.doctor !== priorityDoctor);
   const orderedWaiting = [...priorityWaiting, ...otherWaiting];
+  // Phase 8, batch 7: this used to be its own inline closure duplicating the
+  // exact markup of src/screens/WaitingRoom.jsx's PayBadge. Delegate to that
+  // shared component instead, passing onCollect/C from this closure's own
+  // scope (the shared component takes them as props rather than reading them
+  // from an enclosing closure).
+  const { PayBadge: PayBadgeShared } = window.IAppModules.ui;
   const PayBadge = ({
     a
-  }) => a.cost ? React.createElement("span", {
-    onClick: () => onCollect(a),
-    style: {
-      background: (a.paid ? C.success : C.danger) + "22",
-      color: a.paid ? C.success : C.danger,
-      borderRadius: 6,
-      padding: "2px 7px",
-      fontSize: 9,
-      fontWeight: 700,
-      cursor: "pointer"
-    }
-  }, a.paid ? "✓ مدفوع" : "غير مدفوع", " ", a.cost, "ج") : React.createElement("span", {
-    onClick: () => onCollect(a),
-    style: {
-      background: C.gold + "22",
-      color: C.gold,
-      borderRadius: 6,
-      padding: "2px 7px",
-      fontSize: 9,
-      fontWeight: 700,
-      cursor: "pointer"
-    }
-  }, "💰 تحصيل");
+  }) => PayBadgeShared({
+    a,
+    onCollect,
+    C
+  });
   const durations = done.filter(a => a.inAt && a.doneAt).map(a => a.doneAt - a.inAt).filter(d => d > 0 && d < 3 * 3600 * 1000);
   const avgDurationMin = durations.length ? Math.round(durations.reduce((s, d) => s + d, 0) / durations.length / 60000) : 15;
   const fmtWait = mins => mins < 60 ? mins + " د" : Math.floor(mins / 60) + "س " + mins % 60 + "د";

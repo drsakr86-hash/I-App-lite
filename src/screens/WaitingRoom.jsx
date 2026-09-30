@@ -18,7 +18,10 @@ const btn = (C, tone, extra = {}) => ({
   ...extra
 });
 
-function PayBadge({ a, onCollect, C }) {
+// Exported so the legacy runtime's own WaitingRoom (still used under
+// ?ui=legacy) can delegate to this exact component instead of keeping its
+// own copy (Phase 8, batch 7) — see main.jsx / app-runtime.js.
+export function PayBadge({ a, onCollect, C }) {
   const tone = a.cost ? (a.paid ? 'success' : 'danger') : 'gold';
   const style = {
     background: C[tone] + '22', color: C[tone], borderRadius: 6,

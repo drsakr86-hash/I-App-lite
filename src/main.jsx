@@ -29,7 +29,7 @@ import {
   nextLoginMode, staffLoginFieldsMissing, patientLoginFieldsMissing,
   findPatientByCodeAndName, patientLoginLockKey
 } from './modules/auth/unified-login-view.js';
-import WaitingRoomScreen from './screens/WaitingRoom.jsx';
+import WaitingRoomScreen, { PayBadge } from './screens/WaitingRoom.jsx';
 import AppointmentsScreen from './screens/Appointments.jsx';
 import DashboardScreen from './screens/Dashboard.jsx';
 import PatientsScreen from './screens/Patients.jsx';
@@ -118,7 +118,15 @@ globalThis.IAppModules.storage = { normalizeFileMeta, resolveFileUrl };
 // delegates to these instead of redefining them, so legacy and every React
 // screen reading them via the IAppLegacy bridge share the exact same
 // functions/objects.
-globalThis.IAppModules.ui = { screenPreferenceToStore, isNewScreenPreferred, SC, inp, Field, SecHead, Tag, XRAY_ICON };
+// Phase 8, batch 7 — PayBadge (the small paid/unpaid pill in WaitingRoom) was
+// a closure defined inline inside legacy's own WaitingRoom function (reading
+// onCollect/C from its surrounding scope), not a true top-level shared atom
+// like the others here — that's why it wasn't included in batch 3. Its React
+// counterpart already existed as its own component in src/screens/WaitingRoom.jsx
+// (from the original screen migration); it is now exported and added to this
+// bridge, and legacy's WaitingRoom delegates its own PayBadge closure to it
+// instead of keeping a separate copy of the same markup/logic.
+globalThis.IAppModules.ui = { screenPreferenceToStore, isNewScreenPreferred, SC, inp, Field, SecHead, Tag, XRAY_ICON, PayBadge };
 // Phase 8, batch 1 — the shared color theme (was legacy's own C/_theme/
 // themeSubs singleton); see src/modules/theme/index.js. The legacy runtime
 // now delegates to this module, so `C` is the exact same object everywhere
