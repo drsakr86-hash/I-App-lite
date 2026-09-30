@@ -47,6 +47,7 @@ import { screenPreferenceToStore, isNewScreenPreferred } from './modules/ui/scre
 import { THEMES, C, applyTheme, setTheme, useTheme, getTheme } from './modules/theme/index.js';
 import * as sharedConstants from './modules/constants/index.js';
 import { SC, inp, Field, SecHead, Tag, XRAY_ICON } from './modules/ui/atoms.jsx';
+import { getSB, iappRpc } from './modules/data-access/index.js';
 
 // Migration bridge: keep the proven production runtime intact while the
 // build system and service layer move to Vite. The legacy runtime reaches the
@@ -129,6 +130,15 @@ globalThis.IAppModules.theme = { THEMES, C, applyTheme, setTheme, useTheme, getT
 // src/modules/constants/. Spread as one object so the legacy runtime can
 // destructure whichever names each spot needs, same as the other bridges.
 globalThis.IAppModules.constants = { ...sharedConstants };
+// Phase 8, batch 4 — a couple of small, self-contained data-access helpers
+// (the lazily-cached Supabase client getter and the RPC wrapper) that used
+// to be defined inline in app-runtime.js; see src/modules/data-access/. The
+// legacy runtime now delegates to these instead of redefining them. The rest
+// of the originally-scoped batch 4 helpers (sbGet/sbSet/sbMutate/trashPut/
+// logAudit/saveAutoBackup) turned out to be inseparable from the sync engine
+// (SyncStore, the flusher, the dirty/base localStorage caching scheme) that
+// Phase 3 deliberately left alone for the same reason -- see the roadmap.
+globalThis.IAppModules.db = { getSB, iappRpc };
 
 const legacyScript = document.createElement('script');
 legacyScript.src = import.meta.env.BASE_URL + 'legacy/app-runtime.js?v=' + __BUILD_ID__;

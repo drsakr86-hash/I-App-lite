@@ -834,30 +834,10 @@ const SEED = {
 // Phase 8, batch 2: EXP_CATS moved to src/modules/constants/accounting.js,
 // CLINIC_FILTERS to src/modules/constants/clinics.js — delegates below.
 const { EXP_CATS, CLINIC_FILTERS } = window.IAppModules.constants;
-const SB_URL = "https://mofdveiwlaymlabvsypu.supabase.co";
-const SB_KEY = "sb_publishable_tVZ1mUOyb3vOjRV1jBpq6g_P2u-xIqF";
-let _sb = null;
-function getSB() {
-  if (_sb) return _sb;
-  if (window.__IAppSupabaseClient) {
-    _sb = window.__IAppSupabaseClient;
-  } else if (window.supabase) {
-    _sb = window.supabase.createClient(SB_URL, SB_KEY, {
-      auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-        storageKey: "iapp_sb_auth"
-      }
-    });
-  }
-  return _sb;
-}
-// Phase 48-52: all Supabase RPC calls go through the shared service layer
-// (timeout, in-flight dedupe for writes). Falls back to the raw client if the
-// Vite bridge is not present. Always resolves to { data, error }.
-function iappRpc(sb, name, args) {
-  return window.IAppModules.rpc.safe(sb, name, args);
-}
+// Phase 8, batch 4: getSB (the Supabase client getter) and iappRpc (the RPC
+// wrapper) moved to src/modules/data-access/index.js — delegate below
+// instead of redefining them.
+const { getSB, iappRpc } = window.IAppModules.db;
 const LS = {
   get(k) {
     try {
