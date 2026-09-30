@@ -4,13 +4,14 @@ import {
   periodLabel, buildClinicComparison, buildMissingRecurringExpenseEntries, reportDateLabel
 } from '../modules/accounting/model.js';
 import { Modal, Confirm, Btn } from '../components/common.jsx';
+import { ExpenseForm, RecurringExpenseForm } from '../components/forms/index.js';
 
 const L = () => globalThis.IAppLegacy;
 
 export default function Accounting({ visits, expenses, setExpenses, recurringExpenses, setRecurringExpenses, doctors, clinic }) {
   const {
     C, Field, inp, clinicLabel, localISO, printDoc,
-    CLINICS, CLINIC_FILTERS, EXP_CATS, ExpenseForm, RecurringExpenseForm, getAccountingReportHTML
+    CLINICS, CLINIC_FILTERS, EXP_CATS, getAccountingReportHTML
   } = L();
 
   const [period, setPeriod] = useState('month');
