@@ -44,6 +44,7 @@ import PatientAppScreen from './screens/PatientApp.jsx';
 import AppScreen from './screens/App.jsx';
 import { normalizeFileMeta, resolveFileUrl } from './services/storage.js';
 import { screenPreferenceToStore, isNewScreenPreferred } from './modules/ui/screen-preference.js';
+import { THEMES, C, applyTheme, setTheme, useTheme, getTheme } from './modules/theme/index.js';
 
 // Migration bridge: keep the proven production runtime intact while the
 // build system and service layer move to Vite. The legacy runtime reaches the
@@ -107,6 +108,12 @@ globalThis.IAppModules.storage = { normalizeFileMeta, resolveFileUrl };
 // Phase 7 — pure decision logic behind useNewScreen()'s default flip; see
 // src/modules/ui/screen-preference.js.
 globalThis.IAppModules.ui = { screenPreferenceToStore, isNewScreenPreferred };
+// Phase 8, batch 1 — the shared color theme (was legacy's own C/_theme/
+// themeSubs singleton); see src/modules/theme/index.js. The legacy runtime
+// now delegates to this module, so `C` is the exact same object everywhere
+// (legacy closures and every React screen reading it via the IAppLegacy
+// bridge) — nothing about how a component reads or toggles the theme changes.
+globalThis.IAppModules.theme = { THEMES, C, applyTheme, setTheme, useTheme, getTheme };
 
 const legacyScript = document.createElement('script');
 legacyScript.src = import.meta.env.BASE_URL + 'legacy/app-runtime.js?v=' + __BUILD_ID__;

@@ -561,78 +561,14 @@ async function restoreSnapshot(data, label) {
 const isActiveApt = a => !!a && !a.cancelled && a.status !== "cancelled" && a.waitStatus !== "cancelled";
 const SLOT_CAPACITY = 1;
 const newId = () => Date.now() + Math.floor(Math.random() * 997);
-const THEMES = {
-  dark: {
-    bg: "#0A0F1E",
-    bg2: "#0a1220",
-    surface: "#111827",
-    surface2: "#0D1929",
-    card: "#141E30",
-    border: "#1E2D45",
-    accent: "#00C2FF",
-    teal: "#00E5CC",
-    gold: "#FFB830",
-    text: "#E8F4FF",
-    muted: "#6B8CAE",
-    danger: "#FF4D6D",
-    success: "#00E5B0",
-    purple: "#A78BFA"
-  },
-  light: {
-    bg: "#F2F6FB",
-    bg2: "#FFFFFF",
-    surface: "#FFFFFF",
-    surface2: "#EAF1F9",
-    card: "#FFFFFF",
-    border: "#D3DEEB",
-    accent: "#0077B6",
-    teal: "#008F86",
-    gold: "#B86E00",
-    text: "#0F1B2D",
-    muted: "#566B84",
-    danger: "#D6304F",
-    success: "#0A8F65",
-    purple: "#6D4FD1"
-  }
-};
-const C = {
-  ...THEMES.dark
-};
-let _theme = "dark";
-try {
-  if (localStorage.getItem("iapp_theme") === "light") _theme = "light";
-} catch {}
-const themeSubs = new Set();
-function applyTheme(t) {
-  _theme = t;
-  Object.assign(C, THEMES[t]);
-  try {
-    localStorage.setItem("iapp_theme", t);
-  } catch {}
-  try {
-    document.documentElement.setAttribute("data-theme", t);
-    document.documentElement.style.background = C.bg;
-    document.body.style.background = C.bg;
-    const m = document.querySelector('meta[name="theme-color"]');
-    if (m) m.setAttribute("content", C.bg);
-  } catch {}
-}
-function setTheme(t) {
-  applyTheme(t);
-  themeSubs.forEach(f => f(t));
-}
-function useTheme() {
-  const [t, setT] = useState(_theme);
-  useEffect(() => {
-    themeSubs.add(setT);
-    setT(_theme);
-    return () => {
-      themeSubs.delete(setT);
-    };
-  }, []);
-  return t;
-}
-applyTheme(_theme);
+// Phase 8, batch 1: the theme system (palettes, the shared C object, the
+// subscriber store, applyTheme/setTheme/useTheme) moved to
+// src/modules/theme/index.js — this is now the single source of truth for
+// it. C is the exact same object instance the module already applied the
+// resolved theme to at import time (which happens before this script loads),
+// so nothing here needs to re-run that; getTheme() replaces the old local
+// `_theme` variable for the one place below that reads it directly.
+const { THEMES, C, applyTheme, setTheme, useTheme, getTheme } = window.IAppModules.theme;
 function ThemeToggle() {
   const t = useTheme();
   return React.createElement("div", {
@@ -19441,7 +19377,7 @@ function UnifiedLogin({
       border: "1px solid " + C.border,
       borderRadius: 20,
       padding: "20px 18px",
-      boxShadow: "0 20px 60px " + (_theme === "dark" ? "#0008" : "#1B2B4A22")
+      boxShadow: "0 20px 60px " + (getTheme() === "dark" ? "#0008" : "#1B2B4A22")
     }
   }, mode === "staff" ? React.createElement("form", {
     onSubmit: submit,
