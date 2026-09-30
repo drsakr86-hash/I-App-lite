@@ -376,58 +376,22 @@ async function authenticateStaff(email, password) {
   }
   return prof;
 }
-async function _sbMutateOnline(key, mutator, verify) {
-  if (key === APT_KEY) return await aptMutate(mutator, verify);
-  if (ROW_TABLES[key]) return await rowMutate(key, mutator, verify);
-  for (let attempt = 0; attempt < 4; attempt++) {
-    const cur = await sbGet(key);
-    if (cur === undefined) return {
-      ok: false,
-      error: "offline"
-    };
-    const base = Array.isArray(cur) ? cur : [];
-    const next = mutator(base);
-    if (next && !Array.isArray(next) && next.abort) return {
-      ok: false,
-      error: next.abort,
-      data: base
-    };
-    if (!(await sbSet(key, next))) return {
-      ok: false,
-      error: "offline"
-    };
-    try {
-      localStorage.setItem(key, JSON.stringify(next));
-    } catch {}
-    if (!verify) return {
-      ok: true,
-      data: next
-    };
-    const check = await sbGet(key);
-    if (Array.isArray(check) && verify(check)) {
-      try {
-        localStorage.setItem(key, JSON.stringify(check));
-      } catch {}
-      return {
-        ok: true,
-        data: check
-      };
-    }
-    await new Promise(r => setTimeout(r, 200 + Math.random() * 500));
-  }
-  return {
-    ok: false,
-    error: "conflict"
-  };
-}
-const AUDIT_KEY = "iapp_audit",
-  TRASH_KEY = "iapp_trash",
-  BACKUP_KEY = "iapp_backups";
-const AUDIT_MAX = 1500,
-  TRASH_MAX = 400,
-  TRASH_DAYS = 30,
-  BACKUP_KEEP = 5;
-const BACKUP_KEYS = ["iapp_patients", "iapp_visits", "iapp_exams", "iapp_prescriptions", "iapp_appointments", "iapp_prices", "iapp_doctors", "iapp_clinic", "iapp_expenses", "iapp_recurring_expenses", "iapp_custom_tests", "iapp_imaging_orders"];
+// Phase 8, batch 10: _sbMutateOnline's generic read-modify-write-with-retry
+// loop (everything below the APT_KEY/ROW_TABLES dispatch) moved to
+// src/modules/sync/wiring.js as part of sbMutate -- delegate below instead
+// of redefining it. The APT_KEY/ROW_TABLES dispatch itself is registered
+// with that module via setTableMutate() further down, right where
+// aptMutate/rowMutate are already in scope (see the comment there).
+//
+// Phase 8, batch 10: AUDIT_KEY/TRASH_KEY/BACKUP_KEY and their limits moved
+// to src/modules/sync/engine.js (sbGet/sbMutateLocal need BACKUP_KEY/
+// BACKUP_KEYS) -- delegate below instead of redefining them. logAudit/
+// trashPut/saveAutoBackup (which build actual audit/trash/backup entries
+// using these keys) still live here -- a later batch.
+const {
+  AUDIT_KEY, TRASH_KEY, BACKUP_KEY,
+  AUDIT_MAX, TRASH_MAX, TRASH_DAYS, BACKUP_KEEP, BACKUP_KEYS
+} = window.IAppModules.sync;
 let CURRENT_USER = null;
 const actorName = () => CURRENT_USER ? CURRENT_USER.name || CURRENT_USER.username || "—" : "—";
 async function logAudit(action, details) {
@@ -1253,66 +1217,19 @@ async function _sbSetRaw(key, value) {
 // Phase 8, batch 9: register the two functions above as the moved flusher's
 // actual remote read/write (see the comment near flushKey/flushAll above).
 window.IAppModules.sync.setRawIO({ readRemote: _sbGetRaw, writeRemote: _sbSetRaw });
-async function sbGet(key) {
-  if (isDirty(key)) {
-    if (!isFlushing(key)) flushKey(key).then(refreshPending);
-    const l = LS.get(key);
-    if (l !== null) {
-      try {
-        return JSON.parse(l);
-      } catch {}
-    }
-  }
-  const v = await _sbGetRaw(key);
-  if (v !== undefined && v !== null && !isDirty(key) && !NOCACHE_KEYS.includes(key) && BACKUP_KEYS.includes(key)) LS.set(key, JSON.stringify(v));
-  return v;
-}
-async function sbSet(key, value) {
-  if (isDirty(key)) await flushKey(key);
-  return await _sbSetRaw(key, value);
-}
-function sbMutateLocal(key, mutator) {
-  if (key === BACKUP_KEY) return {
-    ok: false,
-    error: "offline"
-  };
-  let cur = [];
-  try {
-    const l = LS.get(key);
-    if (l !== null) {
-      const p = JSON.parse(l);
-      if (Array.isArray(p)) cur = p;
-    }
-  } catch {}
-  const next = mutator(cur);
-  if (next && !Array.isArray(next) && next.abort) return {
-    ok: false,
-    error: next.abort,
-    data: cur
-  };
-  if (!queueLocal(key, next)) return {
-    ok: false,
-    error: "offline",
-    data: cur
-  };
-  busEmit(key, next);
-  flushKey(key).then(refreshPending);
-  return {
-    ok: true,
-    data: next,
-    queued: true
-  };
-}
-async function sbMutate(key, mutator, verify) {
-  if (!offlineNow() && !(await ensureAuthed()).ok) return sbMutateLocal(key, mutator);
-  if (isDirty(key)) {
-    const ok = await flushKey(key);
-    if (!ok) return sbMutateLocal(key, mutator);
-  }
-  const res = await _sbMutateOnline(key, mutator, verify);
-  if (res.ok || res.error !== "offline") return res;
-  return sbMutateLocal(key, mutator);
-}
+// Phase 8, batch 10: register the per-table "Core" dispatch (the old
+// _sbMutateOnline's APT_KEY/ROW_TABLES branches) as the moved sbMutate's
+// table-mutate hook -- see the comment near AUDIT_KEY above. Returning
+// undefined for any key that isn't a Core table lets the module's own
+// generic read-modify-write-with-retry loop handle everything else.
+window.IAppModules.sync.setTableMutate(async (key, mutator, verify) => {
+  if (key === APT_KEY) return await aptMutate(mutator, verify);
+  if (ROW_TABLES[key]) return await rowMutate(key, mutator, verify);
+  return undefined;
+});
+// Phase 8, batch 10: sbGet/sbSet/sbMutateLocal/sbMutate moved to
+// src/modules/sync/wiring.js -- delegate below instead of redefining them.
+const { sbGet, sbSet, sbMutateLocal, sbMutate } = window.IAppModules.sync;
 // Phase 33 fix (H3): iapp_create_clinical_visit is called from several places without
 // knowing for certain whether the deployed function accepts p_legacy_id (the review
 // could not confirm the live signature). Rather than guessing — which could either

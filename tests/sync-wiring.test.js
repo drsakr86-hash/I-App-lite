@@ -1,7 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { setRawIO, flushKey, isFlushing, flushAll, queueLocal, queueSave } from '../src/modules/sync/wiring.js';
-import { SyncStore, DIRTY_PREFIX, BASE_PREFIX, dirtyKeys } from '../src/modules/sync/engine.js';
+import {
+  setRawIO, flushKey, isFlushing, flushAll, queueLocal, queueSave,
+  sbGet, sbSet, sbMutateLocal, sbMutate, setTableMutate
+} from '../src/modules/sync/wiring.js';
+import { SyncStore, DIRTY_PREFIX, BASE_PREFIX, BACKUP_KEY, dirtyKeys, busOn } from '../src/modules/sync/engine.js';
 
 // A tiny in-memory localStorage polyfill -- LS (src/modules/sync/engine.js)
 // gracefully no-ops without one (see tests/sync-engine.test.js), so to
@@ -31,6 +34,7 @@ test.afterEach(() => {
   // Our polyfill has no clear(); rebuild it fresh between tests instead.
   globalThis.localStorage = makeLocalStorage();
   SyncStore.set({ pending: 0, pendingKeys: [], syncing: false, errors: {}, lastSyncAt: null });
+  setTableMutate(async () => undefined);
 });
 
 test('queueLocal: marks a key dirty, snapshots the previous value as its base, and updates SyncStore.pending', () => {
@@ -162,4 +166,172 @@ test('queueSave: falls back to writing remote directly when the local queue itse
   } finally {
     globalThis.localStorage = saved;
   }
+});
+
+// ---- sbGet / sbSet ----------------------------------------------------------
+
+test('sbGet: not dirty -> reads remote, and caches locally only for a BACKUP_KEYS entry', async () => {
+  setRawIO({ readRemote: async () => ({ n: 7 }), writeRemote: async () => true });
+  const v = await sbGet('iapp_patients'); // a BACKUP_KEYS entry
+  assert.deepEqual(v, { n: 7 });
+  assert.deepEqual(JSON.parse(globalThis.localStorage.getItem('iapp_patients')), { n: 7 });
+});
+
+test('sbGet: not dirty -> a key outside BACKUP_KEYS is not cached locally', async () => {
+  setRawIO({ readRemote: async () => ({ n: 7 }), writeRemote: async () => true });
+  await sbGet('some_other_key');
+  assert.equal(globalThis.localStorage.getItem('some_other_key'), null);
+});
+
+test('sbGet: a dirty key is served from the local cache and kicks off a background flush', async () => {
+  const reads = [];
+  setRawIO({
+    readRemote: async k => { reads.push(k); return null; },
+    writeRemote: async () => true
+  });
+  globalThis.localStorage.setItem('k', JSON.stringify({ n: 1 }));
+  queueLocal('k', { n: 2 });
+
+  const v = await sbGet('k');
+  assert.deepEqual(v, { n: 2 }); // served from LS, not remote
+  // flushKey was kicked off in the background (fire-and-forget) -- give it a tick.
+  await new Promise(r => setTimeout(r, 0));
+  await new Promise(r => setTimeout(r, 0));
+  assert.ok(reads.includes('k'));
+});
+
+test('sbSet: not dirty -> writes remote directly', async () => {
+  const writes = [];
+  setRawIO({ readRemote: async () => null, writeRemote: async (k, v) => { writes.push({ k, v }); return true; } });
+  const ok = await sbSet('k', { n: 5 });
+  assert.equal(ok, true);
+  assert.deepEqual(writes, [{ k: 'k', v: { n: 5 } }]);
+});
+
+test('sbSet: a dirty key is flushed first so the new write does not get clobbered', async () => {
+  const writes = [];
+  setRawIO({
+    readRemote: async () => null,
+    writeRemote: async (k, v) => { writes.push(v); return true; }
+  });
+  globalThis.localStorage.setItem('k', JSON.stringify({ n: 1 }));
+  queueLocal('k', { n: 1 });
+
+  await sbSet('k', { n: 2 });
+  // The dirty flush (uploading {n:1}) happens before the new write ({n:2}).
+  assert.deepEqual(writes, [{ n: 1 }, { n: 2 }]);
+});
+
+// ---- sbMutateLocal -----------------------------------------------------------
+
+test('sbMutateLocal: BACKUP_KEY always refuses (no offline queueing for backups)', () => {
+  const res = sbMutateLocal(BACKUP_KEY, list => list);
+  assert.deepEqual(res, { ok: false, error: 'offline' });
+});
+
+test('sbMutateLocal: queues the mutated value locally, emits the change, and kicks off a background flush', async () => {
+  setRawIO({ readRemote: async () => null, writeRemote: async () => true });
+  globalThis.localStorage.setItem('list_key', JSON.stringify([{ id: 1 }]));
+  const seen = [];
+  const off = busOn('list_key', v => seen.push(v));
+  try {
+    const res = sbMutateLocal('list_key', list => [...list, { id: 2 }]);
+    assert.equal(res.ok, true);
+    assert.equal(res.queued, true);
+    assert.deepEqual(res.data, [{ id: 1 }, { id: 2 }]);
+    assert.deepEqual(seen, [[{ id: 1 }, { id: 2 }]]);
+    assert.ok(globalThis.localStorage.getItem(DIRTY_PREFIX + 'list_key'));
+  } finally {
+    off();
+  }
+});
+
+test('sbMutateLocal: a mutator that returns {abort} leaves the stored value untouched', () => {
+  globalThis.localStorage.setItem('k', JSON.stringify([1, 2]));
+  const res = sbMutateLocal('k', () => ({ abort: 'busy' }));
+  assert.deepEqual(res, { ok: false, error: 'busy', data: [1, 2] });
+  assert.equal(globalThis.localStorage.getItem(DIRTY_PREFIX + 'k'), null);
+});
+
+// ---- sbMutate ----------------------------------------------------------------
+
+test('sbMutate: falls back to sbMutateLocal when the session cannot be confirmed (and not offline)', async () => {
+  const origAuth = globalThis.window.IAppModules.auth;
+  globalThis.window.IAppModules.auth = { ensureSession: async () => ({ ok: false, reason: 'network' }) };
+  try {
+    const res = await sbMutate('k', list => [...list, 1]);
+    assert.equal(res.ok, true);
+    assert.equal(res.queued, true);
+  } finally {
+    globalThis.window.IAppModules.auth = origAuth;
+  }
+});
+
+test('sbMutate: dispatches to a registered table mutate for a key that table owns', async () => {
+  const calls = [];
+  setTableMutate(async (key, mutator, verify) => {
+    if (key !== 'iapp_appointments') return undefined;
+    calls.push({ key, verify });
+    return { ok: true, data: mutator([]) };
+  });
+  const res = await sbMutate('iapp_appointments', () => ['apt1']);
+  assert.equal(res.ok, true);
+  assert.deepEqual(res.data, ['apt1']);
+  assert.equal(calls.length, 1);
+});
+
+test('sbMutate: a key the table dispatcher does not own falls through to the generic read-modify-write loop', async () => {
+  setTableMutate(async () => undefined); // owns nothing
+  setRawIO({
+    readRemote: async () => [1, 2],
+    writeRemote: async () => true
+  });
+  const res = await sbMutate('generic_key', list => [...list, 3]);
+  assert.equal(res.ok, true);
+  assert.deepEqual(res.data, [1, 2, 3]);
+});
+
+test('sbMutate: the generic loop accepts the write once verify() sees it reflected back', async () => {
+  let stored = [1, 2];
+  let writeCount = 0;
+  setRawIO({
+    readRemote: async () => stored,
+    writeRemote: async (k, v) => { writeCount++; stored = v; return true; }
+  });
+  const res = await sbMutate('generic_key', list => [...list, 3], check => check.includes(3));
+  assert.equal(res.ok, true);
+  assert.deepEqual(res.data, [1, 2, 3]);
+  assert.equal(writeCount, 1);
+});
+
+test('sbMutate: the generic loop retries when verify() rejects a stale post-write read, then succeeds', async () => {
+  let stored = [1, 2];
+  let writeCount = 0;
+  let readCount = 0;
+  setRawIO({
+    readRemote: async () => {
+      readCount++;
+      // The verify-check read right after the first write (the 2nd read
+      // overall) comes back stale/conflicting once, forcing exactly one
+      // retry; every other read reflects the latest write.
+      if (readCount === 2) return [9, 9];
+      return stored;
+    },
+    writeRemote: async (k, v) => { writeCount++; stored = v; return true; }
+  });
+  const res = await sbMutate('generic_key', list => (list.includes(3) ? list : [...list, 3]), check => check.includes(3));
+  assert.equal(res.ok, true);
+  assert.ok(res.data.includes(3));
+  assert.equal(writeCount, 2);
+});
+
+test('sbMutate: the generic loop falls back to sbMutateLocal when the remote write fails (offline)', async () => {
+  setTableMutate(async () => undefined);
+  setRawIO({
+    readRemote: async () => undefined, // offline read
+    writeRemote: async () => true
+  });
+  const res = await sbMutate('generic_key', list => [...(list || []), 1]);
+  assert.equal(res.ok, true);
+  assert.equal(res.queued, true);
 });

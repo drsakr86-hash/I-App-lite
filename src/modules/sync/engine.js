@@ -49,6 +49,26 @@ export const DIRTY_PREFIX = 'iapp_dirty_';
 export const BASE_PREFIX = 'iapp_base_';
 export const NOCACHE_KEYS = ['iapp_audit', 'iapp_trash', 'iapp_backups'];
 
+// ---- audit/trash/backup key config (Phase 8, batch 10) --------------------
+// Plain config moved alongside sbGet/sbSet/sbMutate (see wiring.js), which
+// need BACKUP_KEY/BACKUP_KEYS. The functions that actually build audit/trash/
+// backup entries (logAudit/trashPut/saveAutoBackup) still live in
+// app-runtime.js -- that's a later batch -- but the key names and limits
+// they (and sbGet/sbMutateLocal) share are plain data, so there is no reason
+// to keep two copies of them around in the meantime.
+export const AUDIT_KEY = 'iapp_audit';
+export const TRASH_KEY = 'iapp_trash';
+export const BACKUP_KEY = 'iapp_backups';
+export const AUDIT_MAX = 1500;
+export const TRASH_MAX = 400;
+export const TRASH_DAYS = 30;
+export const BACKUP_KEEP = 5;
+export const BACKUP_KEYS = [
+  'iapp_patients', 'iapp_visits', 'iapp_exams', 'iapp_prescriptions',
+  'iapp_appointments', 'iapp_prices', 'iapp_doctors', 'iapp_clinic',
+  'iapp_expenses', 'iapp_recurring_expenses', 'iapp_custom_tests', 'iapp_imaging_orders'
+];
+
 // ---- sync-key display labels ---------------------------------------------
 
 export const SYNC_KEY_LABELS = {

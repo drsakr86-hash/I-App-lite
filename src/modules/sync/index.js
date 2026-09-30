@@ -5,7 +5,11 @@ export {
   LS, DIRTY_PREFIX, BASE_PREFIX, NOCACHE_KEYS,
   SYNC_KEY_LABELS, syncKeyLabel, offlineNow,
   SyncStore, useSyncStatus, busOn, busEmit,
-  isDirty, dirtyKeys, refreshPending, ensureAuthed, tq
+  isDirty, dirtyKeys, refreshPending, ensureAuthed, tq,
+  AUDIT_KEY, TRASH_KEY, BACKUP_KEY, AUDIT_MAX, TRASH_MAX, TRASH_DAYS, BACKUP_KEEP, BACKUP_KEYS
 } from './engine.js';
 export { sbGetStore, sbSetStore } from './store-io.js';
-export { setRawIO, flushKey, isFlushing, flushAll, queueLocal, queueSave } from './wiring.js';
+export {
+  setRawIO, flushKey, isFlushing, flushAll, queueLocal, queueSave,
+  sbGet, sbSet, sbMutateLocal, sbMutate, setTableMutate
+} from './wiring.js';

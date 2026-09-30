@@ -18,8 +18,10 @@ import {
   SYNC_KEY_LABELS, syncKeyLabel, offlineNow,
   SyncStore, useSyncStatus, busOn, busEmit,
   isDirty, dirtyKeys, refreshPending, ensureAuthed, tq,
+  AUDIT_KEY, TRASH_KEY, BACKUP_KEY, AUDIT_MAX, TRASH_MAX, TRASH_DAYS, BACKUP_KEEP, BACKUP_KEYS,
   sbGetStore, sbSetStore,
-  setRawIO, flushKey, isFlushing, flushAll, queueLocal, queueSave
+  setRawIO, flushKey, isFlushing, flushAll, queueLocal, queueSave,
+  sbGet, sbSet, sbMutateLocal, sbMutate, setTableMutate
 } from './modules/sync/index.js';
 import {
   getDailyReportHTML, getPatientFileHTML, getRxHTML, getGlassesHTML,
@@ -96,12 +98,21 @@ globalThis.IAppModules.sync = {
   // Phase 8, batch 9 — the generic key/value Supabase I/O against the
   // `iapp_store` table (sbGetStore/sbSetStore), and the flusher's
   // orchestration (setRawIO/flushKey/isFlushing/flushAll/queueLocal/
-  // queueSave). This is NOT the per-table "Core" read/write for
-  // appointments/visits/exams/... (_sbGetRaw/_sbSetRaw and everything they
-  // dispatch to) -- that stays in app-runtime.js for now; see the roadmap
-  // for why this was split into its own batch.
+  // queueSave).
   sbGetStore, sbSetStore,
-  setRawIO, flushKey, isFlushing, flushAll, queueLocal, queueSave
+  setRawIO, flushKey, isFlushing, flushAll, queueLocal, queueSave,
+  // Phase 8, batch 10 — sbGet/sbSet/sbMutateLocal/sbMutate (the layer other
+  // code actually calls to read/write/mutate a synced key), and the audit/
+  // trash/backup key config (AUDIT_KEY/TRASH_KEY/BACKUP_KEY/.../BACKUP_KEYS)
+  // sbGet and sbMutateLocal need. This is NOT the per-table "Core" read/
+  // write for appointments/visits/exams/... -- sbMutate dispatches to it via
+  // setTableMutate() (registered in app-runtime.js, same pattern as
+  // setRawIO), and it stays in app-runtime.js for now; see the roadmap for
+  // why this was split into its own batch. logAudit/trashPut/saveAutoBackup
+  // (which use these keys to build actual entries) also stay in
+  // app-runtime.js -- a later batch.
+  AUDIT_KEY, TRASH_KEY, BACKUP_KEY, AUDIT_MAX, TRASH_MAX, TRASH_DAYS, BACKUP_KEEP, BACKUP_KEYS,
+  sbGet, sbSet, sbMutateLocal, sbMutate, setTableMutate
 };
 globalThis.IAppModules.print = {
   getDailyReportHTML, getPatientFileHTML, getRxHTML, getGlassesHTML,
