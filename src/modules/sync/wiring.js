@@ -6,18 +6,18 @@
 // flushing dirty keys in the background.
 //
 // The flusher itself (src/modules/sync/flush.js) already takes its remote
-// read/write as injected functions (readRemote/writeRemote), so this module
-// does not need to import them directly. Those two functions
-// (_sbGetRaw/_sbSetRaw in the legacy runtime) still dispatch to the
-// per-table "Core" sync system (appointments, visits, exams, ...) that
-// hasn't moved out of app-runtime.js yet — so instead of hard-importing
-// them here (which this module can't yet satisfy), the legacy runtime
-// registers them once via setRawIO() right after it defines them. This
-// keeps the flusher's actual read/write behavior byte-identical to before:
-// it is the exact same _sbGetRaw/_sbSetRaw functions, just wired in instead
-// of referenced by closure. Once the per-table "Core" system moves in a
-// later batch, _sbGetRaw/_sbSetRaw can move too and this indirection can be
-// dropped in favor of a direct import.
+// read/write as injected functions (readRemote/writeRemote). Originally this
+// module could not import the actual remote read/write directly, because
+// they (_sbGetRaw/_sbSetRaw in the legacy runtime) dispatched to the
+// per-table "Core" sync system (appointments, visits, exams, ...), which
+// hadn't moved out of app-runtime.js yet — so the legacy runtime registered
+// them once via setRawIO() instead. Now that the appointments Core (batch
+// 11) and the generic ROW_TABLES Core (batch 12) have both moved, sbGetRaw/
+// sbSetRaw below are real, directly-imported implementations (Phase 8,
+// combined batch 19) — an exact copy of the old _sbGetRaw/_sbSetRaw, just
+// living here instead of in the legacy runtime. setRawIO() is kept so any
+// caller can still override the default wiring (e.g. tests), but the legacy
+// runtime no longer needs to call it.
 
 import { createFlusher } from './flush.js';
 import { mergeData } from './merge.js';
@@ -26,10 +26,38 @@ import {
   ensureAuthed, SyncStore, busEmit,
   isDirty, dirtyKeys, refreshPending, offlineNow
 } from './engine.js';
+import { ROW_TABLES, rowList, rowMutate } from './row-tables.js';
+import { sbGetStore, sbSetStore } from './store-io.js';
+import { aptList, aptSetAll } from '../appointments/core.js';
+import { APT_KEY } from '../appointments/appointment.mapper.js';
 
-// ---- raw Supabase read/write, injected by the legacy runtime --------------
+// ---- raw Supabase read/write (Phase 8, combined batch 19) ------------------
+// Exact copy of the legacy runtime's _sbGetRaw/_sbSetRaw: decides where a
+// given key's data actually lives (the appointments table, one of the
+// generic ROW_TABLES, or the generic iapp_store key/value table) and
+// reads/writes it there.
 
-let _rawIO = { readRemote: async () => undefined, writeRemote: async () => false };
+export async function sbGetRaw(key) {
+  if (offlineNow()) {
+    SyncStore.set({ reachable: false });
+    return undefined;
+  }
+  if (key === APT_KEY) return await aptList();
+  if (ROW_TABLES[key]) return await rowList(key);
+  return await sbGetStore(key);
+}
+
+export async function sbSetRaw(key, value) {
+  if (offlineNow()) {
+    SyncStore.set({ reachable: false });
+    return false;
+  }
+  if (key === APT_KEY) return await aptSetAll(Array.isArray(value) ? value : []);
+  if (ROW_TABLES[key]) return (await rowMutate(key, () => Array.isArray(value) ? value : [])).ok;
+  return await sbSetStore(key, value);
+}
+
+let _rawIO = { readRemote: sbGetRaw, writeRemote: sbSetRaw };
 export function setRawIO(io) {
   _rawIO = io;
 }

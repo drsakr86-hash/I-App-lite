@@ -71,6 +71,17 @@ import { waOpen, waReminderText, waFollowUpText } from './modules/notifications/
 import { callChannel, broadcastCall } from './modules/realtime/index.js';
 import TopBar from './components/TopBar.jsx';
 import BottomNav from './components/BottomNav.jsx';
+import { useDB } from './modules/data/index.js';
+import {
+  ADMIN_EMAILS, DEFAULT_ROLES, KIOSK_EMAIL, DEFAULT_USERS,
+  lockRemaining, registerLoginFail, clearLoginFails, fmtWait,
+  isRealUser, getUsers, saveUsers, pullUsers, resolveProfile, sbSignOut, authenticateStaff
+} from './modules/auth/staff-login.js';
+import FollowUpCentre from './components/FollowUpCentre.jsx';
+import { INJ_KEY, INJ_DRUGS } from './modules/followups/index.js';
+import GlobalSearch from './components/GlobalSearch.jsx';
+import DataTools from './components/DataTools.jsx';
+import { maybeDailyBackup } from './modules/datatools/index.js';
 
 // Migration bridge: keep the proven production runtime intact while the
 // build system and service layer move to Vite. The legacy runtime reaches the
@@ -173,7 +184,17 @@ globalThis.IAppModules.auth = {
   // Phase 6, batch 2 (real routing, part A) — maps routeViewFor()'s result to
   // a URL path so UnifiedRouter can keep the address bar in sync with the
   // session-derived view. Doesn't change which component renders.
-  pathForRouteView
+  pathForRouteView,
+  // Phase 8, combined batch 19 — authenticateStaff (the actual Supabase
+  // email/password sign-in), resolveProfile (its auto-admin-provisioning,
+  // reviewed for safety back in Phase 5 and left behaviorally unchanged
+  // here), the local user list (getUsers/saveUsers/pullUsers), and the
+  // login-attempt lockout (lockRemaining/registerLoginFail/clearLoginFails/
+  // fmtWait) — see src/modules/auth/staff-login.js. These were always
+  // tightly coupled to each other, so they moved together as one unit.
+  ADMIN_EMAILS, DEFAULT_ROLES, KIOSK_EMAIL, DEFAULT_USERS,
+  lockRemaining, registerLoginFail, clearLoginFails, fmtWait,
+  isRealUser, getUsers, saveUsers, pullUsers, resolveProfile, sbSignOut, authenticateStaff
 };
 globalThis.IAppModules.screens = { WaitingRoom: WaitingRoomScreen, Appointments: AppointmentsScreen, Dashboard: DashboardScreen, Patients: PatientsScreen, PatientFile: PatientFileScreen, Prescriptions: PrescriptionsScreen, Radiology: RadiologyScreen, ImagingCenter: ImagingCenterScreen, Accounting: AccountingScreen, Settings: SettingsScreen, SecretaryApp: SecretaryAppScreen, PatientApp: PatientAppScreen, App: AppScreen };
 globalThis.IAppModules.storage = { normalizeFileMeta, resolveFileUrl };
@@ -242,6 +263,25 @@ globalThis.IAppModules.realtime = { callChannel, broadcastCall };
 // syncKeyLabel, flushAll, ThemeToggle, XRAY_ICON) was already moved in
 // earlier batches, so they move now as self-contained components.
 globalThis.IAppModules.nav = { TopBar, BottomNav };
+// Phase 8, combined batch 19 -- useDB, the core data read/write hook nearly
+// every screen uses: see src/modules/data/use-db.js. Every dependency it
+// used to reach through legacy closures was already moved in earlier
+// batches (most recently sbGetRaw/sbSetRaw, moved alongside it in this same
+// batch -- see src/modules/sync/wiring.js), so it moves now too.
+globalThis.IAppModules.data = { useDB };
+// Phase 8, combined batch 19 -- FollowUpCentre (the overdue-visits/due-
+// injections modal). INJ_KEY/INJ_DRUGS are exposed too because the legacy
+// runtime's InjectionsSection (out of this batch's scope) still reads them.
+globalThis.IAppModules.followups = { FollowUpCentre, INJ_KEY, INJ_DRUGS };
+// Phase 8, combined batch 19 -- GlobalSearch (the patients/prescriptions/
+// appointments quick-search modal): self-contained aside from C (already
+// moved), so it moves on its own.
+globalThis.IAppModules.search = { GlobalSearch };
+// Phase 8, combined batch 19 -- DataTools (the admin-only backups/trash/
+// duplicate-patients/audit-log settings panel) and maybeDailyBackup (called
+// once, separately, from the app's session-ready effect): see
+// src/modules/datatools/.
+globalThis.IAppModules.datatools = { DataTools, maybeDailyBackup };
 
 const legacyScript = document.createElement('script');
 legacyScript.src = import.meta.env.BASE_URL + 'legacy/app-runtime.js?v=' + __BUILD_ID__;

@@ -238,149 +238,21 @@ async function migrateUsers() {
 // bare localStorage-key string; the login-lockout logic that reads it stays
 // here, out of scope for this batch) -- delegate instead of redefining it.
 const { GUARD_KEY } = window.IAppModules.constants;
-function _guards() {
-  try {
-    const g = JSON.parse(localStorage.getItem(GUARD_KEY));
-    return g && typeof g === "object" && !("fails" in g) ? g : {};
-  } catch {
-    return {};
-  }
-}
-function _gkey(k) {
-  return String(k || "_").trim().toLowerCase();
-}
-function lockRemaining(k) {
-  const g = _guards()[_gkey(k)];
-  return g ? Math.max(0, Math.ceil((g.until - Date.now()) / 1000)) : 0;
-}
-function registerLoginFail(k) {
-  const all = _guards(),
-    key = _gkey(k),
-    g = all[key] || {
-      fails: 0,
-      until: 0
-    };
-  g.fails++;
-  if (g.fails >= 6) g.until = Date.now() + Math.min(300, 30 * Math.pow(2, g.fails - 6)) * 1000;
-  all[key] = g;
-  try {
-    localStorage.setItem(GUARD_KEY, JSON.stringify(all));
-  } catch {}
-  return lockRemaining(k);
-}
-function clearLoginFails(k) {
-  const all = _guards();
-  delete all[_gkey(k)];
-  try {
-    localStorage.setItem(GUARD_KEY, JSON.stringify(all));
-  } catch {}
-}
-const fmtWait = s => s >= 60 ? Math.ceil(s / 60) + " دقيقة" : s + " ثانية";
+// Phase 8, combined batch 19: the login-attempt lockout (lockRemaining/
+// registerLoginFail/clearLoginFails/fmtWait) moved to
+// src/modules/auth/staff-login.js, together with authenticateStaff/
+// resolveProfile below (they are tightly coupled) -- delegate below instead
+// of redefining them.
+const { lockRemaining, registerLoginFail, clearLoginFails, fmtWait } = window.IAppModules.auth;
 // Phase 8, batch 14: emailKey moved to src/modules/constants/misc.js (a
 // bare normalization helper) -- delegate instead of redefining it.
 const { emailKey } = window.IAppModules.constants;
-async function resolveProfile(email) {
-  await Promise.race([pullUsers().catch(() => false), new Promise(r => setTimeout(() => r(false), 5000))]);
-  const key = emailKey(email);
-  if (key === emailKey(KIOSK_EMAIL)) return {
-    error: "❌ حساب الشاشة لا يُستخدم للدخول إلى البرنامج"
-  };
-  const users = getUsers().filter(u => u && (u.email || u.username));
-  let u = users.find(x => emailKey(x.email) === key) || users.find(x => emailKey(x.username) === key);
-  if (u) return {
-    user: {
-      ...publicUser(u),
-      email: u.email || email
-    }
-  };
-  const preset = DEFAULT_ROLES[key];
-  const noAccounts = !users.some(x => x.email);
-  if (preset) {
-    const rec = {
-      id: newId(),
-      email: key,
-      username: key,
-      name: preset.name || key.split("@")[0],
-      role: preset.role
-    };
-    saveUsers([...getUsers().filter(x => emailKey(x.email) !== key), rec]);
-    return {
-      user: {
-        ...publicUser(rec),
-        email: key
-      }
-    };
-  }
-  if (ADMIN_EMAILS.map(emailKey).includes(key) || noAccounts) {
-    const rec = {
-      id: newId(),
-      email: key,
-      username: key,
-      name: key.split("@")[0],
-      role: "admin"
-    };
-    saveUsers([...getUsers().filter(x => emailKey(x.email) !== key), rec]);
-    return {
-      user: {
-        ...publicUser(rec),
-        email: key
-      }
-    };
-  }
-  return {
-    error: "❌ هذا الحساب غير مضاف إلى صلاحيات البرنامج — اطلب من المدير إضافة بريدك من الإعدادات"
-  };
-}
-async function authenticateStaff(email, password) {
-  const key = emailKey(email);
-  const wait = lockRemaining(key);
-  if (wait) return {
-    error: "⏳ محاولات خاطئة كثيرة لهذا الحساب — حاول مرة أخرى بعد " + fmtWait(wait)
-  };
-  const sb = getSB();
-  if (!sb) return {
-    error: "❌ تعذر الاتصال بقاعدة البيانات — تأكد من الإنترنت"
-  };
-  if (!key.includes("@")) return {
-    error: "❌ اكتب البريد الإلكتروني كاملاً (مثال: admin@sakr.clinic)"
-  };
-  let res;
-  try {
-    res = await sb.auth.signInWithPassword({
-      email: key,
-      password
-    });
-  } catch (e) {
-    return {
-      error: "❌ تعذر الاتصال بالخادم — حاول مرة أخرى"
-    };
-  }
-  if (res.error) {
-    const m = String(res.error.message || "");
-    const w = registerLoginFail(key);
-    if (w) return {
-      error: "⏳ تم إيقاف الدخول لهذا الحساب مؤقتاً — حاول بعد " + fmtWait(w)
-    };
-    if (/Email not confirmed/i.test(m)) return {
-      error: "❌ البريد غير مُفعّل — أكّده من رسالة Supabase أو أوقف تأكيد البريد من إعدادات Supabase"
-    };
-    if (/Invalid login/i.test(m)) return {
-      error: "❌ البريد الإلكتروني أو كلمة المرور غير صحيحة"
-    };
-    return {
-      error: "❌ " + m
-    };
-  }
-  clearLoginFails(key);
-  SyncStore.set({ authError: false });
-  setTimeout(() => { if (dirtyKeys().length) flushAll(); }, 500);
-  const prof = await resolveProfile(key);
-  if (prof.error) {
-    await sbSignOut();
-    return prof;
-  }
-  return prof;
-}
+// Phase 8, combined batch 19: resolveProfile (auto-admin-provisioning,
+// reviewed for safety in Phase 5 and left behaviorally unchanged here) and
+// authenticateStaff (the actual Supabase email/password sign-in) moved to
+// src/modules/auth/staff-login.js -- delegate below instead of redefining
+// them.
+const { resolveProfile, authenticateStaff } = window.IAppModules.auth;
 // Phase 8, batch 10: _sbMutateOnline's generic read-modify-write-with-retry
 // loop (everything below the APT_KEY/ROW_TABLES dispatch) moved to
 // src/modules/sync/wiring.js as part of sbMutate -- delegate below instead
@@ -409,55 +281,13 @@ const actorName = () => CURRENT_USER ? CURRENT_USER.name || CURRENT_USER.usernam
 // (batch 9) and setTableMutate (batch 10) do.
 window.IAppModules.sync.setActor(() => ({ name: actorName(), role: CURRENT_USER ? CURRENT_USER.role : "" }));
 const { logAudit, trashPut, saveAutoBackup } = window.IAppModules.sync;
-async function trashRestore(entry) {
-  if (!entry || !entry.storeKey || !entry.record) return false;
-  const rec = entry.record;
-  const put = await sbMutate(entry.storeKey, list => list.some(x => x.id === rec.id) ? list.map(x => x.id === rec.id ? rec : x) : [...list, rec], list => list.some(x => x.id === rec.id));
-  if (!put.ok) return false;
-  try {
-    localStorage.setItem(entry.storeKey, JSON.stringify(put.data));
-  } catch {}
-  await sbMutate(TRASH_KEY, list => list.filter(t => t.id !== entry.id));
-  await logAudit("استعادة من سلة المحذوفات", entry.label || entry.storeKey);
-  return true;
-}
-async function trashDrop(entryId) {
-  await sbMutate(TRASH_KEY, list => list.filter(t => t.id !== entryId));
-}
-async function maybeDailyBackup() {
-  try {
-    const list = await sbGet(BACKUP_KEY);
-    if (list === undefined) return;
-    const arr = Array.isArray(list) ? list : [];
-    if (arr.some(b => localISO(new Date(b.at)) === localISO())) return;
-    await saveAutoBackup("نسخة يومية تلقائية");
-  } catch (e) {
-    console.warn("daily backup failed", e);
-  }
-}
-async function restoreSnapshot(data, label) {
-  const keys = Object.keys(data || {}).filter(k => k.indexOf("iapp_") === 0 && !["iapp_session", "iapp_unified_session", GUARD_KEY, BACKUP_KEY, TRASH_KEY, AUDIT_KEY].includes(k));
-  if (!keys.length) return {
-    ok: false,
-    error: "الملف لا يحتوي على بيانات I App"
-  };
-  await saveAutoBackup("قبل الاستعادة");
-  let done = 0;
-  for (const k of keys) {
-    const v = data[k];
-    if (v === undefined) continue;
-    const ok = await sbSet(k, v);
-    try {
-      localStorage.setItem(k, JSON.stringify(v));
-    } catch {}
-    if (ok) done++;
-  }
-  await logAudit("استعادة نسخة احتياطية", (label || "") + " · " + done + " مجموعة بيانات");
-  return {
-    ok: true,
-    count: done
-  };
-}
+// Phase 8, combined batch 19: trashRestore/trashDrop/restoreSnapshot (used
+// only by DataTools, which also moved in this batch) and maybeDailyBackup
+// moved to src/modules/datatools/datatools-core.js. trashRestore/trashDrop/
+// restoreSnapshot have no remaining caller in this file, so they are simply
+// removed; maybeDailyBackup is still called once below (the session-ready
+// effect), so it is delegated instead.
+const { maybeDailyBackup } = window.IAppModules.datatools;
 const isActiveApt = a => !!a && !a.cancelled && a.status !== "cancelled" && a.waitStatus !== "cancelled";
 const SLOT_CAPACITY = 1;
 // Phase 8, batch 14: newId moved to src/modules/constants/misc.js (a bare
@@ -738,40 +568,26 @@ const {
 // isFlushing/flushAll/queueLocal/queueSave) and the background flush
 // lifecycle (online/offline/visibility/interval) moved to
 // src/modules/sync/wiring.js -- delegate below instead of redefining them.
-// The flusher's actual remote read/write (_sbGetRaw/_sbSetRaw, defined
-// further down) still dispatches to the per-table "Core" sync system
-// (appointments, visits, exams, ...) that hasn't moved out of this file yet,
-// so the module version can't import them directly; instead they are
-// registered with the module via setRawIO() right after they're defined
-// below, right where the old readRemote/writeRemote wiring used to be. This
-// keeps the flusher's actual behavior byte-identical to before -- same
-// _sbGetRaw/_sbSetRaw functions, just wired in instead of closed over.
+// Phase 8, combined batch 19: the flusher's actual remote read/write
+// (formerly _sbGetRaw/_sbSetRaw here, registered into the module via
+// setRawIO()) are now real functions living in src/modules/sync/wiring.js
+// itself (sbGetRaw/sbSetRaw), since the per-table "Core" sync system they
+// dispatch to (appointments, batch 11; the generic ROW_TABLES, batch 12)
+// has fully moved out of this file. Nothing to delegate here any more.
 const {
   flushKey, isFlushing, flushAll, queueLocal, queueSave
 } = window.IAppModules.sync;
-const ADMIN_EMAILS = ["admin@sakr.clinic"];
-const DEFAULT_ROLES = {
-  "admin@sakr.clinic": {
-    role: "admin",
-    name: "د. عبدالستار صقر"
-  },
-  "user1@sakr.clinic": {
-    role: "secretary",
-    name: "سكرتارية 1"
-  },
-  "user2@sakr.clinic": {
-    role: "secretary",
-    name: "سكرتارية 2"
-  },
-  "user3@sakr.clinic": {
-    role: "secretary",
-    name: "سكرتارية 3"
-  }
-};
+// Phase 8, combined batch 19: ADMIN_EMAILS/DEFAULT_ROLES moved to
+// src/modules/auth/staff-login.js (resolveProfile, their only caller, moved
+// in the same batch) -- no remaining caller here, so nothing to delegate.
 // Phase 8, batch 2: moved to src/modules/constants/misc.js — delegates below.
 const { BOOKING_TABLE } = window.IAppModules.constants;
 const SLOTS_VIEW = "iapp_slots_taken";
-const KIOSK_EMAIL = "";
+// Phase 8, combined batch 19: KIOSK_EMAIL moved to
+// src/modules/auth/staff-login.js (alongside authenticateStaff/
+// resolveProfile) -- still used below (ensureKiosk) and in the patient
+// login flow, so it is delegated instead of redefined.
+const { KIOSK_EMAIL } = window.IAppModules.auth;
 const KIOSK_PASSWORD = "";
 const PATIENT_FILE_LOGIN = false;
 async function sbSession() {
@@ -803,26 +619,10 @@ async function sbSession() {
   } catch (e) {}
   return null;
 }
-async function sbSignOut() {
-  const sb = getSB();
-  if (offlineNow()) {
-    try {
-      localStorage.removeItem("iapp_sb_auth");
-    } catch (e) {}
-    try {
-      if (sb) sb.auth.signOut({
-        scope: "local"
-      }).catch(() => {});
-    } catch (e) {}
-    return;
-  }
-  try {
-    if (sb) await Promise.race([sb.auth.signOut(), new Promise(r => setTimeout(r, 4000))]);
-  } catch (e) {}
-  try {
-    localStorage.removeItem("iapp_sb_auth");
-  } catch (e) {}
-}
+// Phase 8, combined batch 19: sbSignOut moved to
+// src/modules/auth/staff-login.js (alongside authenticateStaff/
+// resolveProfile) -- delegate below instead of redefining it.
+const { sbSignOut } = window.IAppModules.auth;
 let _kioskTried = false;
 async function ensureKiosk() {
   if (!KIOSK_EMAIL || !KIOSK_PASSWORD) return false;
@@ -867,31 +667,11 @@ const {
 // I/O against the `iapp_store` table) moved to src/modules/sync/store-io.js
 // -- delegate below instead of redefining them.
 const { sbGetStore: _sbGetStore, sbSetStore: _sbSetStore } = window.IAppModules.sync;
-async function _sbGetRaw(key) {
-  if (offlineNow()) {
-    SyncStore.set({
-      reachable: false
-    });
-    return undefined;
-  }
-  if (key === APT_KEY) return await aptList();
-  if (ROW_TABLES[key]) return await rowList(key);
-  return await _sbGetStore(key);
-}
-async function _sbSetRaw(key, value) {
-  if (offlineNow()) {
-    SyncStore.set({
-      reachable: false
-    });
-    return false;
-  }
-  if (key === APT_KEY) return await aptSetAll(Array.isArray(value) ? value : []);
-  if (ROW_TABLES[key]) return (await rowMutate(key, () => Array.isArray(value) ? value : [])).ok;
-  return await _sbSetStore(key, value);
-}
-// Phase 8, batch 9: register the two functions above as the moved flusher's
-// actual remote read/write (see the comment near flushKey/flushAll above).
-window.IAppModules.sync.setRawIO({ readRemote: _sbGetRaw, writeRemote: _sbSetRaw });
+// Phase 8, combined batch 19: _sbGetRaw/_sbSetRaw (and the setRawIO
+// registration that wired them into the flusher) moved to
+// src/modules/sync/wiring.js as real, directly-imported functions
+// (sbGetRaw/sbSetRaw). Their only caller, useDB, also moved in this same
+// batch, so there is nothing left here to delegate.
 // Phase 8, batch 10: register the per-table "Core" dispatch (the old
 // _sbMutateOnline's APT_KEY/ROW_TABLES branches) as the moved sbMutate's
 // table-mutate hook -- see the comment near AUDIT_KEY above. Returning
@@ -922,131 +702,10 @@ async function createClinicalVisitCore(sb, params, legacyId) {
   console.warn("[iapp_create_clinical_visit] retrying without p_legacy_id (function may not accept it yet):", msg);
   return await iappRpc(sb, "iapp_create_clinical_visit", params);
 }
-function useDB(key, seed) {
-  const [data, setData] = useState(() => {
-    try {
-      const local = LS.get(key);
-      if (local) return JSON.parse(local);
-    } catch {}
-    return seed;
-  });
-  const [ready, setReady] = useState(false);
-  useEffect(() => {
-    setReady(true);
-    const off = busOn(key, setData);
-    (async () => {
-      if (isDirty(key)) {
-        await flushKey(key);
-        refreshPending();
-        return;
-      }
-      const remote = await _sbGetRaw(key);
-      if (remote === undefined) {
-        console.log(`[${key}] offline — using localStorage`);
-      } else if (remote === null) {
-        let toUpload = seed;
-        try {
-          const l = LS.get(key);
-          if (l) toUpload = JSON.parse(l);
-        } catch {}
-        await _sbSetRaw(key, toUpload);
-        console.log(`[${key}] first sync ✓`);
-      } else if (!isDirty(key)) {
-        setData(remote);
-        LS.set(key, JSON.stringify(remote));
-        console.log(`[${key}] loaded from Supabase ✓`);
-      }
-    })();
-    return off;
-  }, [key]);
-  useEffect(() => {
-    const sb = getSB();
-    if (!sb) return undefined;
-    let channel;
-    if (ROW_TABLES[key]) {
-      try {
-        channel = sb.channel("rows_" + key).on('postgres_changes', {
-          event: '*',
-          schema: 'public',
-          table: ROW_TABLES[key].table
-        }, async () => {
-          if (isDirty(key)) return;
-          const list = await rowList(key);
-          if (Array.isArray(list) && !isDirty(key)) setData(list);
-        }).subscribe();
-      } catch (e) {
-        console.warn(key + " realtime unavailable", e && e.message);
-      }
-      return () => {
-        if (channel) {
-          try {
-            sb.removeChannel(channel);
-          } catch {}
-        }
-      };
-    }
-    if (key === APT_KEY) {
-      try {
-        channel = sb.channel("iapp_appointments_rows").on('postgres_changes', {
-          event: '*',
-          schema: 'public',
-          table: APT_TABLE
-        }, async () => {
-          if (isDirty(key)) return;
-          const list = await aptList();
-          if (Array.isArray(list) && !isDirty(key)) setData(list);
-        }).subscribe();
-      } catch (e) {
-        console.warn("appointments realtime unavailable", e && e.message);
-      }
-      return () => {
-        if (channel) {
-          try {
-            sb.removeChannel(channel);
-          } catch {}
-        }
-      };
-    }
-    try {
-      channel = sb.channel(`iapp_store_${key}`).on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'iapp_store',
-        filter: `key=eq.${key}`
-      }, payload => {
-        if (isDirty(key)) return;
-        const next = payload?.new?.value;
-        if (next !== undefined && next !== null) {
-          setData(next);
-          LS.set(key, JSON.stringify(next));
-        }
-      }).subscribe();
-    } catch (e) {
-      console.warn(`[${key}] realtime unavailable`, e?.message || e);
-    }
-    return () => {
-      if (channel) {
-        try {
-          sb.removeChannel(channel);
-        } catch {}
-      }
-    };
-  }, [key]);
-  const persist = useCallback(async val => {
-    setData(val);
-    return await queueSave(key, val);
-  }, [key]);
-  const refresh = useCallback(async () => {
-    const remote = await sbGet(key);
-    if (remote !== undefined && remote !== null) {
-      setData(prev => JSON.stringify(prev) === JSON.stringify(remote) ? prev : remote);
-      if (!isDirty(key)) LS.set(key, JSON.stringify(remote));
-      return remote;
-    }
-    return undefined;
-  }, [key]);
-  return [data, persist, ready, refresh];
-}
+// Phase 8, combined batch 19: useDB (the core data read/write hook nearly
+// every screen uses) moved to src/modules/data/use-db.js -- delegate below
+// instead of redefining it.
+const { useDB } = window.IAppModules.data;
 function genCode(patients) {
   const nums = patients.map(p => parseInt((p.patientCode || "P-0000").replace("P-", "")) || 0);
   const next = Math.max(0, ...nums) + 1;
@@ -1065,53 +724,12 @@ const { SecHead, Tag } = window.IAppModules.ui;
 // batch 1) — kept in sync by hand. Delegate below instead of redefining them,
 // so legacy and every React screen share the exact same functions.
 const { Btn, Modal, Confirm, Toast } = window.IAppModules.common;
-const DEFAULT_USERS = [];
-function getUsers() {
-  try {
-    const u = localStorage.getItem("iapp_users");
-    if (u) {
-      const list = JSON.parse(u);
-      if (Array.isArray(list) && list.length) return list;
-    }
-  } catch {}
-  return [];
-}
-let _usersSynced = false;
-const isRealUser = u => !!u && (!!u.email || !!u.username);
-function saveUsers(list, opts) {
-  try {
-    localStorage.setItem("iapp_users", JSON.stringify(list));
-  } catch {}
-  if (!(opts && opts.localOnly)) pushUsers(list);
-}
-async function pushUsers(list) {
-  if (!_usersSynced) return false;
-  const clean = (list || []).filter(isRealUser).map(({
-    password,
-    pw,
-    ...u
-  }) => u);
-  if (!clean.length) return false;
-  return sbSet("iapp_users", clean);
-}
-async function pullUsers() {
-  const remote = await sbGet("iapp_users");
-  if (remote === undefined) return false;
-  if (Array.isArray(remote) && remote.some(isRealUser)) {
-    try {
-      localStorage.setItem("iapp_users", JSON.stringify(remote));
-    } catch {}
-    _usersSynced = true;
-    return true;
-  }
-  _usersSynced = true;
-  let local = null;
-  try {
-    local = JSON.parse(localStorage.getItem("iapp_users") || "null");
-  } catch {}
-  if (Array.isArray(local) && local.some(u => u && u.email)) await pushUsers(local);
-  return true;
-}
+// Phase 8, combined batch 19: DEFAULT_USERS/getUsers/saveUsers (and their
+// private helpers pushUsers/pullUsers/isRealUser/_usersSynced) moved to
+// src/modules/auth/staff-login.js, alongside authenticateStaff/
+// resolveProfile (they are tightly coupled). Only DEFAULT_USERS/getUsers/
+// saveUsers still have callers in this file, so only those are delegated.
+const { DEFAULT_USERS, getUsers, saveUsers } = window.IAppModules.auth;
 function LoginScreen({
   onLogin
 }) {
@@ -1299,8 +917,12 @@ const { waOpen, waReminderText, waFollowUpText } = window.IAppModules.notificati
 // by MedicinesStep) moved to src/modules/prescriptions/rx-templates.js,
 // along with MedicinesStep itself -- see where MedicinesStep is delegated
 // below for the single remaining reference to these.
-const INJ_KEY = "iapp_injections";
-const INJ_DRUGS = ["Avastin", "Lucentis", "Eylea", "Ozurdex", "Triamcinolone", "Vabysmo"];
+// Phase 8, combined batch 19: INJ_KEY/INJ_DRUGS moved to
+// src/modules/followups/followups-model.js (alongside FollowUpCentre, which
+// also needs them) -- delegate below instead of redefining them.
+// saveInjection/deleteInjection below still use INJ_KEY via this
+// destructure, exactly as before.
+const { INJ_KEY, INJ_DRUGS } = window.IAppModules.followups;
 async function saveInjection(rec) {
   const res = await sbMutate(INJ_KEY, list => list.some(x => x.id === rec.id) ? list.map(x => x.id === rec.id ? rec : x) : [...list, rec], list => list.some(x => x.id === rec.id));
   if (res.ok) logAudit("تسجيل حقنة", (rec.patient || "") + " · " + (rec.drug || "") + " · " + (rec.eye || ""));
@@ -1312,263 +934,14 @@ async function deleteInjection(id, rec) {
   if (res.ok) logAudit("حذف حقنة", rec && rec.patient || id);
   return res.ok ? res.data : null;
 }
-function dueInjections(list, days) {
-  const limit = new Date();
-  limit.setDate(limit.getDate() + (days == null ? 7 : days));
-  const latest = {};
-  (list || []).forEach(x => {
-    const k = String(x.patientId || x.patient) + "|" + (x.eye || "");
-    if (!latest[k] || String(x.date || "") > String(latest[k].date || "")) latest[k] = x;
-  });
-  return Object.values(latest).filter(x => x.nextDate && new Date(x.nextDate) <= limit).sort((a, b) => String(a.nextDate).localeCompare(String(b.nextDate)));
-}
-function overdueFollowUps(visits, patients) {
-  const today = localISO();
-  const lastVisit = {};
-  (visits || []).forEach(v => {
-    const k = String(v.patientId);
-    if (!lastVisit[k] || String(v.date || "") > String(lastVisit[k])) lastVisit[k] = String(v.date || "");
-  });
-  const seen = {};
-  return (visits || []).filter(v => {
-    if (!v.nextVisit || String(v.nextVisit) >= today) return false;
-    const k = String(v.patientId);
-    if (String(lastVisit[k] || "") > String(v.nextVisit)) return false;
-    if (seen[k]) return false;
-    seen[k] = true;
-    return true;
-  }).map(v => {
-    const p = (patients || []).find(p => p.id === v.patientId) || {};
-    const late = Math.floor((new Date(today) - new Date(v.nextVisit)) / 86400000);
-    return {
-      ...v,
-      patientName: p.name || v.patient || "—",
-      patientPhone: p.phone || "",
-      late
-    };
-  }).sort((a, b) => b.late - a.late);
-}
-function FollowUpCentre({
-  visits,
-  patients,
-  onClose,
-  onPatientClick
-}) {
-  const [injections, setInjections] = useState([]);
-  const [tab, setTab] = useState("late");
-  useEffect(() => {
-    (async () => {
-      const r = await sbGet(INJ_KEY);
-      if (Array.isArray(r)) setInjections(r);
-    })();
-  }, []);
-  const late = overdueFollowUps(visits, patients);
-  const due = dueInjections(injections, 7);
-  const rows = tab === "late" ? late : due;
-  const tabBtn = (id, label, n) => React.createElement("div", {
-    onClick: () => setTab(id),
-    style: {
-      flex: 1,
-      textAlign: "center",
-      padding: "8px 6px",
-      borderRadius: 10,
-      cursor: "pointer",
-      fontSize: 12,
-      fontWeight: 700,
-      background: tab === id ? C.accent + "22" : C.bg,
-      color: tab === id ? C.accent : C.muted,
-      border: "1px solid " + (tab === id ? C.accent + "66" : C.border)
-    }
-  }, label, " (", n, ")");
-  return React.createElement("div", {
-    style: {
-      position: "fixed",
-      inset: 0,
-      background: "rgba(0,0,0,0.85)",
-      zIndex: 500,
-      display: "flex",
-      alignItems: "flex-start",
-      justifyContent: "center",
-      paddingTop: 50
-    },
-    onClick: onClose
-  }, React.createElement("div", {
-    onClick: e => e.stopPropagation(),
-    style: {
-      background: C.surface,
-      borderRadius: 20,
-      padding: 18,
-      width: "92%",
-      maxWidth: 440,
-      maxHeight: "84vh",
-      overflowY: "auto",
-      border: `2px solid ${C.gold}`
-    }
-  }, React.createElement("div", {
-    style: {
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      marginBottom: 12
-    }
-  }, React.createElement("div", {
-    style: {
-      color: C.gold,
-      fontWeight: 800,
-      fontSize: 15
-    }
-  }, "🔔 المتابعات"), React.createElement("span", {
-    onClick: onClose,
-    style: {
-      color: C.muted,
-      fontSize: 24,
-      cursor: "pointer"
-    }
-  }, "×")), React.createElement("div", {
-    style: {
-      display: "flex",
-      gap: 8,
-      marginBottom: 12
-    }
-  }, tabBtn("late", "متأخرة", late.length), tabBtn("inj", "حقن مستحقة", due.length)), rows.length === 0 && React.createElement("div", {
-    style: {
-      color: C.muted,
-      fontSize: 13,
-      textAlign: "center",
-      padding: "26px 0"
-    }
-  }, "لا يوجد شيء هنا 👌"), tab === "late" && late.map(v => React.createElement("div", {
-    key: v.id,
-    style: {
-      background: C.card,
-      border: `1px solid ${v.late > 60 ? C.danger : C.gold}55`,
-      borderRadius: 12,
-      padding: "11px 13px",
-      marginBottom: 8
-    }
-  }, React.createElement("div", {
-    style: {
-      display: "flex",
-      justifyContent: "space-between",
-      gap: 8
-    }
-  }, React.createElement("span", {
-    onClick: () => {
-      if (onPatientClick) {
-        onPatientClick(v.patientId);
-        onClose();
-      }
-    },
-    style: {
-      color: C.text,
-      fontWeight: 700,
-      fontSize: 13,
-      cursor: "pointer",
-      textDecoration: "underline"
-    }
-  }, v.patientName), React.createElement("span", {
-    style: {
-      color: v.late > 60 ? C.danger : C.gold,
-      fontSize: 11,
-      fontWeight: 700
-    }
-  }, "متأخر ", v.late, " يوم")), React.createElement("div", {
-    style: {
-      color: C.muted,
-      fontSize: 11,
-      marginTop: 3
-    }
-  }, "📅 كان مفروض: ", v.nextVisit, " · آخر زيارة ", v.date), React.createElement("div", {
-    style: {
-      display: "flex",
-      gap: 8,
-      marginTop: 8
-    }
-  }, React.createElement("button", {
-    onClick: () => waOpen(v.patientPhone, waFollowUpText(v.patientName, v.nextVisit, "موعد المتابعة")),
-    style: {
-      flex: 1,
-      background: "#25D36622",
-      border: "1px solid #25D36655",
-      borderRadius: 9,
-      padding: "7px 10px",
-      color: "#25D366",
-      fontSize: 11,
-      fontWeight: 800,
-      cursor: "pointer",
-      fontFamily: "inherit"
-    }
-  }, "💬 تذكير واتساب"), v.patientPhone && React.createElement("a", {
-    href: "tel:" + v.patientPhone,
-    style: {
-      background: C.accent + "22",
-      border: "1px solid " + C.accent + "44",
-      borderRadius: 9,
-      padding: "7px 12px",
-      color: C.accent,
-      fontSize: 11,
-      fontWeight: 700,
-      textDecoration: "none"
-    }
-  }, "📞 اتصال")))), tab === "inj" && due.map(x => {
-    const p = (patients || []).find(p => p.id === x.patientId) || {};
-    const days = Math.round((new Date(x.nextDate) - new Date(localISO())) / 86400000);
-    return React.createElement("div", {
-      key: x.id,
-      style: {
-        background: C.card,
-        border: `1px solid ${days < 0 ? C.danger : C.teal}55`,
-        borderRadius: 12,
-        padding: "11px 13px",
-        marginBottom: 8
-      }
-    }, React.createElement("div", {
-      style: {
-        display: "flex",
-        justifyContent: "space-between",
-        gap: 8
-      }
-    }, React.createElement("span", {
-      style: {
-        color: C.text,
-        fontWeight: 700,
-        fontSize: 13
-      }
-    }, x.patient || p.name || "—"), React.createElement("span", {
-      style: {
-        color: days < 0 ? C.danger : C.teal,
-        fontSize: 11,
-        fontWeight: 700
-      }
-    }, days < 0 ? "متأخرة " + -days + " يوم" : days === 0 ? "اليوم" : "بعد " + days + " يوم")), React.createElement("div", {
-      style: {
-        color: C.muted,
-        fontSize: 11,
-        marginTop: 3
-      }
-    }, "💉 ", x.drug, " · ", x.eye, " · الجرعة رقم ", x.doseNo || "—", " · آخر حقنة ", x.date), React.createElement("div", {
-      style: {
-        display: "flex",
-        gap: 8,
-        marginTop: 8
-      }
-    }, React.createElement("button", {
-      onClick: () => waOpen(x.phone || p.phone, waFollowUpText(x.patient || p.name, x.nextDate, "موعد الحقنة داخل العين")),
-      style: {
-        flex: 1,
-        background: "#25D36622",
-        border: "1px solid #25D36655",
-        borderRadius: 9,
-        padding: "7px 10px",
-        color: "#25D366",
-        fontSize: 11,
-        fontWeight: 800,
-        cursor: "pointer",
-        fontFamily: "inherit"
-      }
-    }, "💬 تذكير واتساب")));
-  })));
-}
+// Phase 8, combined batch 19: dueInjections/overdueFollowUps moved to
+// src/modules/followups/followups-model.js. Their only caller,
+// FollowUpCentre, also moved in this batch, so there is nothing left here
+// to delegate.
+// Phase 8, combined batch 19: FollowUpCentre moved to
+// src/components/FollowUpCentre.jsx -- delegate below instead of
+// redefining it.
+const { FollowUpCentre } = window.IAppModules.followups;
 function InjectionsSection({
   patient
 }) {
@@ -2057,186 +1430,10 @@ function FollowUpAlerts({
     }
   }, "حسناً")));
 }
-function GlobalSearch({
-  patients,
-  prescriptions,
-  appointments,
-  onNavigate,
-  onClose
-}) {
-  const [q, setQ] = useState("");
-  const trimmed = q.trim();
-  const pRes = trimmed ? patients.filter(p => (p.name || "").includes(trimmed) || (p.patientCode || "").includes(trimmed) || (p.phone || "").includes(trimmed)).slice(0, 5) : [];
-  const rRes = trimmed ? prescriptions.filter(r => (r.patient || "").includes(trimmed)).slice(0, 3) : [];
-  const aRes = trimmed ? appointments.filter(a => (a.patient || "").includes(trimmed)).slice(0, 3) : [];
-  const hasResults = pRes.length > 0 || rRes.length > 0 || aRes.length > 0;
-  return React.createElement("div", {
-    style: {
-      position: "fixed",
-      inset: 0,
-      background: "rgba(0,0,0,0.85)",
-      zIndex: 500,
-      display: "flex",
-      alignItems: "flex-start",
-      justifyContent: "center",
-      paddingTop: 60
-    },
-    onClick: onClose
-  }, React.createElement("div", {
-    onClick: e => e.stopPropagation(),
-    style: {
-      background: C.surface,
-      borderRadius: 20,
-      padding: 20,
-      width: "90%",
-      maxWidth: 420,
-      maxHeight: "85vh",
-      overflowY: "auto",
-      border: "1px solid " + C.border
-    }
-  }, React.createElement("div", {
-    style: {
-      display: "flex",
-      alignItems: "center",
-      gap: 10,
-      marginBottom: 14
-    }
-  }, React.createElement("span", {
-    style: {
-      color: C.accent,
-      fontSize: 18
-    }
-  }, "🔍"), React.createElement("input", {
-    autoFocus: true,
-    value: q,
-    onChange: e => setQ(e.target.value),
-    placeholder: "ابحث في المرضى والوصفات والمواعيد...",
-    style: {
-      flex: 1,
-      background: C.bg,
-      border: "1px solid " + C.border,
-      borderRadius: 10,
-      padding: "10px 12px",
-      color: C.text,
-      fontSize: 14,
-      outline: "none",
-      direction: "rtl",
-      fontFamily: "inherit"
-    }
-  }), React.createElement("span", {
-    onClick: onClose,
-    style: {
-      color: C.muted,
-      fontSize: 22,
-      cursor: "pointer",
-      lineHeight: 1
-    }
-  }, "×")), !trimmed && React.createElement("div", {
-    style: {
-      color: C.muted,
-      fontSize: 12,
-      textAlign: "center",
-      padding: 20
-    }
-  }, "ابدأ الكتابة للبحث..."), trimmed && !hasResults && React.createElement("div", {
-    style: {
-      color: C.muted,
-      fontSize: 12,
-      textAlign: "center",
-      padding: 20
-    }
-  }, "لا توجد نتائج لـ \"", trimmed, "\""), pRes.length > 0 && React.createElement(React.Fragment, null, React.createElement("div", {
-    style: {
-      color: C.muted,
-      fontSize: 10,
-      fontWeight: 700,
-      marginBottom: 8
-    }
-  }, "👥 المرضى"), pRes.map(p => React.createElement("div", {
-    key: p.id,
-    onClick: () => onNavigate("patients", p.id),
-    style: {
-      background: C.card,
-      borderRadius: 10,
-      padding: "10px 12px",
-      marginBottom: 6,
-      cursor: "pointer",
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center"
-    }
-  }, React.createElement("div", null, React.createElement("div", {
-    style: {
-      color: C.text,
-      fontWeight: 600,
-      fontSize: 13
-    }
-  }, p.name), React.createElement("div", {
-    style: {
-      color: C.muted,
-      fontSize: 10
-    }
-  }, p.patientCode || "", " · ", p.phone || "")), React.createElement("div", {
-    style: {
-      color: C.accent,
-      fontSize: 14
-    }
-  }, "←")))), rRes.length > 0 && React.createElement(React.Fragment, null, React.createElement("div", {
-    style: {
-      color: C.muted,
-      fontSize: 10,
-      fontWeight: 700,
-      margin: "10px 0 8px"
-    }
-  }, "🔬 الوصفات"), rRes.map(r => React.createElement("div", {
-    key: r.id,
-    onClick: () => onNavigate("prescriptions"),
-    style: {
-      background: C.card,
-      borderRadius: 10,
-      padding: "10px 12px",
-      marginBottom: 6,
-      cursor: "pointer"
-    }
-  }, React.createElement("div", {
-    style: {
-      color: C.text,
-      fontSize: 13
-    }
-  }, r.patient || ""), React.createElement("div", {
-    style: {
-      color: C.muted,
-      fontSize: 10
-    }
-  }, r.date || "", " · ", r.eye || "")))), aRes.length > 0 && React.createElement(React.Fragment, null, React.createElement("div", {
-    style: {
-      color: C.muted,
-      fontSize: 10,
-      fontWeight: 700,
-      margin: "10px 0 8px"
-    }
-  }, "📋 المواعيد"), aRes.map(a => React.createElement("div", {
-    key: a.id,
-    onClick: () => onNavigate("appointments"),
-    style: {
-      background: C.card,
-      borderRadius: 10,
-      padding: "10px 12px",
-      marginBottom: 6,
-      cursor: "pointer"
-    }
-  }, React.createElement("div", {
-    style: {
-      color: C.text,
-      fontSize: 13
-    }
-  }, a.patient || ""), React.createElement("div", {
-    style: {
-      color: C.muted,
-      fontSize: 10
-    }
-  }, a.time || "", " · ", a.type || ""))))));
-}
+// Phase 8, combined batch 19: GlobalSearch moved to
+// src/components/GlobalSearch.jsx -- delegate below instead of redefining
+// it.
+const { GlobalSearch } = window.IAppModules.search;
 // Phase 8, batch 18: TopBar (the shared header bar) moved to
 // src/components/TopBar.jsx -- delegate below instead of redefining it.
 const { TopBar } = window.IAppModules.nav;
@@ -10134,488 +9331,13 @@ function UserForm({
     }
   }, saving ? "⏳ جاري الحفظ..." : initial ? "✓ حفظ التعديل" : "✓ إضافة مستخدم")));
 }
-const MERGE_KEYS = ["iapp_visits", "iapp_exams", "iapp_prescriptions", "iapp_appointments", "iapp_injections", "iapp_imaging_studies", "iapp_imaging_orders"];
-function findDuplicatePatients(patients) {
-  const groups = {};
-  (patients || []).forEach(p => {
-    const phone = normPhone(p.phone);
-    const key = phone ? "p:" + phone : "n:" + normArabic(p.name);
-    if (!normArabic(p.name) && !phone) return;
-    (groups[key] = groups[key] || []).push(p);
-  });
-  return Object.values(groups).filter(g => g.length > 1).map(g => [...g].sort((a, b) => (a.id || 0) - (b.id || 0)));
-}
-async function mergePatients(keep, drop) {
-  for (const key of MERGE_KEYS) {
-    const cur = await sbGet(key);
-    if (!Array.isArray(cur) || !cur.length) continue;
-    const touched = cur.some(r => r && r.patientId === drop.id);
-    if (!touched) continue;
-    await sbMutate(key, list => list.map(r => r && r.patientId === drop.id ? {
-      ...r,
-      patientId: keep.id,
-      patient: keep.name
-    } : r));
-  }
-  await trashPut("iapp_patients", drop, "مريض مدمج: " + (drop.name || ""));
-  const res = await sbMutate("iapp_patients", list => list.filter(p => p.id !== drop.id));
-  await logAudit("دمج ملفين", (drop.patientCode || drop.id) + " ← " + (keep.patientCode || keep.id) + " · " + (keep.name || ""));
-  return res.ok;
-}
-function DataTools({
-  isAdmin
-}) {
-  const [open, setOpen] = useState("");
-  const [backups, setBackups] = useState(null);
-  const [trash, setTrash] = useState(null);
-  const [audit, setAudit] = useState(null);
-  const [dups, setDups] = useState(null);
-  const [busy, setBusy] = useState("");
-  const [msg, setMsg] = useState(null);
-  if (!isAdmin) return null;
-  const note = (text, err) => {
-    setMsg({
-      text,
-      err
-    });
-    setTimeout(() => setMsg(null), 4000);
-  };
-  const fmt = ts => {
-    try {
-      return new Date(ts).toLocaleString("ar-EG", {
-        dateStyle: "short",
-        timeStyle: "short"
-      });
-    } catch {
-      return "";
-    }
-  };
-  const mb = n => n >= 1048576 ? (n / 1048576).toFixed(1) + " م.ب" : Math.round(n / 1024) + " ك.ب";
-  const load = async which => {
-    setOpen(o => o === which ? "" : which);
-    if (open === which) return;
-    setBusy(which);
-    try {
-      if (which === "backups") {
-        const v = await sbGet(BACKUP_KEY);
-        setBackups(Array.isArray(v) ? v : []);
-      }
-      if (which === "trash") {
-        const v = await sbGet(TRASH_KEY);
-        setTrash(Array.isArray(v) ? v : []);
-      }
-      if (which === "audit") {
-        const v = await sbGet(AUDIT_KEY);
-        setAudit(Array.isArray(v) ? v : []);
-      }
-      if (which === "dups") {
-        const v = await sbGet("iapp_patients");
-        setDups(findDuplicatePatients(Array.isArray(v) ? v : []));
-      }
-    } catch (e) {
-      note("تعذر تحميل البيانات — تحقق من الاتصال", true);
-    }
-    setBusy("");
-  };
-  const importFile = async e => {
-    const file = e.target.files && e.target.files[0];
-    e.target.value = "";
-    if (!file) return;
-    if (!window.confirm("سيتم استبدال البيانات الحالية بمحتوى الملف على كل الأجهزة. سيتم حفظ نسخة من البيانات الحالية أولاً. هل تريد المتابعة؟")) return;
-    setBusy("import");
-    try {
-      const text = await file.text();
-      const data = JSON.parse(text);
-      const res = await restoreSnapshot(data, file.name);
-      setBusy("");
-      if (!res.ok) {
-        note(res.error || "تعذرت الاستعادة", true);
-        return;
-      }
-      alert("✅ تمت الاستعادة (" + res.count + " مجموعة بيانات). سيتم إعادة تشغيل البرنامج.");
-      location.reload();
-    } catch (err) {
-      setBusy("");
-      note("الملف غير صالح: " + (err.message || err), true);
-    }
-  };
-  const restoreBackup = async b => {
-    if (!window.confirm("استعادة نسخة " + fmt(b.at) + "؟ سيتم استبدال البيانات الحالية على كل الأجهزة.")) return;
-    setBusy("restore");
-    const res = await restoreSnapshot(b.data, "نسخة " + fmt(b.at));
-    setBusy("");
-    if (!res.ok) {
-      note(res.error || "تعذرت الاستعادة", true);
-      return;
-    }
-    alert("✅ تمت الاستعادة. سيتم إعادة تشغيل البرنامج.");
-    location.reload();
-  };
-  const downloadBackup = b => {
-    try {
-      const blob = new Blob([JSON.stringify(b.data, null, 2)], {
-        type: "application/json"
-      });
-      const url = URL.createObjectURL(blob),
-        a = document.createElement("a");
-      a.href = url;
-      a.download = "iapp-backup-" + localISO(new Date(b.at)) + ".json";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(url), 3000);
-    } catch (e) {
-      note("تعذر التحميل", true);
-    }
-  };
-  const makeBackup = async () => {
-    setBusy("make");
-    const ok = await saveAutoBackup("يدوي");
-    setBusy("");
-    note(ok ? "✅ تم حفظ نسخة جديدة" : "تعذر حفظ النسخة", !ok);
-    if (ok) {
-      const v = await sbGet(BACKUP_KEY);
-      setBackups(Array.isArray(v) ? v : []);
-    }
-  };
-  const doRestoreTrash = async t => {
-    setBusy("t" + t.id);
-    const ok = await trashRestore(t);
-    setBusy("");
-    if (ok) {
-      setTrash(list => (list || []).filter(x => x.id !== t.id));
-      note("✅ تمت الاستعادة");
-    } else note("تعذرت الاستعادة", true);
-  };
-  const doDropTrash = async t => {
-    if (!window.confirm("حذف نهائي؟ لا يمكن التراجع بعد ذلك.")) return;
-    await trashDrop(t.id);
-    setTrash(list => (list || []).filter(x => x.id !== t.id));
-    logAudit("حذف نهائي من سلة المحذوفات", t.label || t.storeKey);
-  };
-  const Row = ({
-    icon,
-    title,
-    sub,
-    badge,
-    which
-  }) => React.createElement("div", {
-    onClick: () => load(which),
-    style: {
-      display: "flex",
-      alignItems: "center",
-      gap: 12,
-      padding: "13px 14px",
-      background: C.card,
-      border: `1px solid ${open === which ? C.accent + "66" : C.border}`,
-      borderRadius: 12,
-      marginBottom: 8,
-      cursor: "pointer"
-    }
-  }, React.createElement("div", {
-    style: {
-      width: 34,
-      height: 34,
-      borderRadius: 10,
-      background: C.accent + "22",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      fontSize: 16
-    }
-  }, icon), React.createElement("div", {
-    style: {
-      flex: 1
-    }
-  }, React.createElement("div", {
-    style: {
-      color: C.text,
-      fontSize: 13
-    }
-  }, title), React.createElement("div", {
-    style: {
-      color: C.muted,
-      fontSize: 11
-    }
-  }, sub)), busy === which ? React.createElement("span", {
-    style: {
-      color: C.muted,
-      fontSize: 12
-    }
-  }, "⏳") : React.createElement("span", {
-    style: {
-      color: C.accent,
-      fontSize: 12
-    }
-  }, open === which ? "▲" : "▼"));
-  const box = {
-    background: C.bg,
-    border: `1px solid ${C.border}`,
-    borderRadius: 12,
-    padding: "10px 12px",
-    marginBottom: 10,
-    maxHeight: 320,
-    overflowY: "auto"
-  };
-  const line = {
-    borderBottom: `1px solid ${C.border}55`,
-    padding: "9px 0"
-  };
-  const btn = (color, onClick, children) => React.createElement("span", {
-    onClick: onClick,
-    style: {
-      background: color + "22",
-      border: `1px solid ${color}55`,
-      color,
-      borderRadius: 8,
-      padding: "4px 10px",
-      fontSize: 11,
-      cursor: "pointer",
-      marginLeft: 6
-    }
-  }, children);
-  return React.createElement("div", {
-    style: {
-      marginBottom: 16
-    }
-  }, msg && React.createElement("div", {
-    style: {
-      background: (msg.err ? C.danger : C.success) + "22",
-      border: `1px solid ${msg.err ? C.danger : C.success}44`,
-      color: msg.err ? C.danger : C.success,
-      borderRadius: 10,
-      padding: "9px 12px",
-      fontSize: 12,
-      textAlign: "center",
-      marginBottom: 8
-    }
-  }, msg.text), React.createElement("label", {
-    style: {
-      display: "flex",
-      alignItems: "center",
-      gap: 12,
-      padding: "13px 14px",
-      background: C.card,
-      border: `1px solid ${C.border}`,
-      borderRadius: 12,
-      marginBottom: 8,
-      cursor: "pointer"
-    }
-  }, React.createElement("div", {
-    style: {
-      width: 34,
-      height: 34,
-      borderRadius: 10,
-      background: C.gold + "33",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      fontSize: 16
-    }
-  }, "♻️"), React.createElement("div", {
-    style: {
-      flex: 1
-    }
-  }, React.createElement("div", {
-    style: {
-      color: C.text,
-      fontSize: 13
-    }
-  }, "استعادة نسخة احتياطية من ملف"), React.createElement("div", {
-    style: {
-      color: C.muted,
-      fontSize: 11
-    }
-  }, busy === "import" ? "جاري الاستعادة..." : "اختر ملف JSON سبق تصديره")), React.createElement("div", {
-    style: {
-      color: C.gold,
-      fontSize: 12
-    }
-  }, "⬆"), React.createElement("input", {
-    type: "file",
-    accept: "application/json,.json",
-    style: {
-      display: "none"
-    },
-    onChange: importFile
-  })), React.createElement(Row, {
-    icon: "🗂",
-    title: "النسخ الاحتياطية التلقائية",
-    sub: "نسخة يومية تُحفظ تلقائياً — تُحفظ آخر 5 نسخ",
-    which: "backups"
-  }), open === "backups" && React.createElement("div", {
-    style: box
-  }, React.createElement("div", {
-    style: {
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      marginBottom: 8
-    }
-  }, React.createElement("span", {
-    style: {
-      color: C.muted,
-      fontSize: 11
-    }
-  }, (backups || []).length, " نسخة"), React.createElement("span", {
-    onClick: makeBackup,
-    style: {
-      color: C.teal,
-      fontSize: 11,
-      cursor: "pointer",
-      background: C.teal + "22",
-      borderRadius: 8,
-      padding: "4px 10px"
-    }
-  }, busy === "make" ? "⏳" : "+ نسخة الآن")), (backups || []).length === 0 && React.createElement("div", {
-    style: {
-      color: C.muted,
-      fontSize: 12,
-      textAlign: "center",
-      padding: "10px 0"
-    }
-  }, "لا توجد نسخ بعد"), (backups || []).map(b => React.createElement("div", {
-    key: b.id,
-    style: {
-      ...line,
-      display: "flex",
-      alignItems: "center",
-      gap: 8,
-      flexWrap: "wrap"
-    }
-  }, React.createElement("div", {
-    style: {
-      flex: 1,
-      minWidth: 150
-    }
-  }, React.createElement("div", {
-    style: {
-      color: C.text,
-      fontSize: 12
-    }
-  }, fmt(b.at)), React.createElement("div", {
-    style: {
-      color: C.muted,
-      fontSize: 10
-    }
-  }, b.reason || "تلقائي", " · ", mb(b.size || 0), " · ", b.by || "—")), btn(C.teal, () => downloadBackup(b), "⬇ تحميل"), btn(C.gold, () => restoreBackup(b), busy === "restore" ? "⏳" : "♻️ استعادة")))), React.createElement(Row, {
-    icon: "🗑",
-    title: "سلة المحذوفات",
-    sub: "يمكن استرجاع المحذوف خلال " + TRASH_DAYS + " يوماً",
-    which: "trash"
-  }), open === "trash" && React.createElement("div", {
-    style: box
-  }, (trash || []).length === 0 && React.createElement("div", {
-    style: {
-      color: C.muted,
-      fontSize: 12,
-      textAlign: "center",
-      padding: "10px 0"
-    }
-  }, "السلة فارغة"), (trash || []).map(t => React.createElement("div", {
-    key: t.id,
-    style: {
-      ...line,
-      display: "flex",
-      alignItems: "center",
-      gap: 8,
-      flexWrap: "wrap"
-    }
-  }, React.createElement("div", {
-    style: {
-      flex: 1,
-      minWidth: 150
-    }
-  }, React.createElement("div", {
-    style: {
-      color: C.text,
-      fontSize: 12
-    }
-  }, t.label || t.storeKey), React.createElement("div", {
-    style: {
-      color: C.muted,
-      fontSize: 10
-    }
-  }, fmt(t.deletedAt), " · حذفه ", t.by || "—", t.record && t.record._imageDropped ? " · بدون الصورة" : "")), btn(C.success, () => doRestoreTrash(t), busy === "t" + t.id ? "⏳" : "↩ استرجاع"), btn(C.danger, () => doDropTrash(t), "✕ نهائي")))), React.createElement(Row, {
-    icon: "👯",
-    title: "ملفات مكررة",
-    sub: "مرضى بنفس الرقم أو نفس الاسم — يمكن دمجهم في ملف واحد",
-    which: "dups"
-  }), open === "dups" && React.createElement("div", {
-    style: box
-  }, (dups || []).length === 0 && React.createElement("div", {
-    style: {
-      color: C.muted,
-      fontSize: 12,
-      textAlign: "center",
-      padding: "10px 0"
-    }
-  }, "لا توجد ملفات مكررة 👌"), (dups || []).map((g, i) => React.createElement("div", {
-    key: i,
-    style: {
-      ...line
-    }
-  }, React.createElement("div", {
-    style: {
-      color: C.text,
-      fontSize: 12,
-      fontWeight: 700,
-      marginBottom: 4
-    }
-  }, g[0].name), g.map((p, idx) => React.createElement("div", {
-    key: p.id,
-    style: {
-      display: "flex",
-      alignItems: "center",
-      gap: 8,
-      flexWrap: "wrap",
-      marginBottom: 4
-    }
-  }, React.createElement("span", {
-    style: {
-      color: C.muted,
-      fontSize: 11,
-      flex: 1,
-      minWidth: 140
-    }
-  }, p.patientCode || "—", " · ", p.phone || "بدون رقم", " · ", p.name, idx === 0 ? " (الأساسي)" : ""), idx > 0 && btn(C.gold, async () => {
-    if (!window.confirm("دمج ملف " + (p.patientCode || "") + " داخل " + (g[0].patientCode || "") + "؟ كل الزيارات والروشتات هتنتقل للملف الأساسي.")) return;
-    setBusy("m" + p.id);
-    const ok = await mergePatients(g[0], p);
-    setBusy("");
-    if (ok) {
-      setDups(list => list.map(x => x.filter(y => y.id !== p.id)).filter(x => x.length > 1));
-      note("✅ تم الدمج");
-    } else note("تعذر الدمج", true);
-  }, busy === "m" + p.id ? "⏳" : "⇦ دمج في الأساسي")))))), React.createElement(Row, {
-    icon: "📜",
-    title: "سجل العمليات",
-    sub: "من قام بأي تعديل ومتى",
-    which: "audit"
-  }), open === "audit" && React.createElement("div", {
-    style: box
-  }, (audit || []).length === 0 && React.createElement("div", {
-    style: {
-      color: C.muted,
-      fontSize: 12,
-      textAlign: "center",
-      padding: "10px 0"
-    }
-  }, "لا توجد عمليات مسجلة بعد"), (audit || []).slice(0, 200).map(a => React.createElement("div", {
-    key: a.id,
-    style: line
-  }, React.createElement("div", {
-    style: {
-      color: C.text,
-      fontSize: 12
-    }
-  }, a.action, a.details ? " — " + a.details : ""), React.createElement("div", {
-    style: {
-      color: C.muted,
-      fontSize: 10
-    }
-  }, fmt(a.ts), " · ", a.by || "—", a.role ? " (" + (ROLE_LABEL[a.role] || a.role) + ")" : "")))));
-}
+// Phase 8, combined batch 19: MERGE_KEYS/findDuplicatePatients/
+// mergePatients moved to src/modules/datatools/datatools-core.js. Their
+// only caller, DataTools, also moved in this batch, so there is nothing
+// left here to delegate.
+// Phase 8, combined batch 19: DataTools moved to
+// src/components/DataTools.jsx -- delegate below instead of redefining it.
+const { DataTools } = window.IAppModules.datatools;
 function Settings({
   patients,
   appointments,

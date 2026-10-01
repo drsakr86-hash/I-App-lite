@@ -11,7 +11,7 @@ export {
 export { sbGetStore, sbSetStore } from './store-io.js';
 export { ROW_TABLES, rowList, rowUpsert, rowDelete, rowMutate } from './row-tables.js';
 export {
-  setRawIO, flushKey, isFlushing, flushAll, queueLocal, queueSave,
+  setRawIO, sbGetRaw, sbSetRaw, flushKey, isFlushing, flushAll, queueLocal, queueSave,
   sbGet, sbSet, sbMutateLocal, sbMutate, setTableMutate
 } from './wiring.js';
 export { setActor, getActorName, logAudit, trashPut, saveAutoBackup } from './audit-trash-backup.js';
