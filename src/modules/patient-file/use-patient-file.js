@@ -14,6 +14,7 @@ import { DEFAULT_TESTS } from '../constants/exams.js';
 import { createClinicalVisitCore } from '../visits/core.js';
 import { imagingRequestParams } from '../investigations/investigation.mapper.js';
 import { getPatient360 } from '../patients/index.js';
+import { EYE_CYCLE } from '../radiology/model.js';
 
 export function usePatientFile({
   patient, allExams, allRx, allVisits, onClose, onUpdatePatient,
@@ -362,13 +363,12 @@ export function usePatientFile({
   const toggleRequestTest = id => setRequestTests(v => (v[id]
     ? Object.fromEntries(Object.entries(v).filter(([k]) => k !== id))
     : { ...v, [id]: requestEye }));
-  // NOTE: legacy's EYE_CYCLE here is a pre-existing bug, preserved exactly --
-  // EYE_CYCLE is only defined inside the (unrelated, dead) Radiology()
-  // function in the legacy file, never at module scope, so this reference
-  // throws a ReferenceError if a user ever actually clicks the eye-cycle
-  // control in this tab. Not fixed here: this batch ports behavior exactly,
-  // bugs included, and this one is flagged in the migration roadmap.
-  // eslint-disable-next-line no-undef
+  // Fixed (previously a latent ReferenceError in the legacy runtime):
+  // EYE_CYCLE was only ever defined inside the unrelated, dead Radiology()
+  // function there, never at module scope, so clicking the eye-cycle control
+  // in this tab would throw. It's the same OU->OD->OS->OU cycle already used
+  // by the migrated radiology screen, so it's imported from there instead of
+  // redefining it -- same values, now actually reachable.
   const cycleRequestEye = id => setRequestTests(v => ({ ...v, [id]: EYE_CYCLE[v[id] || requestEye] || 'OU' }));
 
   const savePatientRadiologyRequest = async () => {
