@@ -69,6 +69,8 @@ import { Btn, Modal, Confirm, Toast, ThemeToggle } from './components/common.jsx
 import MedicinesStep from './components/forms/MedicinesStep.jsx';
 import { waOpen, waReminderText, waFollowUpText } from './modules/notifications/index.js';
 import { callChannel, broadcastCall } from './modules/realtime/index.js';
+import TopBar from './components/TopBar.jsx';
+import BottomNav from './components/BottomNav.jsx';
 
 // Migration bridge: keep the proven production runtime intact while the
 // build system and service layer move to Vite. The legacy runtime reaches the
@@ -235,6 +237,11 @@ globalThis.IAppModules.notifications = { waOpen, waReminderText, waFollowUpText 
 // broadcast channel WaitingRoom's call/recall buttons use): self-contained
 // aside from getSB (already moved in batch 4), so it moves on its own.
 globalThis.IAppModules.realtime = { callChannel, broadcastCall };
+// Phase 8, batch 18 -- TopBar/BottomNav (the shared header and bottom
+// navigation bar): every dependency they need (C, useSyncStatus, dirtyKeys,
+// syncKeyLabel, flushAll, ThemeToggle, XRAY_ICON) was already moved in
+// earlier batches, so they move now as self-contained components.
+globalThis.IAppModules.nav = { TopBar, BottomNav };
 
 const legacyScript = document.createElement('script');
 legacyScript.src = import.meta.env.BASE_URL + 'legacy/app-runtime.js?v=' + __BUILD_ID__;
