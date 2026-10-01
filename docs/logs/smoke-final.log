@@ -1,0 +1,20 @@
+
+> i-app-lite@41.0.0 test:smoke
+> esbuild tests/smoke/patient-file-render.smoke.jsx --bundle --platform=node --format=esm --jsx=automatic --loader:.js=jsx --outfile=.smoke/patient-file-render.mjs --log-level=error --banner:js="import{createRequire}from'module';const require=createRequire(import.meta.url);" && node .smoke/patient-file-render.mjs
+
+ok   tab info 22304
+ok   tab timeline 28166
+ok   tab visits 18066
+ok   tab exams 19708
+ok   tab requests 25682
+ok   tab treatment 13084
+ok   tab rx 19108
+ok   tab images 19851
+ok   tab compare 11744
+ok   core medicines array rendered
+ok   core diagnosis + follow-up on timeline
+ok   modal addExam
+ok   modal addVisit
+ok   modal addRx
+ok   modal editPatient
+smoke: all passed

@@ -1,0 +1,3724 @@
+
+> i-app-lite@41.0.0 test
+> node --test tests/appointments.test.js tests/clinical-builders.test.js tests/session.test.js tests/queue.test.js tests/queue-model.test.js tests/appointments-list.test.js tests/dashboard-model.test.js tests/patients-list.test.js tests/patient-file-model.test.js tests/sync.test.js tests/sync-status-view.test.js tests/prescriptions-list.test.js tests/radiology-model.test.js tests/imaging-model.test.js tests/accounting-model.test.js tests/settings-model.test.js tests/auth-session.test.js tests/secretary-app-model.test.js tests/patient-app-model.test.js tests/common-components.test.js tests/visit-form-model.test.js tests/exam-form-model.test.js tests/patient-form-model.test.js tests/rx-form-model.test.js tests/settings-forms-model.test.js tests/login-form-model.test.js tests/secretary-forms-model.test.js tests/booking-form-model.test.js tests/modals-model.test.js tests/print-templates.test.js tests/router-view.test.js tests/unified-login-view.test.js tests/screen-preference.test.js tests/theme.test.js tests/constants.test.js tests/ui-atoms.test.js tests/data-access.test.js tests/apt-expense-forms-model.test.js tests/sync-engine.test.js tests/sync-store-io.test.js tests/sync-wiring.test.js tests/appointments-core.test.js tests/sync-row-tables.test.js tests/sync-audit-trash-backup.test.js tests/print-dom-print.test.js tests/medicines-step-model.test.js tests/prescriptions-drugs.test.js tests/prescriptions-rx-templates.test.js tests/notifications-whatsapp.test.js tests/realtime-call-channel.test.js tests/topbar-model.test.js tests/bottomnav-model.test.js tests/sync-raw-io.test.js tests/followups-model.test.js tests/global-search-model.test.js tests/auth-staff-login.test.js tests/patient360-normalize.test.js tests/patient360-save-workflows.test.js tests/patient360-hook.test.js tests/patient360-print-permissions.test.js
+
+TAP version 13
+# Subtest: inPeriod: today/month/all
+ok 1 - inPeriod: today/month/all
+  ---
+  duration_ms: 0.938148
+  type: 'test'
+  ...
+# Subtest: inClinic: empty filter matches everything
+ok 2 - inClinic: empty filter matches everything
+  ---
+  duration_ms: 1.302982
+  type: 'test'
+  ...
+# Subtest: filterPeriodVisits filters by period and clinic
+ok 3 - filterPeriodVisits filters by period and clinic
+  ---
+  duration_ms: 0.240783
+  type: 'test'
+  ...
+# Subtest: filterPeriodExpenses filters and sorts newest date first
+ok 4 - filterPeriodExpenses filters and sorts newest date first
+  ---
+  duration_ms: 8.656311
+  type: 'test'
+  ...
+# Subtest: computeRevenue only counts paid visits
+ok 5 - computeRevenue only counts paid visits
+  ---
+  duration_ms: 0.289871
+  type: 'test'
+  ...
+# Subtest: computeTotalExpenses sums amounts
+ok 6 - computeTotalExpenses sums amounts
+  ---
+  duration_ms: 0.141967
+  type: 'test'
+  ...
+# Subtest: periodLabel returns the Arabic label
+ok 7 - periodLabel returns the Arabic label
+  ---
+  duration_ms: 0.170271
+  type: 'test'
+  ...
+# Subtest: buildClinicComparison computes per-clinic revenue/expense/net
+ok 8 - buildClinicComparison computes per-clinic revenue/expense/net
+  ---
+  duration_ms: 0.239972
+  type: 'test'
+  ...
+# Subtest: buildMissingRecurringExpenseEntries creates one entry per not-yet-materialized recurring expense
+ok 9 - buildMissingRecurringExpenseEntries creates one entry per not-yet-materialized recurring expense
+  ---
+  duration_ms: 0.441505
+  type: 'test'
+  ...
+# Subtest: buildMissingRecurringExpenseEntries skips ones already materialized this month
+ok 10 - buildMissingRecurringExpenseEntries skips ones already materialized this month
+  ---
+  duration_ms: 0.362753
+  type: 'test'
+  ...
+# Subtest: buildMissingRecurringExpenseEntries returns empty for no recurring expenses
+ok 11 - buildMissingRecurringExpenseEntries returns empty for no recurring expenses
+  ---
+  duration_ms: 0.15211
+  type: 'test'
+  ...
+# Subtest: reportDateLabel formats by period
+ok 12 - reportDateLabel formats by period
+  ---
+  duration_ms: 26.671846
+  type: 'test'
+  ...
+# aptList boom
+# aptList Error: network down
+#     at fromImpl (file:///home/claude/work/iapp-source-latest/tests/appointments-core.test.js:97:28)
+#     at Object.from (file:///home/claude/work/iapp-source-latest/tests/appointments-core.test.js:36:56)
+#     at aptList (file:///home/claude/work/iapp-source-latest/src/modules/appointments/core.js:37:41)
+#     at TestContext.<anonymous> (file:///home/claude/work/iapp-source-latest/tests/appointments-core.test.js:98:22)
+#     at Test.runInAsyncScope (node:async_hooks:214:14)
+#     at Test.run (node:internal/test_runner/test:1047:25)
+#     at Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+#     at Test.postRun (node:internal/test_runner/test:1173:19)
+#     at Test.run (node:internal/test_runner/test:1101:12)
+#     at async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+# aptUpsert boom
+# aptDelete boom
+# aptList Error: down
+#     at fromImpl (file:///home/claude/work/iapp-source-latest/tests/appointments-core.test.js:122:28)
+#     at Object.from (file:///home/claude/work/iapp-source-latest/tests/appointments-core.test.js:36:56)
+#     at aptList (file:///home/claude/work/iapp-source-latest/src/modules/appointments/core.js:37:41)
+#     at aptMutate (file:///home/claude/work/iapp-source-latest/src/modules/appointments/core.js:68:22)
+#     at TestContext.<anonymous> (file:///home/claude/work/iapp-source-latest/tests/appointments-core.test.js:123:21)
+#     at Test.runInAsyncScope (node:async_hooks:214:14)
+#     at Test.run (node:internal/test_runner/test:1047:25)
+#     at Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+#     at Test.postRun (node:internal/test_runner/test:1173:19)
+#     at Test.run (node:internal/test_runner/test:1101:12)
+# aptUpsert boom
+# Subtest: aptList: maps rows, caches to localStorage when not dirty, returns the list
+ok 13 - aptList: maps rows, caches to localStorage when not dirty, returns the list
+  ---
+  duration_ms: 2.025886
+  type: 'test'
+  ...
+# Subtest: aptList: does not overwrite localStorage cache while the key is dirty
+ok 14 - aptList: does not overwrite localStorage cache while the key is dirty
+  ---
+  duration_ms: 0.363563
+  type: 'test'
+  ...
+# Subtest: aptList: a query error returns undefined without throwing
+ok 15 - aptList: a query error returns undefined without throwing
+  ---
+  duration_ms: 1.266344
+  type: 'test'
+  ...
+# Subtest: aptList: a thrown exception returns undefined without throwing
+ok 16 - aptList: a thrown exception returns undefined without throwing
+  ---
+  duration_ms: 2.138672
+  type: 'test'
+  ...
+# Subtest: aptUpsert: successful upsert returns true
+ok 17 - aptUpsert: successful upsert returns true
+  ---
+  duration_ms: 0.774611
+  type: 'test'
+  ...
+# Subtest: aptUpsert: an upsert error returns false without throwing
+ok 18 - aptUpsert: an upsert error returns false without throwing
+  ---
+  duration_ms: 0.474719
+  type: 'test'
+  ...
+# Subtest: aptDelete: successful delete returns true
+ok 19 - aptDelete: successful delete returns true
+  ---
+  duration_ms: 0.340747
+  type: 'test'
+  ...
+# Subtest: aptDelete: a delete error returns false without throwing
+ok 20 - aptDelete: a delete error returns false without throwing
+  ---
+  duration_ms: 0.249123
+  type: 'test'
+  ...
+# Subtest: aptMutate: offline (aptList -> undefined) returns { ok: false, error: "offline" }
+ok 21 - aptMutate: offline (aptList -> undefined) returns { ok: false, error: "offline" }
+  ---
+  duration_ms: 0.570624
+  type: 'test'
+  ...
+# Subtest: aptMutate: an abort object from the mutator returns { ok: false, error, data: base }
+ok 22 - aptMutate: an abort object from the mutator returns { ok: false, error, data: base }
+  ---
+  duration_ms: 0.450195
+  type: 'test'
+  ...
+# Subtest: aptMutate: upserts changed rows and deletes removed rows, then returns the new list (no verify)
+ok 23 - aptMutate: upserts changed rows and deletes removed rows, then returns the new list (no verify)
+  ---
+  duration_ms: 0.795389
+  type: 'test'
+  ...
+# Subtest: aptMutate: a failed upsert/delete returns { ok: false, error: "offline", data: base }
+ok 24 - aptMutate: a failed upsert/delete returns { ok: false, error: "offline", data: base }
+  ---
+  duration_ms: 0.418581
+  type: 'test'
+  ...
+# Subtest: aptMutate: with verify, a re-fetch that satisfies verify() returns { ok: true, data: check }
+ok 25 - aptMutate: with verify, a re-fetch that satisfies verify() returns { ok: true, data: check }
+  ---
+  duration_ms: 1.7191
+  type: 'test'
+  ...
+# Subtest: aptMutate: with verify, a re-fetch that fails verify() returns { ok: false, error: "conflict" }
+ok 26 - aptMutate: with verify, a re-fetch that fails verify() returns { ok: false, error: "conflict" }
+  ---
+  duration_ms: 0.472094
+  type: 'test'
+  ...
+# Subtest: aptSetAll: replaces the whole list via aptMutate and returns its ok flag
+ok 27 - aptSetAll: replaces the whole list via aptMutate and returns its ok flag
+  ---
+  duration_ms: 0.400297
+  type: 'test'
+  ...
+# Subtest: hides finished by default, shows them on request
+ok 28 - hides finished by default, shows them on request
+  ---
+  duration_ms: 1.876135
+  type: 'test'
+  ...
+# Subtest: filters by doctor
+ok 29 - filters by doctor
+  ---
+  duration_ms: 0.280084
+  type: 'test'
+  ...
+# Subtest: countDone and non-array input
+ok 30 - countDone and non-array input
+  ---
+  duration_ms: 0.15967
+  type: 'test'
+  ...
+# Subtest: findPatientForApt matches by name or patientId
+ok 31 - findPatientForApt matches by name or patientId
+  ---
+  duration_ms: 0.218846
+  type: 'test'
+  ...
+# Subtest: whatsapp url strips leading zero and encodes text
+ok 32 - whatsapp url strips leading zero and encodes text
+  ---
+  duration_ms: 1.36927
+  type: 'test'
+  ...
+# Subtest: row -> appointment -> row keeps the data
+ok 33 - row -> appointment -> row keeps the data
+  ---
+  duration_ms: 1.306327
+  type: 'test'
+  ...
+# Subtest: diff finds changed, added and removed appointments
+ok 34 - diff finds changed, added and removed appointments
+  ---
+  duration_ms: 2.484391
+  type: 'test'
+  ...
+# Subtest: diff is empty when nothing changed
+ok 35 - diff is empty when nothing changed
+  ---
+  duration_ms: 0.219426
+  type: 'test'
+  ...
+# Subtest: blankApt / initialAptState: add mode gets the fixed defaults, edit mode merges over them
+ok 36 - blankApt / initialAptState: add mode gets the fixed defaults, edit mode merges over them
+  ---
+  duration_ms: 3.014848
+  type: 'test'
+  ...
+# Subtest: DEFAULT_APT_DOCTOR_NAMES matches the legacy fallback list
+ok 37 - DEFAULT_APT_DOCTOR_NAMES matches the legacy fallback list
+  ---
+  duration_ms: 0.272252
+  type: 'test'
+  ...
+# Subtest: hasSchedulingConflict: same doctor+time+date is a conflict, editing itself is not
+ok 38 - hasSchedulingConflict: same doctor+time+date is a conflict, editing itself is not
+  ---
+  duration_ms: 0.279177
+  type: 'test'
+  ...
+# Subtest: hasSchedulingConflict: a missing date is treated as today on both sides
+ok 39 - hasSchedulingConflict: a missing date is treated as today on both sides
+  ---
+  duration_ms: 0.119497
+  type: 'test'
+  ...
+# Subtest: aptSaveOutcome: empty patient name is a silent no-op
+ok 40 - aptSaveOutcome: empty patient name is a silent no-op
+  ---
+  duration_ms: 0.201741
+  type: 'test'
+  ...
+# Subtest: aptSaveOutcome: a real conflict blocks the save with the legacy message
+ok 41 - aptSaveOutcome: a real conflict blocks the save with the legacy message
+  ---
+  duration_ms: 0.197776
+  type: 'test'
+  ...
+# Subtest: aptSaveOutcome: no conflict and a patient name saves
+ok 42 - aptSaveOutcome: no conflict and a patient name saves
+  ---
+  duration_ms: 0.10809
+  type: 'test'
+  ...
+# Subtest: blankExpense / initialExpenseState: add mode gets defaults, edit mode uses initial as-is (no merge)
+ok 43 - blankExpense / initialExpenseState: add mode gets defaults, edit mode uses initial as-is (no merge)
+  ---
+  duration_ms: 0.221692
+  type: 'test'
+  ...
+# Subtest: blankRecurringExpense / initialRecurringExpenseState: same shape minus date
+ok 44 - blankRecurringExpense / initialRecurringExpenseState: same shape minus date
+  ---
+  duration_ms: 0.34435
+  type: 'test'
+  ...
+# Subtest: isValidExpense requires a positive amount AND a date; isValidRecurringExpense does not need a date
+ok 45 - isValidExpense requires a positive amount AND a date; isValidRecurringExpense does not need a date
+  ---
+  duration_ms: 0.38744
+  type: 'test'
+  ...
+# Subtest: buildExpenseSavePayload: keeps an existing id, assigns a fresh one otherwise
+ok 46 - buildExpenseSavePayload: keeps an existing id, assigns a fresh one otherwise
+  ---
+  duration_ms: 0.174076
+  type: 'test'
+  ...
+# Subtest: STAFF_ROLES lists exactly the four staff roles
+ok 47 - STAFF_ROLES lists exactly the four staff roles
+  ---
+  duration_ms: 2.037722
+  type: 'test'
+  ...
+# Subtest: publicUser strips internal fields and normalizes mustChange
+ok 48 - publicUser strips internal fields and normalizes mustChange
+  ---
+  duration_ms: 0.267708
+  type: 'test'
+  ...
+# Subtest: publicUser defaults email to empty string and mustChange to boolean
+ok 49 - publicUser defaults email to empty string and mustChange to boolean
+  ---
+  duration_ms: 0.213827
+  type: 'test'
+  ...
+# Subtest: publicUser returns null for a falsy user
+ok 50 - publicUser returns null for a falsy user
+  ---
+  duration_ms: 0.121063
+  type: 'test'
+  ...
+# Subtest: buildCompactSession keeps only the four toolbar fields
+ok 51 - buildCompactSession keeps only the four toolbar fields
+  ---
+  duration_ms: 0.152637
+  type: 'test'
+  ...
+# Subtest: isStaffRole / isInvalidStaffSession
+ok 52 - isStaffRole / isInvalidStaffSession
+  ---
+  duration_ms: 0.168018
+  type: 'test'
+  ...
+# Subtest: isSessionExpired
+ok 53 - isSessionExpired
+  ---
+  duration_ms: 0.191959
+  type: 'test'
+  ...
+# Subtest: sessionExpiry picks the remember-me vs temporary TTL
+ok 54 - sessionExpiry picks the remember-me vs temporary TTL
+  ---
+  duration_ms: 0.163847
+  type: 'test'
+  ...
+# Subtest: mergeFreshStaffSession overlays the current user profile onto the stored session
+ok 55 - mergeFreshStaffSession overlays the current user profile onto the stored session
+  ---
+  duration_ms: 0.319304
+  type: 'test'
+  ...
+# Subtest: staffSessionDrifted detects role/name/username/mustChange changes only
+ok 56 - staffSessionDrifted detects role/name/username/mustChange changes only
+  ---
+  duration_ms: 0.366108
+  type: 'test'
+  ...
+# Subtest: buildStaffSessionRecord / buildPatientSessionRecord
+ok 57 - buildStaffSessionRecord / buildPatientSessionRecord
+  ---
+  duration_ms: 0.242554
+  type: 'test'
+  ...
+# Subtest: constants are unchanged from the legacy originals
+ok 58 - constants are unchanged from the legacy originals
+  ---
+  duration_ms: 2.452105
+  type: 'test'
+  ...
+# Subtest: lockRemaining: zero for a key with no recorded failures
+ok 59 - lockRemaining: zero for a key with no recorded failures
+  ---
+  duration_ms: 0.265807
+  type: 'test'
+  ...
+# Subtest: registerLoginFail: locks out after the 6th failure, and clearLoginFails lifts it
+ok 60 - registerLoginFail: locks out after the 6th failure, and clearLoginFails lifts it
+  ---
+  duration_ms: 0.494017
+  type: 'test'
+  ...
+# Subtest: fmtWait: seconds under a minute are shown in seconds, a minute or more in minutes (rounded up)
+ok 61 - fmtWait: seconds under a minute are shown in seconds, a minute or more in minutes (rounded up)
+  ---
+  duration_ms: 0.263605
+  type: 'test'
+  ...
+# Subtest: getUsers: empty/missing localStorage returns []
+ok 62 - getUsers: empty/missing localStorage returns []
+  ---
+  duration_ms: 0.664771
+  type: 'test'
+  ...
+# Subtest: saveUsers/getUsers: round-trips through localStorage
+ok 63 - saveUsers/getUsers: round-trips through localStorage
+  ---
+  duration_ms: 0.465542
+  type: 'test'
+  ...
+# Subtest: resolveProfile: an existing local user is returned as-is (profile shape only, via publicUser)
+ok 64 - resolveProfile: an existing local user is returned as-is (profile shape only, via publicUser)
+  ---
+  duration_ms: 0.864288
+  type: 'test'
+  ...
+# Subtest: resolveProfile: the kiosk email is rejected for login
+ok 65 - resolveProfile: the kiosk email is rejected for login
+  ---
+  duration_ms: 0.389313
+  type: 'test'
+  ...
+# Subtest: resolveProfile: a DEFAULT_ROLES preset email with no existing account is auto-provisioned with its preset role/name
+ok 66 - resolveProfile: a DEFAULT_ROLES preset email with no existing account is auto-provisioned with its preset role/name
+  ---
+  duration_ms: 1.395784
+  type: 'test'
+  ...
+# Subtest: resolveProfile: the very first login ever (no accounts at all) is auto-provisioned as admin, even for an arbitrary email
+ok 67 - resolveProfile: the very first login ever (no accounts at all) is auto-provisioned as admin, even for an arbitrary email
+  ---
+  duration_ms: 0.465113
+  type: 'test'
+  ...
+# Subtest: resolveProfile: an unrecognized email is rejected once real accounts already exist
+ok 68 - resolveProfile: an unrecognized email is rejected once real accounts already exist
+  ---
+  duration_ms: 0.41913
+  type: 'test'
+  ...
+# Subtest: sbSignOut: offline clears the local Supabase auth token without awaiting the network
+ok 69 - sbSignOut: offline clears the local Supabase auth token without awaiting the network
+  ---
+  duration_ms: 0.273458
+  type: 'test'
+  ...
+# Subtest: sbSignOut: online awaits the real sign-out and still clears the local token
+ok 70 - sbSignOut: online awaits the real sign-out and still clears the local token
+  ---
+  duration_ms: 0.185858
+  type: 'test'
+  ...
+# Subtest: authenticateStaff: a locked-out account is rejected before any network call
+ok 71 - authenticateStaff: a locked-out account is rejected before any network call
+  ---
+  duration_ms: 0.53616
+  type: 'test'
+  ...
+# Subtest: authenticateStaff: an email without "@" is rejected before signing in (client must exist first)
+ok 72 - authenticateStaff: an email without "@" is rejected before signing in (client must exist first)
+  ---
+  duration_ms: 0.151597
+  type: 'test'
+  ...
+# Subtest: authenticateStaff: invalid credentials register a failure and return the Arabic message
+ok 73 - authenticateStaff: invalid credentials register a failure and return the Arabic message
+  ---
+  duration_ms: 0.256937
+  type: 'test'
+  ...
+# Subtest: authenticateStaff: an unconfirmed email returns its own Arabic message
+ok 74 - authenticateStaff: an unconfirmed email returns its own Arabic message
+  ---
+  duration_ms: 0.362892
+  type: 'test'
+  ...
+# Subtest: authenticateStaff: a successful sign-in clears the lockout and resolves the user profile
+ok 75 - authenticateStaff: a successful sign-in clears the lockout and resolves the user profile
+  ---
+  duration_ms: 1.205243
+  type: 'test'
+  ...
+# Subtest: authenticateStaff: when resolveProfile itself fails after a successful sign-in, it signs the session back out
+ok 76 - authenticateStaff: when resolveProfile itself fails after a successful sign-in, it signs the session back out
+  ---
+  duration_ms: 0.46612
+  type: 'test'
+  ...
+# Subtest: constants are the legacy values
+ok 77 - constants are the legacy values
+  ---
+  duration_ms: 2.086537
+  type: 'test'
+  ...
+# Subtest: steps: guest starts at info, registered patient at clinic
+ok 78 - steps: guest starts at info, registered patient at clinic
+  ---
+  duration_ms: 0.258256
+  type: 'test'
+  ...
+# Subtest: getAvailableDates equals legacy for every clinic over two months of start days
+ok 79 - getAvailableDates equals legacy for every clinic over two months of start days
+  ---
+  duration_ms: 120.192925
+  type: 'test'
+  ...
+# Subtest: getAvailableDates: tomorrow onward, 30 days, clinic weekdays only
+ok 80 - getAvailableDates: tomorrow onward, 30 days, clinic weekdays only
+  ---
+  duration_ms: 0.714793
+  type: 'test'
+  ...
+# Subtest: getSlots equals legacy
+ok 81 - getSlots equals legacy
+  ---
+  duration_ms: 0.618541
+  type: 'test'
+  ...
+# Subtest: slotsClinicCode: short code else the name
+ok 82 - slotsClinicCode: short code else the name
+  ---
+  duration_ms: 0.190998
+  type: 'test'
+  ...
+# Subtest: addTakenRows: counts by time, bad counts become 1, mutates in place
+ok 83 - addTakenRows: counts by time, bad counts become 1, mutates in place
+  ---
+  duration_ms: 0.97915
+  type: 'test'
+  ...
+# Subtest: isSlotFull / canPickSlot
+ok 84 - isSlotFull / canPickSlot
+  ---
+  duration_ms: 0.254877
+  type: 'test'
+  ...
+# Subtest: bookForm transitions
+ok 85 - bookForm transitions
+  ---
+  duration_ms: 0.671641
+  type: 'test'
+  ...
+# Subtest: shouldReturnToTimeStep: confirm step with the time cleared
+ok 86 - shouldReturnToTimeStep: confirm step with the time cleared
+  ---
+  duration_ms: 0.566827
+  type: 'test'
+  ...
+# Subtest: guestInfoError: name, then phone (raw length >= 10)
+ok 87 - guestInfoError: name, then phone (raw length >= 10)
+  ---
+  duration_ms: 0.402557
+  type: 'test'
+  ...
+# Subtest: guest step check vs doBook (both kept as legacy)
+ok 88 - guest step check vs doBook (both kept as legacy)
+  ---
+  duration_ms: 0.2259
+  type: 'test'
+  ...
+# Subtest: bookingSummaryRows equals the legacy summary expression
+ok 89 - bookingSummaryRows equals the legacy summary expression
+  ---
+  duration_ms: 0.778478
+  type: 'test'
+  ...
+# Subtest: bookButtonLabel
+ok 90 - bookButtonLabel
+  ---
+  duration_ms: 0.188328
+  type: 'test'
+  ...
+# Subtest: NAV: has the 7 expected tabs in order, with "accounting" marked admin-only and the rest not
+ok 91 - NAV: has the 7 expected tabs in order, with "accounting" marked admin-only and the rest not
+  ---
+  duration_ms: 2.122495
+  type: 'test'
+  ...
+# Subtest: navItemsForRole: admin sees all 7 tabs including accounting
+ok 92 - navItemsForRole: admin sees all 7 tabs including accounting
+  ---
+  duration_ms: 0.249442
+  type: 'test'
+  ...
+# Subtest: navItemsForRole: a non-admin role (doctor/secretary/employee) does not see accounting
+ok 93 - navItemsForRole: a non-admin role (doctor/secretary/employee) does not see accounting
+  ---
+  duration_ms: 0.260533
+  type: 'test'
+  ...
+# Subtest: prescription params: nulls, eye default, medicines normalisation
+ok 94 - prescription params: nulls, eye default, medicines normalisation
+  ---
+  duration_ms: 2.135597
+  type: 'test'
+  ...
+# Subtest: imaging request: eye is OU unless every test shares one eye
+ok 95 - imaging request: eye is OU unless every test shares one eye
+  ---
+  duration_ms: 0.292009
+  type: 'test'
+  ...
+# Subtest: single imaging order and study params
+ok 96 - single imaging order and study params
+  ---
+  duration_ms: 0.214147
+  type: 'test'
+  ...
+# Subtest: toast durations are the legacy 2200 / 4000 ms
+ok 97 - toast durations are the legacy 2200 / 4000 ms
+  ---
+  duration_ms: 0.70331
+  type: 'test'
+  ...
+# Subtest: isWarnToast: only strings starting with ⚠
+ok 98 - isWarnToast: only strings starting with ⚠
+  ---
+  duration_ms: 0.208686
+  type: 'test'
+  ...
+# Subtest: toastText: warnings as-is, everything else gets the "✓ " prefix
+ok 99 - toastText: warnings as-is, everything else gets the "✓ " prefix
+  ---
+  duration_ms: 0.120789
+  type: 'test'
+  ...
+# Subtest: btnStyle matches the legacy Btn style for every prop combination
+ok 100 - btnStyle matches the legacy Btn style for every prop combination
+  ---
+  duration_ms: 3.10559
+  type: 'test'
+  ...
+# Subtest: btnStyle precedence: outline > danger > color
+ok 101 - btnStyle precedence: outline > danger > color
+  ---
+  duration_ms: 0.240535
+  type: 'test'
+  ...
+# Subtest: btnStyle reads C at call time (theme object is mutated in place)
+ok 102 - btnStyle reads C at call time (theme object is mutated in place)
+  ---
+  duration_ms: 0.170103
+  type: 'test'
+  ...
+# Subtest: theme toggle helpers
+ok 103 - theme toggle helpers
+  ---
+  duration_ms: 0.196244
+  type: 'test'
+  ...
+# Subtest: clinicLabel: known clinic values map to their Arabic label
+ok 104 - clinicLabel: known clinic values map to their Arabic label
+  ---
+  duration_ms: 0.967732
+  type: 'test'
+  ...
+# Subtest: clinicLabel: unknown/empty value falls back to the value itself, then an em dash
+ok 105 - clinicLabel: unknown/empty value falls back to the value itself, then an em dash
+  ---
+  duration_ms: 0.21828
+  type: 'test'
+  ...
+# Subtest: CLINIC_FILTERS: starts with the "all clinics" option, then every CLINICS entry in order
+ok 106 - CLINIC_FILTERS: starts with the "all clinics" option, then every CLINICS entry in order
+  ---
+  duration_ms: 1.674583
+  type: 'test'
+  ...
+# Subtest: CLINICS_LIST: plain clinic names match CLINICS values
+ok 107 - CLINICS_LIST: plain clinic names match CLINICS values
+  ---
+  duration_ms: 0.192421
+  type: 'test'
+  ...
+# Subtest: PATIENT_CLINICS: every clinic has either days+sessions or a schedule map
+ok 108 - PATIENT_CLINICS: every clinic has either days+sessions or a schedule map
+  ---
+  duration_ms: 0.20583
+  type: 'test'
+  ...
+# Subtest: clinicDisplay / CLINIC_CODE round-trip between short and full clinic names
+ok 109 - clinicDisplay / CLINIC_CODE round-trip between short and full clinic names
+  ---
+  duration_ms: 0.110642
+  type: 'test'
+  ...
+# Subtest: clinicDisplay: unknown/empty value falls back to the value itself / empty string
+ok 110 - clinicDisplay: unknown/empty value falls back to the value itself / empty string
+  ---
+  duration_ms: 0.135782
+  type: 'test'
+  ...
+# Subtest: imagingTypeName: known ids map to their display name, unknown id falls back to itself
+ok 111 - imagingTypeName: known ids map to their display name, unknown id falls back to itself
+  ---
+  duration_ms: 0.105174
+  type: 'test'
+  ...
+# Subtest: IMAGING_REPORT_TEMPLATES and IMAGING_ORDER_STATUSES exist for every IMAGING_TYPES id (where applicable)
+ok 112 - IMAGING_REPORT_TEMPLATES and IMAGING_ORDER_STATUSES exist for every IMAGING_TYPES id (where applicable)
+  ---
+  duration_ms: 0.429572
+  type: 'test'
+  ...
+# Subtest: IMAGING_EYES: three standard eye options (OU/OD/OS)
+ok 113 - IMAGING_EYES: three standard eye options (OU/OD/OS)
+  ---
+  duration_ms: 0.360056
+  type: 'test'
+  ...
+# Subtest: CAT_COLORS: has a color for every DEFAULT_TESTS category
+ok 114 - CAT_COLORS: has a color for every DEFAULT_TESTS category
+  ---
+  duration_ms: 0.202833
+  type: 'test'
+  ...
+# Subtest: EXP_CATS: each entry is a [label, icon] pair
+ok 115 - EXP_CATS: each entry is a [label, icon] pair
+  ---
+  duration_ms: 0.371706
+  type: 'test'
+  ...
+# Subtest: BOOKING_TABLE is the expected localStorage/table key
+ok 116 - BOOKING_TABLE is the expected localStorage/table key
+  ---
+  duration_ms: 0.086673
+  type: 'test'
+  ...
+# Subtest: localDateStr / localTimeStr: match the expected format
+ok 117 - localDateStr / localTimeStr: match the expected format
+  ---
+  duration_ms: 0.347026
+  type: 'test'
+  ...
+# Subtest: localISO: formats a given date in the local timezone as YYYY-MM-DD
+ok 118 - localISO: formats a given date in the local timezone as YYYY-MM-DD
+  ---
+  duration_ms: 0.336678
+  type: 'test'
+  ...
+# Subtest: localISO: defaults to "now" when called with no argument
+ok 119 - localISO: defaults to "now" when called with no argument
+  ---
+  duration_ms: 0.137574
+  type: 'test'
+  ...
+# Subtest: newId: returns a timestamp-based number close to Date.now()
+ok 120 - newId: returns a timestamp-based number close to Date.now()
+  ---
+  duration_ms: 0.093904
+  type: 'test'
+  ...
+# Subtest: emailKey: trims, lowercases, and tolerates non-string/empty input
+ok 121 - emailKey: trims, lowercases, and tolerates non-string/empty input
+  ---
+  duration_ms: 0.065622
+  type: 'test'
+  ...
+# Subtest: ROLE_LABEL: has an Arabic label for every staff role
+ok 122 - ROLE_LABEL: has an Arabic label for every staff role
+  ---
+  duration_ms: 0.070912
+  type: 'test'
+  ...
+# Subtest: MIN_PW_LEN / GUARD_KEY: expected values
+ok 123 - MIN_PW_LEN / GUARD_KEY: expected values
+  ---
+  duration_ms: 0.049111
+  type: 'test'
+  ...
+# Subtest: today and month revenue, unpaid count
+ok 124 - today and month revenue, unpaid count
+  ---
+  duration_ms: 0.776918
+  type: 'test'
+  ...
+# Subtest: handles empty/non-array visits
+ok 125 - handles empty/non-array visits
+  ---
+  duration_ms: 1.354971
+  type: 'test'
+  ...
+# Subtest: averageRating rounds to one decimal, null when empty
+ok 126 - averageRating rounds to one decimal, null when empty
+  ---
+  duration_ms: 0.197716
+  type: 'test'
+  ...
+# Subtest: todayQueueGroups splits by wait status and date
+ok 127 - todayQueueGroups splits by wait status and date
+  ---
+  duration_ms: 1.354196
+  type: 'test'
+  ...
+# Subtest: recentAppointments hides done/cancelled and caps at limit
+ok 128 - recentAppointments hides done/cancelled and caps at limit
+  ---
+  duration_ms: 0.402022
+  type: 'test'
+  ...
+# Subtest: emergencyPatients filters by status
+ok 129 - emergencyPatients filters by status
+  ---
+  duration_ms: 0.198705
+  type: 'test'
+  ...
+# Subtest: buildDashboardData composes everything
+ok 130 - buildDashboardData composes everything
+  ---
+  duration_ms: 0.278811
+  type: 'test'
+  ...
+# Subtest: getSB: returns null when neither the shared client nor window.supabase exist (the initial _sb value)
+ok 131 - getSB: returns null when neither the shared client nor window.supabase exist (the initial _sb value)
+  ---
+  duration_ms: 0.848783
+  type: 'test'
+  ...
+# Subtest: getSB: falls back to globalThis.supabase.createClient(...) with the expected args
+ok 132 - getSB: falls back to globalThis.supabase.createClient(...) with the expected args
+  ---
+  duration_ms: 1.282635
+  type: 'test'
+  ...
+# Subtest: getSB: caches the result -- a later call does not re-resolve even if the globals change
+ok 133 - getSB: caches the result -- a later call does not re-resolve even if the globals change
+  ---
+  duration_ms: 0.125985
+  type: 'test'
+  ...
+# Subtest: iappRpc: forwards to globalThis.IAppModules.rpc.safe and returns its result as-is
+ok 134 - iappRpc: forwards to globalThis.IAppModules.rpc.safe and returns its result as-is
+  ---
+  duration_ms: 0.26389
+  type: 'test'
+  ...
+# Subtest: option lists are the legacy ExamForm lists
+ok 135 - option lists are the legacy ExamForm lists
+  ---
+  duration_ms: 3.373214
+  type: 'test'
+  ...
+# Subtest: blankExam equals the legacy blank (values and key order)
+ok 136 - blankExam equals the legacy blank (values and key order)
+  ---
+  duration_ms: 0.348882
+  type: 'test'
+  ...
+# Subtest: initialExamState: add vs edit (plain copy, no defaults)
+ok 137 - initialExamState: add vs edit (plain copy, no defaults)
+  ---
+  duration_ms: 0.247092
+  type: 'test'
+  ...
+# Subtest: chief complaint select / input / badge
+ok 138 - chief complaint select / input / badge
+  ---
+  duration_ms: 0.366993
+  type: 'test'
+  ...
+# Subtest: IOP high flag: strictly above 21 mmHg, numeric strings
+ok 139 - IOP high flag: strictly above 21 mmHg, numeric strings
+  ---
+  duration_ms: 0.155937
+  type: 'test'
+  ...
+# Subtest: step navigation helpers
+ok 140 - step navigation helpers
+  ---
+  duration_ms: 0.100772
+  type: 'test'
+  ...
+# Subtest: buildExamPayload: add vs edit, key order
+ok 141 - buildExamPayload: add vs edit, key order
+  ---
+  duration_ms: 0.26617
+  type: 'test'
+  ...
+# Subtest: INJ_KEY/INJ_DRUGS: unchanged constants
+ok 142 - INJ_KEY/INJ_DRUGS: unchanged constants
+  ---
+  duration_ms: 1.924445
+  type: 'test'
+  ...
+# Subtest: dueInjections: only the latest injection per patient+eye counts, and only when its nextDate is within the window
+ok 143 - dueInjections: only the latest injection per patient+eye counts, and only when its nextDate is within the window
+  ---
+  duration_ms: 1.525358
+  type: 'test'
+  ...
+# Subtest: dueInjections: defaults to a 7-day window when days is null
+ok 144 - dueInjections: defaults to a 7-day window when days is null
+  ---
+  duration_ms: 0.187221
+  type: 'test'
+  ...
+# Subtest: dueInjections: sorts by nextDate ascending
+ok 145 - dueInjections: sorts by nextDate ascending
+  ---
+  duration_ms: 7.506701
+  type: 'test'
+  ...
+# Subtest: overdueFollowUps: a visit with a past nextVisit and no later visit for that patient is overdue
+ok 146 - overdueFollowUps: a visit with a past nextVisit and no later visit for that patient is overdue
+  ---
+  duration_ms: 0.434595
+  type: 'test'
+  ...
+# Subtest: overdueFollowUps: a patient who already came back after their due date is not overdue
+ok 147 - overdueFollowUps: a patient who already came back after their due date is not overdue
+  ---
+  duration_ms: 0.136052
+  type: 'test'
+  ...
+# Subtest: overdueFollowUps: a future nextVisit is not overdue, and a patient appears at most once
+ok 148 - overdueFollowUps: a future nextVisit is not overdue, and a patient appears at most once
+  ---
+  duration_ms: 0.13829
+  type: 'test'
+  ...
+# Subtest: overdueFollowUps: missing patient record falls back to the visit's own patient name and empty phone
+ok 149 - overdueFollowUps: missing patient record falls back to the visit's own patient name and empty phone
+  ---
+  duration_ms: 0.129212
+  type: 'test'
+  ...
+# Subtest: overdueFollowUps: sorted most-late first
+ok 150 - overdueFollowUps: sorted most-late first
+  ---
+  duration_ms: 0.337192
+  type: 'test'
+  ...
+# Subtest: globalSearchResults: empty query returns no results and is not "hasResults"
+ok 151 - globalSearchResults: empty query returns no results and is not "hasResults"
+  ---
+  duration_ms: 1.860356
+  type: 'test'
+  ...
+# Subtest: globalSearchResults: matches patients by name, code, or phone
+ok 152 - globalSearchResults: matches patients by name, code, or phone
+  ---
+  duration_ms: 0.241835
+  type: 'test'
+  ...
+# Subtest: globalSearchResults: matches prescriptions and appointments by patient name
+ok 153 - globalSearchResults: matches prescriptions and appointments by patient name
+  ---
+  duration_ms: 0.15127
+  type: 'test'
+  ...
+# Subtest: globalSearchResults: a query with no matches anywhere reports hasResults=false
+ok 154 - globalSearchResults: a query with no matches anywhere reports hasResults=false
+  ---
+  duration_ms: 0.104108
+  type: 'test'
+  ...
+# Subtest: globalSearchResults: caps results at 5 patients, 3 prescriptions, 3 appointments
+ok 155 - globalSearchResults: caps results at 5 patients, 3 prescriptions, 3 appointments
+  ---
+  duration_ms: 1.627085
+  type: 'test'
+  ...
+# Subtest: globalSearchResults: tolerates missing/undefined arrays and fields
+ok 156 - globalSearchResults: tolerates missing/undefined arrays and fields
+  ---
+  duration_ms: 0.132667
+  type: 'test'
+  ...
+# Subtest: filterImagingPatients matches name/code case-insensitively, phone raw, max 8
+ok 157 - filterImagingPatients matches name/code case-insensitively, phone raw, max 8
+  ---
+  duration_ms: 2.913518
+  type: 'test'
+  ...
+# Subtest: filterStudies filters by type and search and sorts newest first
+ok 158 - filterStudies filters by type and search and sorts newest first
+  ---
+  duration_ms: 12.05708
+  type: 'test'
+  ...
+# Subtest: pendingOrdersForPatient keeps only open orders of that patient
+ok 159 - pendingOrdersForPatient keeps only open orders of that patient
+  ---
+  duration_ms: 0.2594
+  type: 'test'
+  ...
+# Subtest: findImagingType matches by name or id
+ok 160 - findImagingType matches by name or id
+  ---
+  duration_ms: 0.339949
+  type: 'test'
+  ...
+# Subtest: buildTypeFilters prepends الكل to every type
+ok 161 - buildTypeFilters prepends الكل to every type
+  ---
+  duration_ms: 0.273286
+  type: 'test'
+  ...
+# Subtest: resolveStudyTarget without an order uses manual type and eye
+ok 162 - resolveStudyTarget without an order uses manual type and eye
+  ---
+  duration_ms: 0.247995
+  type: 'test'
+  ...
+# Subtest: resolveStudyTarget with an order picks the selected test (or the first)
+ok 163 - resolveStudyTarget with an order picks the selected test (or the first)
+  ---
+  duration_ms: 0.252373
+  type: 'test'
+  ...
+# Subtest: buildStudyRecord reproduces the legacy record, preferring Core workflow ids
+ok 164 - buildStudyRecord reproduces the legacy record, preferring Core workflow ids
+  ---
+  duration_ms: 0.257297
+  type: 'test'
+  ...
+# Subtest: buildStudyRecord offline / no order / blank report defaults
+ok 165 - buildStudyRecord offline / no order / blank report defaults
+  ---
+  duration_ms: 0.371989
+  type: 'test'
+  ...
+# Subtest: buildImageMeta maps each uploaded file to a metadata entry
+ok 166 - buildImageMeta maps each uploaded file to a metadata entry
+  ---
+  duration_ms: 0.497519
+  type: 'test'
+  ...
+# Subtest: buildImagingExamRecord reproduces the legacy exam record
+ok 167 - buildImagingExamRecord reproduces the legacy exam record
+  ---
+  duration_ms: 0.343105
+  type: 'test'
+  ...
+# Subtest: strings and defaults are the legacy LoginScreen ones
+ok 168 - strings and defaults are the legacy LoginScreen ones
+  ---
+  duration_ms: 1.257159
+  type: 'test'
+  ...
+# Subtest: loginFieldsMissing: email trimmed, password not
+ok 169 - loginFieldsMissing: email trimmed, password not
+  ---
+  duration_ms: 0.214357
+  type: 'test'
+  ...
+# Subtest: password visibility, button label and opacity
+ok 170 - password visibility, button label and opacity
+  ---
+  duration_ms: 0.258873
+  type: 'test'
+  ...
+# Subtest: LoginScreen port calls authenticateStaff, same shape as legacy
+ok 171 - LoginScreen port calls authenticateStaff, same shape as legacy
+  ---
+  duration_ms: 1.416061
+  type: 'test'
+  ...
+# Subtest: parseMedicines: empty/falsy input returns an empty list
+ok 172 - parseMedicines: empty/falsy input returns an empty list
+  ---
+  duration_ms: 1.945815
+  type: 'test'
+  ...
+# Subtest: parseMedicines: splits "Name - Dose" lines on the first " - "
+ok 173 - parseMedicines: splits "Name - Dose" lines on the first " - "
+  ---
+  duration_ms: 0.256254
+  type: 'test'
+  ...
+# Subtest: parseMedicines: a line with no " - " separator keeps the whole thing as the name, empty dose
+ok 174 - parseMedicines: a line with no " - " separator keeps the whole thing as the name, empty dose
+  ---
+  duration_ms: 0.175448
+  type: 'test'
+  ...
+# Subtest: parseMedicines: ignores blank lines
+ok 175 - parseMedicines: ignores blank lines
+  ---
+  duration_ms: 1.127314
+  type: 'test'
+  ...
+# Subtest: serializeMedicines: joins name/dose pairs back with " - ", omitting the dash when dose is empty
+ok 176 - serializeMedicines: joins name/dose pairs back with " - ", omitting the dash when dose is empty
+  ---
+  duration_ms: 0.29197
+  type: 'test'
+  ...
+# Subtest: parseMedicines/serializeMedicines round-trip
+ok 177 - parseMedicines/serializeMedicines round-trip
+  ---
+  duration_ms: 0.118976
+  type: 'test'
+  ...
+# Subtest: medicinesTextForTemplate: drops unnamed rows, keeps the same "Name - Dose" format
+ok 178 - medicinesTextForTemplate: drops unnamed rows, keeps the same "Name - Dose" format
+  ---
+  duration_ms: 0.239175
+  type: 'test'
+  ...
+# Subtest: medicinesTextForTemplate: empty list gives an empty string
+ok 179 - medicinesTextForTemplate: empty list gives an empty string
+  ---
+  duration_ms: 0.108381
+  type: 'test'
+  ...
+# Subtest: tomorrowOf equals the legacy tomorrow computation
+ok 180 - tomorrowOf equals the legacy tomorrow computation
+  ---
+  duration_ms: 1.356988
+  type: 'test'
+  ...
+# Subtest: reminderRows equals the legacy rows expression
+ok 181 - reminderRows equals the legacy rows expression
+  ---
+  duration_ms: 9.294224
+  type: 'test'
+  ...
+# Subtest: reminderRows: tomorrow only, not cancelled, sorted by time string
+ok 182 - reminderRows: tomorrow only, not cancelled, sorted by time string
+  ---
+  duration_ms: 0.734097
+  type: 'test'
+  ...
+# Subtest: reminder labels
+ok 183 - reminder labels
+  ---
+  duration_ms: 0.150317
+  type: 'test'
+  ...
+# Subtest: printDoctorName / printPatient equal legacy
+ok 184 - printDoctorName / printPatient equal legacy
+  ---
+  duration_ms: 0.435965
+  type: 'test'
+  ...
+# Subtest: glasses preview grid
+ok 185 - glasses preview grid
+  ---
+  duration_ms: 0.210732
+  type: 'test'
+  ...
+# Subtest: medicines preview: first three non-empty lines + count of the rest
+ok 186 - medicines preview: first three non-empty lines + count of the rest
+  ---
+  duration_ms: 0.295811
+  type: 'test'
+  ...
+# Subtest: waOpen: normalizes an Egyptian local number and opens wa.me with the encoded text
+ok 187 - waOpen: normalizes an Egyptian local number and opens wa.me with the encoded text
+  ---
+  duration_ms: 1.196901
+  type: 'test'
+  ...
+# Subtest: waOpen: a number already in international form (with or without 00) is not double-prefixed
+ok 188 - waOpen: a number already in international form (with or without 00) is not double-prefixed
+  ---
+  duration_ms: 1.325881
+  type: 'test'
+  ...
+# Subtest: waOpen: no usable phone number alerts and returns false without opening anything
+ok 189 - waOpen: no usable phone number alerts and returns false without opening anything
+  ---
+  duration_ms: 0.283839
+  type: 'test'
+  ...
+# Subtest: waReminderText: builds the Arabic reminder message with first name, date/time and clinic label
+ok 190 - waReminderText: builds the Arabic reminder message with first name, date/time and clinic label
+  ---
+  duration_ms: 0.49978
+  type: 'test'
+  ...
+# Subtest: waReminderText: missing date/time/clinic degrade gracefully (empty, not "undefined")
+ok 191 - waReminderText: missing date/time/clinic degrade gracefully (empty, not "undefined")
+  ---
+  duration_ms: 0.634545
+  type: 'test'
+  ...
+# Subtest: waFollowUpText: builds the follow-up message with first name, date and the given reason
+ok 192 - waFollowUpText: builds the follow-up message with first name, date and the given reason
+  ---
+  duration_ms: 0.317832
+  type: 'test'
+  ...
+# Subtest: waFollowUpText: falls back to the default reason text when none is given
+ok 193 - waFollowUpText: falls back to the default reason text when none is given
+  ---
+  duration_ms: 0.134948
+  type: 'test'
+  ...
+# Subtest: constants mirror the legacy literals
+ok 194 - constants mirror the legacy literals
+  ---
+  duration_ms: 4.452802
+  type: 'test'
+  ...
+# Subtest: normArabic / normPhone / isActiveApt behave exactly like the runtime copies
+ok 195 - normArabic / normPhone / isActiveApt behave exactly like the runtime copies
+  ---
+  duration_ms: 1.10563
+  type: 'test'
+  ...
+# Subtest: initialTab / patientTabs: guest gets only the booking tab
+ok 196 - initialTab / patientTabs: guest gets only the booking tab
+  ---
+  duration_ms: 0.531024
+  type: 'test'
+  ...
+# Subtest: blankBookForm: isNew mirrors isGuest (undefined for registered patients)
+ok 197 - blankBookForm: isNew mirrors isGuest (undefined for registered patients)
+  ---
+  duration_ms: 0.302041
+  type: 'test'
+  ...
+# Subtest: blankBookForm: FIX — registered patients get their own name/phone prefilled, guests stay blank
+ok 198 - blankBookForm: FIX — registered patients get their own name/phone prefilled, guests stay blank
+  ---
+  duration_ms: 0.326617
+  type: 'test'
+  ...
+# Subtest: isMyApt: guests / id-less sessions never match
+ok 199 - isMyApt: guests / id-less sessions never match
+  ---
+  duration_ms: 0.340792
+  type: 'test'
+  ...
+# Subtest: isMyApt: id match wins whenever the record has a patientId
+ok 200 - isMyApt: id match wins whenever the record has a patientId
+  ---
+  duration_ms: 0.297379
+  type: 'test'
+  ...
+# Subtest: isMyApt: name + phone fallback (normalized) when the record has no patientId
+ok 201 - isMyApt: name + phone fallback (normalized) when the record has no patientId
+  ---
+  duration_ms: 0.326204
+  type: 'test'
+  ...
+# Subtest: myAppointments / ownRecords
+ok 202 - myAppointments / ownRecords
+  ---
+  duration_ms: 0.820647
+  type: 'test'
+  ...
+# Subtest: upcomingAppointments: today or later, active only, date-sorted (stable within a day)
+ok 203 - upcomingAppointments: today or later, active only, date-sorted (stable within a day)
+  ---
+  duration_ms: 12.54444
+  type: 'test'
+  ...
+# Subtest: pastAppointments: before today, newest first, cancelled included
+ok 204 - pastAppointments: before today, newest first, cancelled included
+  ---
+  duration_ms: 1.867536
+  type: 'test'
+  ...
+# Subtest: isAptSoon: 0 <= hours < 24 from now, local time, time defaults to 00:00
+ok 205 - isAptSoon: 0 <= hours < 24 from now, local time, time defaults to 00:00
+  ---
+  duration_ms: 0.548408
+  type: 'test'
+  ...
+# Subtest: findUnratedVisit: first visit ≤ 3 days old and not rated
+ok 206 - findUnratedVisit: first visit ≤ 3 days old and not rated
+  ---
+  duration_ms: 0.314272
+  type: 'test'
+  ...
+# Subtest: shouldAutoPromptRating: suppressed for guests and when nothing is due
+ok 207 - shouldAutoPromptRating: suppressed for guests and when nothing is due
+  ---
+  duration_ms: 0.152663
+  type: 'test'
+  ...
+# Subtest: bookFormError: clinic → date → time → name → phone
+ok 208 - bookFormError: clinic → date → time → name → phone
+  ---
+  duration_ms: 0.349019
+  type: 'test'
+  ...
+# Subtest: buildBookingRow: exact payload shape
+ok 209 - buildBookingRow: exact payload shape
+  ---
+  duration_ms: 0.423082
+  type: 'test'
+  ...
+# Subtest: isDuplicateBookingError: /duplicate|unique/i on error.message
+ok 210 - isDuplicateBookingError: /duplicate|unique/i on error.message
+  ---
+  duration_ms: 0.336086
+  type: 'test'
+  ...
+# Subtest: clearBookTime only clears the time
+ok 211 - clearBookTime only clears the time
+  ---
+  duration_ms: 0.198254
+  type: 'test'
+  ...
+# Subtest: bookDoneSummary rows
+ok 212 - bookDoneSummary rows
+  ---
+  duration_ms: 0.158914
+  type: 'test'
+  ...
+# Subtest: markVisitRatedIn: rated:true on the matching id only
+ok 213 - markVisitRatedIn: rated:true on the matching id only
+  ---
+  duration_ms: 0.206115
+  type: 'test'
+  ...
+# Subtest: RatingPrompt helpers
+ok 214 - RatingPrompt helpers
+  ---
+  duration_ms: 0.388996
+  type: 'test'
+  ...
+# Subtest: header / display helpers
+ok 215 - header / display helpers
+  ---
+  duration_ms: 0.509613
+  type: 'test'
+  ...
+# Subtest: latestExamByDateTime uses date+time and does not mutate input
+ok 216 - latestExamByDateTime uses date+time and does not mutate input
+  ---
+  duration_ms: 13.452877
+  type: 'test'
+  ...
+# Subtest: ageLabel shows "—" for blank/null/undefined/NaN, keeps 0
+ok 217 - ageLabel shows "—" for blank/null/undefined/NaN, keeps 0
+  ---
+  duration_ms: 0.27227
+  type: 'test'
+  ...
+# Subtest: compareRows keeps exams with VA/IOP only, oldest first
+ok 218 - compareRows keeps exams with VA/IOP only, oldest first
+  ---
+  duration_ms: 0.252377
+  type: 'test'
+  ...
+# Subtest: buildTimelineEvents maps every source with type, icon and colour
+ok 219 - buildTimelineEvents maps every source with type, icon and colour
+  ---
+  duration_ms: 1.857504
+  type: 'test'
+  ...
+# Subtest: timelineSourceEvents prefers the Core 360 journey only when non-empty
+ok 220 - timelineSourceEvents prefers the Core 360 journey only when non-empty
+  ---
+  duration_ms: 0.358621
+  type: 'test'
+  ...
+# Subtest: filterTimeline filters by type and search, newest first then by time
+ok 221 - filterTimeline filters by type and search, newest first then by time
+  ---
+  duration_ms: 0.595671
+  type: 'test'
+  ...
+# Subtest: option lists appear verbatim in both legacy patient forms
+ok 222 - option lists appear verbatim in both legacy patient forms
+  ---
+  duration_ms: 3.255923
+  type: 'test'
+  ...
+# Subtest: blankPatient equals the legacy blank (values and key order)
+ok 223 - blankPatient equals the legacy blank (values and key order)
+  ---
+  duration_ms: 0.358974
+  type: 'test'
+  ...
+# Subtest: initialPatientState: add, edit and the "add from search" seed
+ok 224 - initialPatientState: add, edit and the "add from search" seed
+  ---
+  duration_ms: 0.195603
+  type: 'test'
+  ...
+# Subtest: normalizeAge: "" / null / undefined → "", else Number()
+ok 225 - normalizeAge: "" / null / undefined → "", else Number()
+  ---
+  duration_ms: 0.242984
+  type: 'test'
+  ...
+# Subtest: canSavePatient: name required (legacy truthiness)
+ok 226 - canSavePatient: name required (legacy truthiness)
+  ---
+  duration_ms: 0.125534
+  type: 'test'
+  ...
+# Subtest: buildPatientPayload / buildPatientEditPayload: only age changes, key order kept
+ok 227 - buildPatientPayload / buildPatientEditPayload: only age changes, key order kept
+  ---
+  duration_ms: 0.241833
+  type: 'test'
+  ...
+# Subtest: initialPatientEditState is a shallow copy of the patient
+ok 228 - initialPatientEditState is a shallow copy of the patient
+  ---
+  duration_ms: 0.170579
+  type: 'test'
+  ...
+# Subtest: switching patients while the Core load is in flight: the late response for the first patient is discarded
+ok 229 - switching patients while the Core load is in flight: the late response for the first patient is discarded
+  ---
+  duration_ms: 74.137626
+  type: 'test'
+  ...
+# Subtest: same hook instance given a different patient: a Core file of another patient is never merged in
+ok 230 - same hook instance given a different patient: a Core file of another patient is never merged in
+  ---
+  duration_ms: 62.740458
+  type: 'test'
+  ...
+# Core Patient 360 unavailable; using legacy Patient File: no handler iapp_get_patient_file_by_code
+# Subtest: a Core payload whose patient_code differs from the open patient is rejected with a visible error
+ok 231 - a Core payload whose patient_code differs from the open patient is rejected with a visible error
+  ---
+  duration_ms: 21.373118
+  type: 'test'
+  ...
+# Subtest: Core load failure leaves legacy records visible and reports the error state
+ok 232 - Core load failure leaves legacy records visible and reports the error state
+  ---
+  duration_ms: 51.085176
+  type: 'test'
+  ...
+# Subtest: double click on "save investigation request" performs ONE visit, ONE order and ONE legacy save
+ok 233 - double click on "save investigation request" performs ONE visit, ONE order and ONE legacy save
+  ---
+  duration_ms: 48.064786
+  type: 'test'
+  ...
+# Subtest: network failure during an investigation request is reported as local-only, the form content is cleared only because it was stored locally, and no auto-retry happens
+ok 234 - network failure during an investigation request is reported as local-only, the form content is cleared only because it was stored locally, and no auto-retry happens
+  ---
+  duration_ms: 22.457588
+  type: 'test'
+  ...
+# Subtest: local save failure after Core success is a partial result and keeps the draft for a safe retry
+ok 235 - local save failure after Core success is a partial result and keeps the draft for a safe retry
+  ---
+  duration_ms: 26.323777
+  type: 'test'
+  ...
+# Subtest: exam save: honest status (synced / local-only / failed) and double submit is ignored
+ok 236 - exam save: honest status (synced / local-only / failed) and double submit is ignored
+  ---
+  duration_ms: 63.350344
+  type: 'test'
+  ...
+# Core Patient 360 unavailable; using legacy Patient File: no handler iapp_get_patient_file_by_code
+# Subtest: deleting a Core-only record is refused with an explanation instead of silently doing nothing
+ok 237 - deleting a Core-only record is refused with an explanation instead of silently doing nothing
+  ---
+  duration_ms: 21.238486
+  type: 'test'
+  ...
+# Subtest: a modal with unsaved edits asks before closing; a clean one closes
+ok 238 - a modal with unsaved edits asks before closing; a clean one closes
+  ---
+  duration_ms: 21.423162
+  type: 'test'
+  ...
+# Subtest: timeline contains each source once and each event can be opened at its source tab
+ok 239 - timeline contains each source once and each event can be opened at its source tab
+  ---
+  duration_ms: 28.93288
+  type: 'test'
+  ...
+# Subtest: exam present in both sources appears once, legacy wins, provenance kept
+ok 240 - exam present in both sources appears once, legacy wins, provenance kept
+  ---
+  duration_ms: 3.048194
+  type: 'test'
+  ...
+# Subtest: core-only exam is kept and linked to the patient and its encounter
+ok 241 - core-only exam is kept and linked to the patient and its encounter
+  ---
+  duration_ms: 0.295405
+  type: 'test'
+  ...
+# Subtest: shadow visit (exam-visit:<id>) and its Core visit (legacy_id exam:<id>) are one visit even without _coreId
+ok 242 - shadow visit (exam-visit:<id>) and its Core visit (legacy_id exam:<id>) are one visit even without _coreId
+  ---
+  duration_ms: 0.408571
+  type: 'test'
+  ...
+# Subtest: numeric legacy visit matches Core visit by legacy_id; different visits on the same date stay separate
+ok 243 - numeric legacy visit matches Core visit by legacy_id; different visits on the same date stay separate
+  ---
+  duration_ms: 7.715255
+  type: 'test'
+  ...
+# Subtest: visitKeys only alias known shadow prefixes
+ok 244 - visitKeys only alias known shadow prefixes
+  ---
+  duration_ms: 0.315132
+  type: 'test'
+  ...
+# Subtest: legacy investigation request and Core order are one request (matched by Core order id, not by text)
+ok 245 - legacy investigation request and Core order are one request (matched by Core order id, not by text)
+  ---
+  duration_ms: 0.640502
+  type: 'test'
+  ...
+# Subtest: requests with the same test and date but different order ids are NOT merged
+ok 246 - requests with the same test and date but different order ids are NOT merged
+  ---
+  duration_ms: 0.313307
+  type: 'test'
+  ...
+# Subtest: Core order carrying source_exam_legacy_id matches the legacy request even if the legacy copy lacks Core ids
+ok 247 - Core order carrying source_exam_legacy_id matches the legacy request even if the legacy copy lacks Core ids
+  ---
+  duration_ms: 0.228188
+  type: 'test'
+  ...
+# Subtest: invalid ordered_at never produces "Invalid Date"
+ok 248 - invalid ordered_at never produces "Invalid Date"
+  ---
+  duration_ms: 0.40216
+  type: 'test'
+  ...
+# Subtest: rows that explicitly belong to another patient are dropped, a foreign Core file is ignored
+ok 249 - rows that explicitly belong to another patient are dropped, a foreign Core file is ignored
+  ---
+  duration_ms: 0.57709
+  type: 'test'
+  ...
+# Subtest: legacy records of another patient are never shown
+ok 250 - legacy records of another patient are never shown
+  ---
+  duration_ms: 0.18449
+  type: 'test'
+  ...
+# Subtest: missing / malformed payloads do not throw
+ok 251 - missing / malformed payloads do not throw
+  ---
+  duration_ms: 2.137411
+  type: 'test'
+  ...
+# Subtest: Core medicines array becomes text (an array of objects would crash React rendering)
+ok 252 - Core medicines array becomes text (an array of objects would crash React rendering)
+  ---
+  duration_ms: 0.308849
+  type: 'test'
+  ...
+# Subtest: images de-duplicate by public_id / id / url; metadata wins; core study order link is kept
+ok 253 - images de-duplicate by public_id / id / url; metadata wins; core study order link is kept
+  ---
+  duration_ms: 0.267215
+  type: 'test'
+  ...
+# Subtest: timeline: each clinical event once, newest first, undated last, stable keys, source tab
+ok 254 - timeline: each clinical event once, newest first, undated last, stable keys, source tab
+  ---
+  duration_ms: 0.449827
+  type: 'test'
+  ...
+# Subtest: timeline: Core diagnosis that mirrors the exam on the same encounter is not shown twice; a different one is
+ok 255 - timeline: Core diagnosis that mirrors the exam on the same encounter is not shown twice; a different one is
+  ---
+  duration_ms: 0.503012
+  type: 'test'
+  ...
+# Subtest: timeline: offline-only local records still appear while Core is loaded (no longer replaced by the journey)
+ok 256 - timeline: offline-only local records still appear while Core is loaded (no longer replaced by the journey)
+  ---
+  duration_ms: 0.222454
+  type: 'test'
+  ...
+# Subtest: timeline filter + search
+ok 257 - timeline filter + search
+  ---
+  duration_ms: 0.129686
+  type: 'test'
+  ...
+# Subtest: mergeByIdentity does not mutate its inputs
+ok 258 - mergeByIdentity does not mutate its inputs
+  ---
+  duration_ms: 0.105329
+  type: 'test'
+  ...
+# Subtest: print: a visit without a date and an exam without a date do not crash the printout
+ok 259 - print: a visit without a date and an exam without a date do not crash the printout
+  ---
+  duration_ms: 21.400238
+  type: 'test'
+  ...
+# Subtest: print: patient identity, code, clinician and print date are present and HTML-escaped
+ok 260 - print: patient identity, code, clinician and print date are present and HTML-escaped
+  ---
+  duration_ms: 0.426254
+  type: 'test'
+  ...
+# Subtest: print: investigation requests are not printed as the "last examination"
+ok 261 - print: investigation requests are not printed as the "last examination"
+  ---
+  duration_ms: 0.366493
+  type: 'test'
+  ...
+# Subtest: print: full exam history, prescriptions (text or Core array) and other patients' data
+ok 262 - print: full exam history, prescriptions (text or Core array) and other patients' data
+  ---
+  duration_ms: 0.501918
+  type: 'test'
+  ...
+# Subtest: permission matrix: roles and protected operations
+ok 263 - permission matrix: roles and protected operations
+  ---
+  duration_ms: 1.617338
+  type: 'test'
+  ...
+# Subtest: first save creates diagnosis, treatment and follow-up once and records markers
+ok 264 - first save creates diagnosis, treatment and follow-up once and records markers
+  ---
+  duration_ms: 2.472843
+  type: 'test'
+  ...
+# Subtest: re-saving an unchanged diagnosis/treatment/follow-up does NOT create them again
+ok 265 - re-saving an unchanged diagnosis/treatment/follow-up does NOT create them again
+  ---
+  duration_ms: 0.381377
+  type: 'test'
+  ...
+# Subtest: only the changed field is re-created
+ok 266 - only the changed field is re-created
+  ---
+  duration_ms: 0.215763
+  type: 'test'
+  ...
+# Subtest: a failing step is reported as partial, other steps still run, failed marker is not recorded
+ok 267 - a failing step is reported as partial, other steps still run, failed marker is not recorded
+  ---
+  duration_ms: 0.343477
+  type: 'test'
+  ...
+# Subtest: base examination sync failure is "failed" and nothing else is attempted; no automatic retry
+ok 268 - base examination sync failure is "failed" and nothing else is attempted; no automatic retry
+  ---
+  duration_ms: 0.23259
+  type: 'test'
+  ...
+# Subtest: diagnosis step without a Core visit id is reported, never sent with a null visit
+ok 269 - diagnosis step without a Core visit id is reported, never sent with a null visit
+  ---
+  duration_ms: 0.323264
+  type: 'test'
+  ...
+# Subtest: planExamSteps ignores blank values; markers persist per exam id
+ok 270 - planExamSteps ignores blank values; markers persist per exam id
+  ---
+  duration_ms: 0.335896
+  type: 'test'
+  ...
+# Subtest: request: everything succeeds -> saved, Core ids recorded on both records
+ok 271 - request: everything succeeds -> saved, Core ids recorded on both records
+  ---
+  duration_ms: 0.588312
+  type: 'test'
+  ...
+# Subtest: request: no tests -> invalid and nothing written
+ok 272 - request: no tests -> invalid and nothing written
+  ---
+  duration_ms: 0.386651
+  type: 'test'
+  ...
+# Subtest: request: offline -> local-only (never reported as saved), no Core call
+ok 273 - request: offline -> local-only (never reported as saved), no Core call
+  ---
+  duration_ms: 0.446697
+  type: 'test'
+  ...
+# Subtest: request: network failure during Core order -> local-only with the error kept for resync; visit id is kept for retry
+ok 274 - request: network failure during Core order -> local-only with the error kept for resync; visit id is kept for retry
+  ---
+  duration_ms: 0.307985
+  type: 'test'
+  ...
+# Subtest: request: Core succeeded but local save failed -> partial, retry reuses the same draft id and Core ids (no duplicate visit/order)
+ok 275 - request: Core succeeded but local save failed -> partial, retry reuses the same draft id and Core ids (no duplicate visit/order)
+  ---
+  duration_ms: 0.309476
+  type: 'test'
+  ...
+# Subtest: request: imaging-order store write reporting failure is surfaced, not swallowed
+ok 276 - request: imaging-order store write reporting failure is surfaced, not swallowed
+  ---
+  duration_ms: 0.189225
+  type: 'test'
+  ...
+# Subtest: request: everything fails -> failed
+ok 277 - request: everything fails -> failed
+  ---
+  duration_ms: 0.365393
+  type: 'test'
+  ...
+# Subtest: request: an RPC answering without an order id is not success
+ok 278 - request: an RPC answering without an order id is not success
+  ---
+  duration_ms: 0.171655
+  type: 'test'
+  ...
+# Subtest: resync: uses the request id as legacy id, patches Core ids, offline is refused
+ok 279 - resync: uses the request id as legacy id, patches Core ids, offline is refused
+  ---
+  duration_ms: 0.283556
+  type: 'test'
+  ...
+# Subtest: normArabic unifies letter forms, strips tashkeel/tatweel, collapses spaces
+ok 280 - normArabic unifies letter forms, strips tashkeel/tatweel, collapses spaces
+  ---
+  duration_ms: 1.100274
+  type: 'test'
+  ...
+# Subtest: normPhone keeps digits and maps the Egyptian prefix to 0
+ok 281 - normPhone keeps digits and maps the Egyptian prefix to 0
+  ---
+  duration_ms: 0.318091
+  type: 'test'
+  ...
+# Subtest: sortPatients: newest id first, missing id last, input not mutated
+ok 282 - sortPatients: newest id first, missing id last, input not mutated
+  ---
+  duration_ms: 2.416353
+  type: 'test'
+  ...
+# Subtest: listPatients with empty / blank search returns all, sorted
+ok 283 - listPatients with empty / blank search returns all, sorted
+  ---
+  duration_ms: 0.176848
+  type: 'test'
+  ...
+# Subtest: search by name ignores hamza/taa-marbuta variants
+ok 284 - search by name ignores hamza/taa-marbuta variants
+  ---
+  duration_ms: 0.567885
+  type: 'test'
+  ...
+# Subtest: search by condition, file code (case-insensitive) and code digits
+ok 285 - search by condition, file code (case-insensitive) and code digits
+  ---
+  duration_ms: 0.245306
+  type: 'test'
+  ...
+# Subtest: search by phone digits, including +20 numbers
+ok 286 - search by phone digits, including +20 numbers
+  ---
+  duration_ms: 0.246964
+  type: 'test'
+  ...
+# Subtest: matchesPatient tolerates missing fields
+ok 287 - matchesPatient tolerates missing fields
+  ---
+  duration_ms: 0.16824
+  type: 'test'
+  ...
+# Subtest: isNewToday: within 24h of creation only, always boolean
+ok 288 - isNewToday: within 24h of creation only, always boolean
+  ---
+  duration_ms: 0.399597
+  type: 'test'
+  ...
+# Subtest: nextPatientCode follows the highest existing code
+ok 289 - nextPatientCode follows the highest existing code
+  ---
+  duration_ms: 0.441108
+  type: 'test'
+  ...
+# Subtest: loadDrugs: with no custom drugs saved, returns exactly DEFAULT_DRUGS
+ok 290 - loadDrugs: with no custom drugs saved, returns exactly DEFAULT_DRUGS
+  ---
+  duration_ms: 2.190983
+  type: 'test'
+  ...
+# Subtest: loadDrugs: falls back to DEFAULT_DRUGS if localStorage has malformed JSON
+ok 291 - loadDrugs: falls back to DEFAULT_DRUGS if localStorage has malformed JSON
+  ---
+  duration_ms: 0.349631
+  type: 'test'
+  ...
+# Subtest: saveDrug: adds a new custom drug, loadDrugs then includes it after the defaults
+ok 292 - saveDrug: adds a new custom drug, loadDrugs then includes it after the defaults
+  ---
+  duration_ms: 2.337931
+  type: 'test'
+  ...
+# Subtest: saveDrug: does not duplicate an existing custom drug or a default drug
+ok 293 - saveDrug: does not duplicate an existing custom drug or a default drug
+  ---
+  duration_ms: 0.610041
+  type: 'test'
+  ...
+# Subtest: deleteDrug: removes a previously saved custom drug
+ok 294 - deleteDrug: removes a previously saved custom drug
+  ---
+  duration_ms: 0.904348
+  type: 'test'
+  ...
+# Subtest: DOSE_OPTIONS: has the expected fixed set of frequency strings
+ok 295 - DOSE_OPTIONS: has the expected fixed set of frequency strings
+  ---
+  duration_ms: 0.484005
+  type: 'test'
+  ...
+# Subtest: findPatientForRx matches by patientId or name
+ok 296 - findPatientForRx matches by patientId or name
+  ---
+  duration_ms: 0.963117
+  type: 'test'
+  ...
+# Subtest: eyeRows returns right then left with sph/cyl/axis
+ok 297 - eyeRows returns right then left with sph/cyl/axis
+  ---
+  duration_ms: 0.29457
+  type: 'test'
+  ...
+# Subtest: loadRxTemplates: no localStorage entry returns an empty list
+ok 298 - loadRxTemplates: no localStorage entry returns an empty list
+  ---
+  duration_ms: 2.500081
+  type: 'test'
+  ...
+# Subtest: loadRxTemplates: malformed localStorage JSON returns an empty list
+ok 299 - loadRxTemplates: malformed localStorage JSON returns an empty list
+  ---
+  duration_ms: 0.353673
+  type: 'test'
+  ...
+# Subtest: refreshRxTemplates: pulls the remote list and caches it locally
+ok 300 - refreshRxTemplates: pulls the remote list and caches it locally
+  ---
+  duration_ms: 0.63918
+  type: 'test'
+  ...
+# Subtest: refreshRxTemplates: falls back to the local cache when the remote value is not an array
+ok 301 - refreshRxTemplates: falls back to the local cache when the remote value is not an array
+  ---
+  duration_ms: 0.472152
+  type: 'test'
+  ...
+# Subtest: addRxTemplate: stamps id/by, stores alongside existing templates, logs an audit entry
+ok 302 - addRxTemplate: stamps id/by, stores alongside existing templates, logs an audit entry
+  ---
+  duration_ms: 2.078925
+  type: 'test'
+  ...
+# Subtest: addRxTemplate: replaces an existing template with the same name instead of duplicating it
+ok 303 - addRxTemplate: replaces an existing template with the same name instead of duplicating it
+  ---
+  duration_ms: 0.788886
+  type: 'test'
+  ...
+# Subtest: addRxTemplate: with no session, queues the save locally (sbMutate's offline fallback) instead of throwing
+ok 304 - addRxTemplate: with no session, queues the save locally (sbMutate's offline fallback) instead of throwing
+  ---
+  duration_ms: 1.570447
+  type: 'test'
+  ...
+# Subtest: deleteRxTemplate: removes only the matching id
+ok 305 - deleteRxTemplate: removes only the matching id
+  ---
+  duration_ms: 0.50437
+  type: 'test'
+  ...
+# Subtest: whenPrintReady: calls back once stylesheets report ready
+ok 306 - whenPrintReady: calls back once stylesheets report ready
+  ---
+  duration_ms: 171.679674
+  type: 'test'
+  ...
+# Subtest: whenPrintReady: still calls back eventually even if stylesheets never report ready (timeout path)
+ok 307 - whenPrintReady: still calls back eventually even if stylesheets never report ready (timeout path)
+  ---
+  duration_ms: 3700.875142
+  type: 'test'
+  ...
+# Subtest: whenPrintReady: never calls back twice
+ok 308 - whenPrintReady: never calls back twice
+  ---
+  duration_ms: 301.063595
+  type: 'test'
+  ...
+# Subtest: printDoc: writes the given HTML into a newly opened window and triggers print()
+ok 309 - printDoc: writes the given HTML into a newly opened window and triggers print()
+  ---
+  duration_ms: 300.774377
+  type: 'test'
+  ...
+# Subtest: printDoc: falls back to printViaIframe when window.open returns nothing
+ok 310 - printDoc: falls back to printViaIframe when window.open returns nothing
+  ---
+  duration_ms: 0.631041
+  type: 'test'
+  ...
+# Subtest: printViaIframe: removes a previous print iframe before creating a new one
+ok 311 - printViaIframe: removes a previous print iframe before creating a new one
+  ---
+  duration_ms: 0.318197
+  type: 'test'
+  ...
+# Subtest: escHTML escapes the five HTML-sensitive characters
+ok 312 - escHTML escapes the five HTML-sensitive characters
+  ---
+  duration_ms: 1.098669
+  type: 'test'
+  ...
+# Subtest: escDeep recurses into arrays and plain objects, leaves numbers/null alone
+ok 313 - escDeep recurses into arrays and plain objects, leaves numbers/null alone
+  ---
+  duration_ms: 1.399559
+  type: 'test'
+  ...
+# Subtest: escDeep stops recursing past depth 8 (defensive against cycles/huge nesting)
+ok 314 - escDeep stops recursing past depth 8 (defensive against cycles/huge nesting)
+  ---
+  duration_ms: 0.236597
+  type: 'test'
+  ...
+# Subtest: safeTemplate escapes every argument before calling the wrapped function
+ok 315 - safeTemplate escapes every argument before calling the wrapped function
+  ---
+  duration_ms: 0.214927
+  type: 'test'
+  ...
+# Subtest: daily report: counts visits/appointments and totals paid revenue
+ok 316 - daily report: counts visits/appointments and totals paid revenue
+  ---
+  duration_ms: 18.753522
+  type: 'test'
+  ...
+# Subtest: daily report: shows the empty-day message when there are no visits
+ok 317 - daily report: shows the empty-day message when there are no visits
+  ---
+  duration_ms: 0.339952
+  type: 'test'
+  ...
+# Subtest: daily report Raw vs wrapped: wrapped version HTML-escapes patient/doctor text
+ok 318 - daily report Raw vs wrapped: wrapped version HTML-escapes patient/doctor text
+  ---
+  duration_ms: 0.480511
+  type: 'test'
+  ...
+# Subtest: patient file: shows patient card fields and totals paid visits
+ok 319 - patient file: shows patient card fields and totals paid visits
+  ---
+  duration_ms: 1.040781
+  type: 'test'
+  ...
+# Subtest: patient file: omits the last-exam section when there is no exam for this patient
+ok 320 - patient file: omits the last-exam section when there is no exam for this patient
+  ---
+  duration_ms: 0.518127
+  type: 'test'
+  ...
+# Subtest: patient file: shows the last exam (most recent by date) when present
+ok 321 - patient file: shows the last exam (most recent by date) when present
+  ---
+  duration_ms: 1.409982
+  type: 'test'
+  ...
+# Subtest: Rx: uses the clinic-owner letterhead when no doctor name (or the owner's) is given
+ok 322 - Rx: uses the clinic-owner letterhead when no doctor name (or the owner's) is given
+  ---
+  duration_ms: 0.821493
+  type: 'test'
+  ...
+# Subtest: Rx: uses a plain "طب وجراحة العيون" line for a non-owner doctor name
+ok 323 - Rx: uses a plain "طب وجراحة العيون" line for a non-owner doctor name
+  ---
+  duration_ms: 0.368426
+  type: 'test'
+  ...
+# Subtest: Rx: splits each medicine line into a name and a dose on first dash
+ok 324 - Rx: splits each medicine line into a name and a dose on first dash
+  ---
+  duration_ms: 0.240849
+  type: 'test'
+  ...
+# Subtest: Rx: blank medicines produces no med rows but does not throw
+ok 325 - Rx: blank medicines produces no med rows but does not throw
+  ---
+  duration_ms: 0.222496
+  type: 'test'
+  ...
+# Subtest: glasses Rx: fills the SPH/CYL/AXIS/IPD cells from the rx object
+ok 326 - glasses Rx: fills the SPH/CYL/AXIS/IPD cells from the rx object
+  ---
+  duration_ms: 0.422116
+  type: 'test'
+  ...
+# Subtest: glasses Rx: falls back to the seed clinic address/phone when none is given
+ok 327 - glasses Rx: falls back to the seed clinic address/phone when none is given
+  ---
+  duration_ms: 0.203445
+  type: 'test'
+  ...
+# Subtest: glasses Rx: ADD and notes lines only render when present
+ok 328 - glasses Rx: ADD and notes lines only render when present
+  ---
+  duration_ms: 0.307236
+  type: 'test'
+  ...
+# Subtest: radiology: groups selected tests by category and counts the total
+ok 329 - radiology: groups selected tests by category and counts the total
+  ---
+  duration_ms: 0.544274
+  type: 'test'
+  ...
+# Subtest: radiology: an unknown test id is silently skipped (not counted, not rendered)
+ok 330 - radiology: an unknown test id is silently skipped (not counted, not rendered)
+  ---
+  duration_ms: 0.219386
+  type: 'test'
+  ...
+# Subtest: radiology: notes box only renders when notes are given
+ok 331 - radiology: notes box only renders when notes are given
+  ---
+  duration_ms: 0.376009
+  type: 'test'
+  ...
+# Subtest: accounting report: computes total expenses and net profit
+ok 332 - accounting report: computes total expenses and net profit
+  ---
+  duration_ms: 0.503544
+  type: 'test'
+  ...
+# Subtest: accounting report: negative net profit still renders (red, not clamped)
+ok 333 - accounting report: negative net profit still renders (red, not clamped)
+  ---
+  duration_ms: 0.24759
+  type: 'test'
+  ...
+# Subtest: accounting report: shows the no-expenses message for an empty period
+ok 334 - accounting report: shows the no-expenses message for an empty period
+  ---
+  duration_ms: 0.145309
+  type: 'test'
+  ...
+# Subtest: every template HTML-escapes a hostile patient name (no raw <script> in the output)
+ok 335 - every template HTML-escapes a hostile patient name (no raw <script> in the output)
+  ---
+  duration_ms: 0.586431
+  type: 'test'
+  ...
+# Subtest: groups today by status and ignores other days
+ok 336 - groups today by status and ignores other days
+  ---
+  duration_ms: 9.794067
+  type: 'test'
+  ...
+# Subtest: stale = past-day waiting/called/in only
+ok 337 - stale = past-day waiting/called/in only
+  ---
+  duration_ms: 0.264802
+  type: 'test'
+  ...
+# Subtest: priority doctor goes first
+ok 338 - priority doctor goes first
+  ---
+  duration_ms: 1.716143
+  type: 'test'
+  ...
+# Subtest: average exam duration, default 15 when none
+ok 339 - average exam duration, default 15 when none
+  ---
+  duration_ms: 0.24748
+  type: 'test'
+  ...
+# Subtest: handles non-array input
+ok 340 - handles non-array input
+  ---
+  duration_ms: 0.137982
+  type: 'test'
+  ...
+# Subtest: fmtWait and estimateWait
+ok 341 - fmtWait and estimateWait
+  ---
+  duration_ms: 0.198642
+  type: 'test'
+  ...
+# Subtest: transitions do not mutate and set timestamps
+ok 342 - transitions do not mutate and set timestamps
+  ---
+  duration_ms: 0.162299
+  type: 'test'
+  ...
+# Subtest: called appointment of the same patient becomes done
+ok 343 - called appointment of the same patient becomes done
+  ---
+  duration_ms: 0.882853
+  type: 'test'
+  ...
+# Subtest: in-room appointment is finished too
+ok 344 - in-room appointment is finished too
+  ---
+  duration_ms: 0.267191
+  type: 'test'
+  ...
+# Subtest: waiting / not-arrived / postponed / no-show appointments are finished when the patient is examined
+ok 345 - waiting / not-arrived / postponed / no-show appointments are finished when the patient is examined
+  ---
+  duration_ms: 0.172515
+  type: 'test'
+  ...
+# Subtest: other patient, other day, cancelled and already done stay unchanged
+ok 346 - other patient, other day, cancelled and already done stay unchanged
+  ---
+  duration_ms: 1.165368
+  type: 'test'
+  ...
+# Subtest: two bookings the same day: only the most advanced one is finished
+ok 347 - two bookings the same day: only the most advanced one is finished
+  ---
+  duration_ms: 0.334329
+  type: 'test'
+  ...
+# Subtest: falls back to the name when the appointment has no patient id
+ok 348 - falls back to the name when the appointment has no patient id
+  ---
+  duration_ms: 0.190208
+  type: 'test'
+  ...
+# Subtest: same name but a different id does not match
+ok 349 - same name but a different id does not match
+  ---
+  duration_ms: 0.123752
+  type: 'test'
+  ...
+# Subtest: buildAllTests appends custom tests tagged as مخصص
+ok 350 - buildAllTests appends custom tests tagged as مخصص
+  ---
+  duration_ms: 0.961072
+  type: 'test'
+  ...
+# Subtest: buildCats returns unique categories in first-seen order
+ok 351 - buildCats returns unique categories in first-seen order
+  ---
+  duration_ms: 2.203178
+  type: 'test'
+  ...
+# Subtest: toggleSelection adds with OU default and removes on second call
+ok 352 - toggleSelection adds with OU default and removes on second call
+  ---
+  duration_ms: 0.212324
+  type: 'test'
+  ...
+# Subtest: cycleEyeValue cycles OU -> OD -> OS -> OU and is a no-op if not selected
+ok 353 - cycleEyeValue cycles OU -> OD -> OS -> OU and is a no-op if not selected
+  ---
+  duration_ms: 0.149202
+  type: 'test'
+  ...
+# Subtest: selectAllInCategory selects all then deselects all on second call
+ok 354 - selectAllInCategory selects all then deselects all on second call
+  ---
+  duration_ms: 0.346812
+  type: 'test'
+  ...
+# Subtest: addCustomTest returns null when name is blank, else appends with prefixed id
+ok 355 - addCustomTest returns null when name is blank, else appends with prefixed id
+  ---
+  duration_ms: 0.306742
+  type: 'test'
+  ...
+# Subtest: removeCustomTest drops the test and its selection
+ok 356 - removeCustomTest drops the test and its selection
+  ---
+  duration_ms: 0.224736
+  type: 'test'
+  ...
+# Subtest: filterVisibleTests matches by category and name (either language)
+ok 357 - filterVisibleTests matches by category and name (either language)
+  ---
+  duration_ms: 0.172405
+  type: 'test'
+  ...
+# Subtest: filterPatientResults filters by name/code/phone and caps at 8
+ok 358 - filterPatientResults filters by name/code/phone and caps at 8
+  ---
+  duration_ms: 0.400111
+  type: 'test'
+  ...
+# Subtest: buildRequestedTests maps selected ids to full test info
+ok 359 - buildRequestedTests maps selected ids to full test info
+  ---
+  duration_ms: 0.439853
+  type: 'test'
+  ...
+# Subtest: buildExamRecord assembles the saved record shape
+ok 360 - buildExamRecord assembles the saved record shape
+  ---
+  duration_ms: 0.21242
+  type: 'test'
+  ...
+# Subtest: callChannel: returns null when no Supabase client is available
+ok 361 - callChannel: returns null when no Supabase client is available
+  ---
+  duration_ms: 0.850483
+  type: 'test'
+  ...
+# Subtest: broadcastCall: does nothing (and does not throw) when no channel is available
+ok 362 - broadcastCall: does nothing (and does not throw) when no channel is available
+  ---
+  duration_ms: 0.344523
+  type: 'test'
+  ...
+# Subtest: callChannel: builds the broadcast channel (self:false) against "iapp_queue_calls" once, then caches it
+ok 363 - callChannel: builds the broadcast channel (self:false) against "iapp_queue_calls" once, then caches it
+  ---
+  duration_ms: 1.367181
+  type: 'test'
+  ...
+# Subtest: broadcastCall: sends a "call" broadcast event with the expected payload shape
+ok 364 - broadcastCall: sends a "call" broadcast event with the expected payload shape
+  ---
+  duration_ms: 0.411681
+  type: 'test'
+  ...
+# Subtest: broadcastCall: passes a truthy "repeat" value through as given (recall case)
+ok 365 - broadcastCall: passes a truthy "repeat" value through as given (recall case)
+  ---
+  duration_ms: 0.214182
+  type: 'test'
+  ...
+# Subtest: broadcastCall: a send() failure is swallowed, not thrown
+ok 366 - broadcastCall: a send() failure is swallowed, not thrown
+  ---
+  duration_ms: 0.213479
+  type: 'test'
+  ...
+# Subtest: router view: not ready yet -> loading
+ok 367 - router view: not ready yet -> loading
+  ---
+  duration_ms: 0.950467
+  type: 'test'
+  ...
+# Subtest: router view: ready but no session -> login
+ok 368 - router view: ready but no session -> login
+  ---
+  duration_ms: 0.202192
+  type: 'test'
+  ...
+# Subtest: router view: patient session always wins, even if invalidRole/mustChange were somehow set
+ok 369 - router view: patient session always wins, even if invalidRole/mustChange were somehow set
+  ---
+  duration_ms: 0.154822
+  type: 'test'
+  ...
+# Subtest: router view: invalid staff role -> blocked
+ok 370 - router view: invalid staff role -> blocked
+  ---
+  duration_ms: 0.249375
+  type: 'test'
+  ...
+# Subtest: router view: must change password (and no email yet) -> force-password-change
+ok 371 - router view: must change password (and no email yet) -> force-password-change
+  ---
+  duration_ms: 0.12963
+  type: 'test'
+  ...
+# Subtest: router view: mustChange is ignored once the account has an email on file
+ok 372 - router view: mustChange is ignored once the account has an email on file
+  ---
+  duration_ms: 0.138939
+  type: 'test'
+  ...
+# Subtest: router view: secretary and employee roles both route to secretary
+ok 373 - router view: secretary and employee roles both route to secretary
+  ---
+  duration_ms: 0.111418
+  type: 'test'
+  ...
+# Subtest: router view: admin/doctor roles fall through to the doctor app
+ok 374 - router view: admin/doctor roles fall through to the doctor app
+  ---
+  duration_ms: 0.102666
+  type: 'test'
+  ...
+# Subtest: pathForRouteView: every known routeViewFor() result maps to its own path
+ok 375 - pathForRouteView: every known routeViewFor() result maps to its own path
+  ---
+  duration_ms: 0.292564
+  type: 'test'
+  ...
+# Subtest: pathForRouteView: an unrecognized key falls back to /login rather than throwing
+ok 376 - pathForRouteView: an unrecognized key falls back to /login rather than throwing
+  ---
+  duration_ms: 0.382019
+  type: 'test'
+  ...
+# Subtest: refraction option lists equal the legacy runtime constants
+ok 377 - refraction option lists equal the legacy runtime constants
+  ---
+  duration_ms: 3.140953
+  type: 'test'
+  ...
+# Subtest: ADD / IPD lists, display defaults and texts appear verbatim in legacy RxForm
+ok 378 - ADD / IPD lists, display defaults and texts appear verbatim in legacy RxForm
+  ---
+  duration_ms: 0.343567
+  type: 'test'
+  ...
+# Subtest: autoPatientOf: exactly one patient
+ok 379 - autoPatientOf: exactly one patient
+  ---
+  duration_ms: 0.127539
+  type: 'test'
+  ...
+# Subtest: blankRx equals the legacy blank, with and without an auto patient
+ok 380 - blankRx equals the legacy blank, with and without an auto patient
+  ---
+  duration_ms: 0.561197
+  type: 'test'
+  ...
+# Subtest: initialRxState / initialRxStep: add vs edit
+ok 381 - initialRxState / initialRxStep: add vs edit
+  ---
+  duration_ms: 0.208718
+  type: 'test'
+  ...
+# Subtest: step tabs
+ok 382 - step tabs
+  ---
+  duration_ms: 0.128054
+  type: 'test'
+  ...
+# Subtest: needsRight / needsLeft / refractionSides
+ok 383 - needsRight / needsLeft / refractionSides
+  ---
+  duration_ms: 0.176243
+  type: 'test'
+  ...
+# Subtest: validateRx: AXIS required with CYL on a selected eye
+ok 384 - validateRx: AXIS required with CYL on a selected eye
+  ---
+  duration_ms: 0.316328
+  type: 'test'
+  ...
+# Subtest: patientStepBlocked: only step 0 without a patient name
+ok 385 - patientStepBlocked: only step 0 without a patient name
+  ---
+  duration_ms: 0.302072
+  type: 'test'
+  ...
+# Subtest: patient select: numeric id match, name copied
+ok 386 - patient select: numeric id match, name copied
+  ---
+  duration_ms: 0.467471
+  type: 'test'
+  ...
+# Subtest: axis star, error clearing and banner eye
+ok 387 - axis star, error clearing and banner eye
+  ---
+  duration_ms: 0.189111
+  type: 'test'
+  ...
+# Subtest: screenPreferenceToStore: ?ui=react stores "react"
+ok 388 - screenPreferenceToStore: ?ui=react stores "react"
+  ---
+  duration_ms: 0.715887
+  type: 'test'
+  ...
+# Subtest: screenPreferenceToStore: ?ui=legacy stores "legacy"
+ok 389 - screenPreferenceToStore: ?ui=legacy stores "legacy"
+  ---
+  duration_ms: 0.161971
+  type: 'test'
+  ...
+# Subtest: screenPreferenceToStore: no ?ui param (or any other value) writes nothing
+ok 390 - screenPreferenceToStore: no ?ui param (or any other value) writes nothing
+  ---
+  duration_ms: 0.097145
+  type: 'test'
+  ...
+# Subtest: isNewScreenPreferred: defaults to true (React) when nothing was ever stored
+ok 391 - isNewScreenPreferred: defaults to true (React) when nothing was ever stored
+  ---
+  duration_ms: 0.098409
+  type: 'test'
+  ...
+# Subtest: isNewScreenPreferred: "legacy" is the only opt-out
+ok 392 - isNewScreenPreferred: "legacy" is the only opt-out
+  ---
+  duration_ms: 1.040442
+  type: 'test'
+  ...
+# Subtest: isNewScreenPreferred: an explicit "react" (from earlier testing) still means React
+ok 393 - isNewScreenPreferred: an explicit "react" (from earlier testing) still means React
+  ---
+  duration_ms: 0.172791
+  type: 'test'
+  ...
+# Subtest: isNewScreenPreferred: any unrecognized stored value defaults to React, not legacy
+ok 394 - isNewScreenPreferred: any unrecognized stored value defaults to React, not legacy
+  ---
+  duration_ms: 0.166906
+  type: 'test'
+  ...
+# Subtest: isActiveApt matches the legacy definition
+ok 395 - isActiveApt matches the legacy definition
+  ---
+  duration_ms: 2.053261
+  type: 'test'
+  ...
+# Subtest: aptConflict: same doctor/date/time on another active appointment
+ok 396 - aptConflict: same doctor/date/time on another active appointment
+  ---
+  duration_ms: 0.326192
+  type: 'test'
+  ...
+# Subtest: mutation helpers abort with the exact legacy messages
+ok 397 - mutation helpers abort with the exact legacy messages
+  ---
+  duration_ms: 1.521245
+  type: 'test'
+  ...
+# Subtest: mutateErrorMessage: offline/conflict -> generic alert, else raw
+ok 398 - mutateErrorMessage: offline/conflict -> generic alert, else raw
+  ---
+  duration_ms: 0.186087
+  type: 'test'
+  ...
+# Subtest: mergeApt merges into existing row or appends; markRemindedIn / withoutAptId
+ok 399 - mergeApt merges into existing row or appends; markRemindedIn / withoutAptId
+  ---
+  duration_ms: 0.360999
+  type: 'test'
+  ...
+# Subtest: buildAcceptedAppointment maps a booking request exactly
+ok 400 - buildAcceptedAppointment maps a booking request exactly
+  ---
+  duration_ms: 0.320327
+  type: 'test'
+  ...
+# Subtest: buildCollectionVisitRecord: exact iapp_visits row for a payment
+ok 401 - buildCollectionVisitRecord: exact iapp_visits row for a payment
+  ---
+  duration_ms: 0.326532
+  type: 'test'
+  ...
+# Subtest: upsertVisit replaces by id or appends
+ok 402 - upsertVisit replaces by id or appends
+  ---
+  duration_ms: 0.205287
+  type: 'test'
+  ...
+# Subtest: collect audit / toast and delete audit strings
+ok 403 - collect audit / toast and delete audit strings
+  ---
+  duration_ms: 0.480226
+  type: 'test'
+  ...
+# Subtest: counts
+ok 404 - counts
+  ---
+  duration_ms: 0.421273
+  type: 'test'
+  ...
+# Subtest: filterSecretaryApts: date / search / fromPatient / clinic, sorted by date then time
+ok 405 - filterSecretaryApts: date / search / fromPatient / clinic, sorted by date then time
+  ---
+  duration_ms: 8.634533
+  type: 'test'
+  ...
+# Subtest: todayDoctorNames keeps first-appearance order, unique
+ok 406 - todayDoctorNames keeps first-appearance order, unique
+  ---
+  duration_ms: 0.247423
+  type: 'test'
+  ...
+# Subtest: stats: collected / unpaid today
+ok 407 - stats: collected / unpaid today
+  ---
+  duration_ms: 0.309194
+  type: 'test'
+  ...
+# Subtest: stats: clinicStats and typeStats
+ok 408 - stats: clinicStats and typeStats
+  ---
+  duration_ms: 0.48732
+  type: 'test'
+  ...
+# Subtest: requestsTabLabel and waCardHref
+ok 409 - requestsTabLabel and waCardHref
+  ---
+  duration_ms: 0.250225
+  type: 'test'
+  ...
+# Subtest: constants are the legacy SecretaryAptForm values
+ok 410 - constants are the legacy SecretaryAptForm values
+  ---
+  duration_ms: 1.071818
+  type: 'test'
+  ...
+# Subtest: blankSecretaryApt equals legacy blank (values and key order)
+ok 411 - blankSecretaryApt equals legacy blank (values and key order)
+  ---
+  duration_ms: 1.745024
+  type: 'test'
+  ...
+# Subtest: initial state / mode / costTouched: add and edit
+ok 412 - initial state / mode / costTouched: add and edit
+  ---
+  duration_ms: 0.350123
+  type: 'test'
+  ...
+# Subtest: matchSecretaryPrice equals legacy matchPrice
+ok 413 - matchSecretaryPrice equals legacy matchPrice
+  ---
+  duration_ms: 0.786045
+  type: 'test'
+  ...
+# Subtest: withSecretaryAptType: cost follows the price only while untouched
+ok 414 - withSecretaryAptType: cost follows the price only while untouched
+  ---
+  duration_ms: 0.287519
+  type: 'test'
+  ...
+# Subtest: patient mode switches and picker
+ok 415 - patient mode switches and picker
+  ---
+  duration_ms: 0.236865
+  type: 'test'
+  ...
+# Subtest: secretaryAptConflict: legacy local check (does not skip cancelled)
+ok 416 - secretaryAptConflict: legacy local check (does not skip cancelled)
+  ---
+  duration_ms: 0.326648
+  type: 'test'
+  ...
+# Subtest: secretaryAptConflict equals the legacy inline expression
+ok 417 - secretaryAptConflict equals the legacy inline expression
+  ---
+  duration_ms: 0.39332
+  type: 'test'
+  ...
+# Subtest: secretaryAptError: name first, then conflict
+ok 418 - secretaryAptError: name first, then conflict
+  ---
+  duration_ms: 0.382958
+  type: 'test'
+  ...
+# Subtest: buildSecretaryAptPayload: whole form, id kept or Date.now()
+ok 419 - buildSecretaryAptPayload: whole form, id kept or Date.now()
+  ---
+  duration_ms: 0.436337
+  type: 'test'
+  ...
+# Subtest: matchCollectPrice / initialCollectCost equal legacy
+ok 420 - matchCollectPrice / initialCollectCost equal legacy
+  ---
+  duration_ms: 0.946132
+  type: 'test'
+  ...
+# Subtest: initialCollectPaid
+ok 421 - initialCollectPaid
+  ---
+  duration_ms: 0.106783
+  type: 'test'
+  ...
+# Subtest: valid session: no network call
+ok 422 - valid session: no network call
+  ---
+  duration_ms: 2.623833
+  type: 'test'
+  ...
+# Subtest: SDK stuck: refreshes from the stored refresh token and sets the session
+ok 423 - SDK stuck: refreshes from the stored refresh token and sets the session
+  ---
+  duration_ms: 0.588234
+  type: 'test'
+  ...
+# Subtest: no stored session -> no-session
+ok 424 - no stored session -> no-session
+  ---
+  duration_ms: 1.319673
+  type: 'test'
+  ...
+# Subtest: rejected refresh token -> expired; network failure -> network
+ok 425 - rejected refresh token -> expired; network failure -> network
+  ---
+  duration_ms: 0.653684
+  type: 'test'
+  ...
+# Subtest: PRICE_ICONS and blankPrice equal legacy
+ok 426 - PRICE_ICONS and blankPrice equal legacy
+  ---
+  duration_ms: 3.612946
+  type: 'test'
+  ...
+# Subtest: initialPriceState: add vs edit
+ok 427 - initialPriceState: add vs edit
+  ---
+  duration_ms: 0.259201
+  type: 'test'
+  ...
+# Subtest: canSavePrice: name and price required
+ok 428 - canSavePrice: name and price required
+  ---
+  duration_ms: 0.195501
+  type: 'test'
+  ...
+# Subtest: blankDoctor equals legacy
+ok 429 - blankDoctor equals legacy
+  ---
+  duration_ms: 0.322812
+  type: 'test'
+  ...
+# Subtest: deriveDoctorNameFields
+ok 430 - deriveDoctorNameFields
+  ---
+  duration_ms: 0.200281
+  type: 'test'
+  ...
+# Subtest: withDoctorName latches initial/short on the first non-empty derivation
+ok 431 - withDoctorName latches initial/short on the first non-empty derivation
+  ---
+  duration_ms: 0.278856
+  type: 'test'
+  ...
+# Subtest: togglePrimary and canSaveDoctor
+ok 432 - togglePrimary and canSaveDoctor
+  ---
+  duration_ms: 0.145233
+  type: 'test'
+  ...
+# Subtest: role options and password note appear verbatim in legacy UserForm
+ok 433 - role options and password note appear verbatim in legacy UserForm
+  ---
+  duration_ms: 0.283641
+  type: 'test'
+  ...
+# Subtest: initialUserState: email falls back to username
+ok 434 - initialUserState: email falls back to username
+  ---
+  duration_ms: 0.348133
+  type: 'test'
+  ...
+# Subtest: isUserFormValid: "@" in email, non-blank name, not saving
+ok 435 - isUserFormValid: "@" in email, non-blank name, not saving
+  ---
+  duration_ms: 0.737026
+  type: 'test'
+  ...
+# Subtest: buildUserPayload and userSaveLabel
+ok 436 - buildUserPayload and userSaveLabel
+  ---
+  duration_ms: 0.266363
+  type: 'test'
+  ...
+# Subtest: sameName ignores case and surrounding whitespace, tolerates null
+ok 437 - sameName ignores case and surrounding whitespace, tolerates null
+  ---
+  duration_ms: 0.907888
+  type: 'test'
+  ...
+# Subtest: adminCount counts role === "admin" only
+ok 438 - adminCount counts role === "admin" only
+  ---
+  duration_ms: 0.319002
+  type: 'test'
+  ...
+# Subtest: addUserError: duplicate by email (normalized) or by username
+ok 439 - addUserError: duplicate by email (normalized) or by username
+  ---
+  duration_ms: 0.175447
+  type: 'test'
+  ...
+# Subtest: buildNewUserRecord trims name and uses the normalized email for email+username
+ok 440 - buildNewUserRecord trims name and uses the normalized email for email+username
+  ---
+  duration_ms: 1.293926
+  type: 'test'
+  ...
+# Subtest: canRemoveAdminRole blocks demoting the only admin
+ok 441 - canRemoveAdminRole blocks demoting the only admin
+  ---
+  duration_ms: 0.260458
+  type: 'test'
+  ...
+# Subtest: editUserError checks duplicate (email only, other ids) -> not found -> last admin, in that order
+ok 442 - editUserError checks duplicate (email only, other ids) -> not found -> last admin, in that order
+  ---
+  duration_ms: 0.190005
+  type: 'test'
+  ...
+# Subtest: buildEditedUserRecord keeps other fields but strips pw/password/mustChange
+ok 443 - buildEditedUserRecord keeps other fields but strips pw/password/mustChange
+  ---
+  duration_ms: 0.258329
+  type: 'test'
+  ...
+# Subtest: replaceUser swaps by id
+ok 444 - replaceUser swaps by id
+  ---
+  duration_ms: 0.174061
+  type: 'test'
+  ...
+# Subtest: canDeleteUser: ignore unknown/self, block last admin, else delete
+ok 445 - canDeleteUser: ignore unknown/self, block last admin, else delete
+  ---
+  duration_ms: 0.448115
+  type: 'test'
+  ...
+# Subtest: userAuditDetail uses role label, falls back to raw role
+ok 446 - userAuditDetail uses role label, falls back to raw role
+  ---
+  duration_ms: 0.394777
+  type: 'test'
+  ...
+# Subtest: doctor/price array helpers
+ok 447 - doctor/price array helpers
+  ---
+  duration_ms: 0.439861
+  type: 'test'
+  ...
+# Subtest: passwordFormError: length first, then mismatch
+ok 448 - passwordFormError: length first, then mismatch
+  ---
+  duration_ms: 0.119714
+  type: 'test'
+  ...
+# Subtest: database summary rows and revenue
+ok 449 - database summary rows and revenue
+  ---
+  duration_ms: 13.974082
+  type: 'test'
+  ...
+# audit failed Error: down
+#     at Object.readRemote (file:///home/claude/work/iapp-source-latest/tests/sync-audit-trash-backup.test.js:79:46)
+#     at sbGet (file:///home/claude/work/iapp-source-latest/src/modules/sync/wiring.js:156:26)
+#     at sbMutateOnline (file:///home/claude/work/iapp-source-latest/src/modules/sync/wiring.js:204:23)
+#     at async sbMutate (file:///home/claude/work/iapp-source-latest/src/modules/sync/wiring.js:232:15)
+#     at async logAudit (file:///home/claude/work/iapp-source-latest/src/modules/sync/audit-trash-backup.js:55:5)
+#     at async waitForActual (node:assert:644:5)
+#     at async Function.doesNotReject (node:assert:787:33)
+#     at async TestContext.<anonymous> (file:///home/claude/work/iapp-source-latest/tests/sync-audit-trash-backup.test.js:80:3)
+#     at async Test.run (node:internal/test_runner/test:1054:7)
+#     at async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+# backup too large, skipped
+# Subtest: logAudit: default actor (no setActor call) stamps "—" with an empty role
+ok 450 - logAudit: default actor (no setActor call) stamps "—" with an empty role
+  ---
+  duration_ms: 1.692627
+  type: 'test'
+  ...
+# Subtest: logAudit: uses the actor registered via setActor()
+ok 451 - logAudit: uses the actor registered via setActor()
+  ---
+  duration_ms: 0.291202
+  type: 'test'
+  ...
+# Subtest: logAudit: prepends new entries and caps the list at AUDIT_MAX
+ok 452 - logAudit: prepends new entries and caps the list at AUDIT_MAX
+  ---
+  duration_ms: 0.76432
+  type: 'test'
+  ...
+# Subtest: logAudit: truncates details to 200 characters
+ok 453 - logAudit: truncates details to 200 characters
+  ---
+  duration_ms: 1.084484
+  type: 'test'
+  ...
+# Subtest: logAudit: swallows a failing write without throwing
+ok 454 - logAudit: swallows a failing write without throwing
+  ---
+  duration_ms: 1.735563
+  type: 'test'
+  ...
+# Subtest: trashPut: wraps items with metadata and writes them, returns true on success
+ok 455 - trashPut: wraps items with metadata and writes them, returns true on success
+  ---
+  duration_ms: 0.575443
+  type: 'test'
+  ...
+# Subtest: trashPut: accepts an array of items and filters out falsy entries
+ok 456 - trashPut: accepts an array of items and filters out falsy entries
+  ---
+  duration_ms: 0.212629
+  type: 'test'
+  ...
+# Subtest: trashPut: an empty/falsy items list returns false without writing
+ok 457 - trashPut: an empty/falsy items list returns false without writing
+  ---
+  duration_ms: 0.181615
+  type: 'test'
+  ...
+# Subtest: trashPut: drops oversized image-like fields via slimForTrash
+ok 458 - trashPut: drops oversized image-like fields via slimForTrash
+  ---
+  duration_ms: 1.573726
+  type: 'test'
+  ...
+# Subtest: trashPut: caps the list at TRASH_MAX and drops entries older than TRASH_DAYS
+ok 459 - trashPut: caps the list at TRASH_MAX and drops entries older than TRASH_DAYS
+  ---
+  duration_ms: 0.439636
+  type: 'test'
+  ...
+# Subtest: saveAutoBackup: snapshots every BACKUP_KEYS value available remotely, caps at BACKUP_KEEP
+ok 460 - saveAutoBackup: snapshots every BACKUP_KEYS value available remotely, caps at BACKUP_KEEP
+  ---
+  duration_ms: 1.729807
+  type: 'test'
+  ...
+# Subtest: saveAutoBackup: falls back to localStorage for a key missing remotely
+ok 461 - saveAutoBackup: falls back to localStorage for a key missing remotely
+  ---
+  duration_ms: 0.354399
+  type: 'test'
+  ...
+# Subtest: saveAutoBackup: defaults the reason to "تلقائي" when none is given
+ok 462 - saveAutoBackup: defaults the reason to "تلقائي" when none is given
+  ---
+  duration_ms: 0.241226
+  type: 'test'
+  ...
+# Subtest: saveAutoBackup: refuses an oversized snapshot and returns false
+ok 463 - saveAutoBackup: refuses an oversized snapshot and returns false
+  ---
+  duration_ms: 47.793347
+  type: 'test'
+  ...
+# Subtest: syncKeyLabel: known keys return their Arabic label, unknown keys pass through
+ok 464 - syncKeyLabel: known keys return their Arabic label, unknown keys pass through
+  ---
+  duration_ms: 1.050724
+  type: 'test'
+  ...
+# Subtest: offlineNow: true only when navigator.onLine is exactly false
+ok 465 - offlineNow: true only when navigator.onLine is exactly false
+  ---
+  duration_ms: 0.257759
+  type: 'test'
+  ...
+# Subtest: SyncStore.set: merges partial state and notifies subscribers with the new state
+ok 466 - SyncStore.set: merges partial state and notifies subscribers with the new state
+  ---
+  duration_ms: 0.270149
+  type: 'test'
+  ...
+# Subtest: SyncStore.set: an unsubscribed listener stops receiving updates
+ok 467 - SyncStore.set: an unsubscribed listener stops receiving updates
+  ---
+  duration_ms: 0.125122
+  type: 'test'
+  ...
+# Subtest: LS: falls back to a safe no-op/null when localStorage is unavailable (e.g. under node:test)
+ok 468 - LS: falls back to a safe no-op/null when localStorage is unavailable (e.g. under node:test)
+  ---
+  duration_ms: 0.34931
+  type: 'test'
+  ...
+# Subtest: isDirty / dirtyKeys: report nothing dirty when localStorage is unavailable, without throwing
+ok 469 - isDirty / dirtyKeys: report nothing dirty when localStorage is unavailable, without throwing
+  ---
+  duration_ms: 1.344499
+  type: 'test'
+  ...
+# Subtest: refreshPending: reflects dirtyKeys() into SyncStore.pending/pendingKeys
+ok 470 - refreshPending: reflects dirtyKeys() into SyncStore.pending/pendingKeys
+  ---
+  duration_ms: 0.222785
+  type: 'test'
+  ...
+# Subtest: ensureAuthed: clears a stale authError once the session is confirmed ok
+ok 471 - ensureAuthed: clears a stale authError once the session is confirmed ok
+  ---
+  duration_ms: 0.222822
+  type: 'test'
+  ...
+# Subtest: ensureAuthed: sets authError=true for an expired/no-session failure, false for other failures
+ok 472 - ensureAuthed: sets authError=true for an expired/no-session failure, false for other failures
+  ---
+  duration_ms: 0.449612
+  type: 'test'
+  ...
+# Subtest: tq: marks reachable=true on a clean response and reachable=false on a non-coded error
+ok 473 - tq: marks reachable=true on a clean response and reachable=false on a non-coded error
+  ---
+  duration_ms: 0.83517
+  type: 'test'
+  ...
+# Subtest: busOn/busEmit: emits only to subscribers of the matching key, and unsubscribe stops delivery
+ok 474 - busOn/busEmit: emits only to subscribers of the matching key, and unsubscribe stops delivery
+  ---
+  duration_ms: 0.338568
+  type: 'test'
+  ...
+# Subtest: sbGetRaw: offline marks SyncStore unreachable and returns undefined without touching Supabase
+ok 475 - sbGetRaw: offline marks SyncStore unreachable and returns undefined without touching Supabase
+  ---
+  duration_ms: 1.200369
+  type: 'test'
+  ...
+# Subtest: sbSetRaw: offline marks SyncStore unreachable and returns false without touching Supabase
+ok 476 - sbSetRaw: offline marks SyncStore unreachable and returns false without touching Supabase
+  ---
+  duration_ms: 0.28398
+  type: 'test'
+  ...
+# Subtest: sbGetRaw: the appointments key reads through aptList (the appointments Core)
+ok 477 - sbGetRaw: the appointments key reads through aptList (the appointments Core)
+  ---
+  duration_ms: 0.988806
+  type: 'test'
+  ...
+# Subtest: sbSetRaw: the appointments key writes through aptSetAll (the appointments Core) -- an empty list needs no upsert/delete
+ok 478 - sbSetRaw: the appointments key writes through aptSetAll (the appointments Core) -- an empty list needs no upsert/delete
+  ---
+  duration_ms: 0.52108
+  type: 'test'
+  ...
+# Subtest: sbGetRaw: a generic key (not appointments, not a ROW_TABLES table) reads through sbGetStore (iapp_store)
+ok 479 - sbGetRaw: a generic key (not appointments, not a ROW_TABLES table) reads through sbGetStore (iapp_store)
+  ---
+  duration_ms: 2.000536
+  type: 'test'
+  ...
+# Subtest: sbSetRaw: a generic key writes through sbSetStore (iapp_store)
+ok 480 - sbSetRaw: a generic key writes through sbSetStore (iapp_store)
+  ---
+  duration_ms: 0.62442
+  type: 'test'
+  ...
+# Subtest: sbGetRaw: a ROW_TABLES key (e.g. visits) reads through rowList
+ok 481 - sbGetRaw: a ROW_TABLES key (e.g. visits) reads through rowList
+  ---
+  duration_ms: 0.423863
+  type: 'test'
+  ...
+# Subtest: sbSetRaw: a ROW_TABLES key (e.g. visits) writes through rowMutate -- an empty list needs no upsert/delete
+ok 482 - sbSetRaw: a ROW_TABLES key (e.g. visits) writes through rowMutate -- an empty list needs no upsert/delete
+  ---
+  duration_ms: 0.394961
+  type: 'test'
+  ...
+# rowList iapp_expenses boom
+# rowList iapp_recurring_expenses Error: network down
+#     at fromImpl (file:///home/claude/work/iapp-source-latest/tests/sync-row-tables.test.js:110:28)
+#     at Object.from (file:///home/claude/work/iapp-source-latest/tests/sync-row-tables.test.js:25:56)
+#     at rowList (file:///home/claude/work/iapp-source-latest/src/modules/sync/row-tables.js:107:41)
+#     at TestContext.<anonymous> (file:///home/claude/work/iapp-source-latest/tests/sync-row-tables.test.js:111:22)
+#     at Test.runInAsyncScope (node:async_hooks:214:14)
+#     at Test.run (node:internal/test_runner/test:1047:25)
+#     at Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+#     at Test.postRun (node:internal/test_runner/test:1173:19)
+#     at Test.run (node:internal/test_runner/test:1101:12)
+#     at async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+# rowUpsert iapp_visits boom
+# rowDelete iapp_visits boom
+# rowList iapp_visits Error: down
+#     at fromImpl (file:///home/claude/work/iapp-source-latest/tests/sync-row-tables.test.js:139:28)
+#     at Object.from (file:///home/claude/work/iapp-source-latest/tests/sync-row-tables.test.js:25:56)
+#     at rowList (file:///home/claude/work/iapp-source-latest/src/modules/sync/row-tables.js:107:41)
+#     at rowMutate (file:///home/claude/work/iapp-source-latest/src/modules/sync/row-tables.js:140:22)
+#     at TestContext.<anonymous> (file:///home/claude/work/iapp-source-latest/tests/sync-row-tables.test.js:140:21)
+#     at Test.runInAsyncScope (node:async_hooks:214:14)
+#     at Test.run (node:internal/test_runner/test:1047:25)
+#     at Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+#     at Test.postRun (node:internal/test_runner/test:1173:19)
+#     at Test.run (node:internal/test_runner/test:1101:12)
+# rowUpsert iapp_visits boom
+# Subtest: ROW_TABLES: has exactly the three expected keys, with table names and order columns
+ok 483 - ROW_TABLES: has exactly the three expected keys, with table names and order columns
+  ---
+  duration_ms: 2.418506
+  type: 'test'
+  ...
+# Subtest: ROW_TABLES.iapp_visits: fromRow/toRow round-trip the key fields
+ok 484 - ROW_TABLES.iapp_visits: fromRow/toRow round-trip the key fields
+  ---
+  duration_ms: 0.552945
+  type: 'test'
+  ...
+# Subtest: ROW_TABLES.iapp_expenses: recurringId falls back to undefined when missing
+ok 485 - ROW_TABLES.iapp_expenses: recurringId falls back to undefined when missing
+  ---
+  duration_ms: 0.294053
+  type: 'test'
+  ...
+# Subtest: rowList: unknown key returns undefined without touching Supabase
+ok 486 - rowList: unknown key returns undefined without touching Supabase
+  ---
+  duration_ms: 0.278978
+  type: 'test'
+  ...
+# Subtest: rowList: maps rows, caches to localStorage when not dirty, returns the list
+ok 487 - rowList: maps rows, caches to localStorage when not dirty, returns the list
+  ---
+  duration_ms: 0.857847
+  type: 'test'
+  ...
+# Subtest: rowList: does not overwrite localStorage cache while the key is dirty
+ok 488 - rowList: does not overwrite localStorage cache while the key is dirty
+  ---
+  duration_ms: 0.365014
+  type: 'test'
+  ...
+# Subtest: rowList: a query error returns undefined without throwing
+ok 489 - rowList: a query error returns undefined without throwing
+  ---
+  duration_ms: 0.94227
+  type: 'test'
+  ...
+# Subtest: rowList: a thrown exception returns undefined without throwing
+ok 490 - rowList: a thrown exception returns undefined without throwing
+  ---
+  duration_ms: 0.578618
+  type: 'test'
+  ...
+# Subtest: rowUpsert: successful upsert returns true
+ok 491 - rowUpsert: successful upsert returns true
+  ---
+  duration_ms: 0.400212
+  type: 'test'
+  ...
+# Subtest: rowUpsert: unknown key returns false without touching Supabase
+ok 492 - rowUpsert: unknown key returns false without touching Supabase
+  ---
+  duration_ms: 0.26511
+  type: 'test'
+  ...
+# Subtest: rowUpsert: an upsert error returns false without throwing
+ok 493 - rowUpsert: an upsert error returns false without throwing
+  ---
+  duration_ms: 0.27621
+  type: 'test'
+  ...
+# Subtest: rowDelete: successful delete returns true
+ok 494 - rowDelete: successful delete returns true
+  ---
+  duration_ms: 0.246064
+  type: 'test'
+  ...
+# Subtest: rowDelete: an delete error returns false without throwing
+ok 495 - rowDelete: an delete error returns false without throwing
+  ---
+  duration_ms: 0.194329
+  type: 'test'
+  ...
+# Subtest: rowMutate: offline (rowList -> undefined) returns { ok: false, error: "offline" }
+ok 496 - rowMutate: offline (rowList -> undefined) returns { ok: false, error: "offline" }
+  ---
+  duration_ms: 0.444512
+  type: 'test'
+  ...
+# Subtest: rowMutate: an abort object from the mutator returns { ok: false, error, data: base }
+ok 497 - rowMutate: an abort object from the mutator returns { ok: false, error, data: base }
+  ---
+  duration_ms: 2.024537
+  type: 'test'
+  ...
+# Subtest: rowMutate: upserts changed rows and deletes removed rows, then returns the new list (no verify)
+ok 498 - rowMutate: upserts changed rows and deletes removed rows, then returns the new list (no verify)
+  ---
+  duration_ms: 0.857735
+  type: 'test'
+  ...
+# Subtest: rowMutate: a failed upsert returns { ok: false, error: "offline", data: base }
+ok 499 - rowMutate: a failed upsert returns { ok: false, error: "offline", data: base }
+  ---
+  duration_ms: 0.417768
+  type: 'test'
+  ...
+# Subtest: rowMutate: with verify, a re-fetch that satisfies verify() returns { ok: true, data: check }
+ok 500 - rowMutate: with verify, a re-fetch that satisfies verify() returns { ok: true, data: check }
+  ---
+  duration_ms: 0.63982
+  type: 'test'
+  ...
+# Subtest: rowMutate: with verify, a re-fetch that fails verify() returns { ok: false, error: "conflict" }
+ok 501 - rowMutate: with verify, a re-fetch that fails verify() returns { ok: false, error: "conflict" }
+  ---
+  duration_ms: 0.406643
+  type: 'test'
+  ...
+# Subtest: sync-status: connected and up to date (default state)
+ok 502 - sync-status: connected and up to date (default state)
+  ---
+  duration_ms: 0.988642
+  type: 'test'
+  ...
+# Subtest: sync-status: offline with no pending items
+ok 503 - sync-status: offline with no pending items
+  ---
+  duration_ms: 0.254474
+  type: 'test'
+  ...
+# Subtest: sync-status: offline (unreachable) with pending items shows the count
+ok 504 - sync-status: offline (unreachable) with pending items shows the count
+  ---
+  duration_ms: 0.116638
+  type: 'test'
+  ...
+# Subtest: sync-status: auth error while online, no pending
+ok 505 - sync-status: auth error while online, no pending
+  ---
+  duration_ms: 0.221292
+  type: 'test'
+  ...
+# Subtest: sync-status: auth error while online, with pending items
+ok 506 - sync-status: auth error while online, with pending items
+  ---
+  duration_ms: 0.281019
+  type: 'test'
+  ...
+# Subtest: sync-status: auth error is ignored while offline (offline branch wins)
+ok 507 - sync-status: auth error is ignored while offline (offline branch wins)
+  ---
+  duration_ms: 0.139035
+  type: 'test'
+  ...
+# Subtest: sync-status: actively syncing
+ok 508 - sync-status: actively syncing
+  ---
+  duration_ms: 0.160672
+  type: 'test'
+  ...
+# Subtest: sync-status: pending items with no errors
+ok 509 - sync-status: pending items with no errors
+  ---
+  duration_ms: 0.103864
+  type: 'test'
+  ...
+# Subtest: sync-status: pending items with an error appends the first error message
+ok 510 - sync-status: pending items with an error appends the first error message
+  ---
+  duration_ms: 0.357947
+  type: 'test'
+  ...
+# Subtest: sync-status: failedCount reflects the number of error keys
+ok 511 - sync-status: failedCount reflects the number of error keys
+  ---
+  duration_ms: 0.35603
+  type: 'test'
+  ...
+# Subtest: sync-status: missing/undefined fields default safely
+ok 512 - sync-status: missing/undefined fields default safely
+  ---
+  duration_ms: 0.242487
+  type: 'test'
+  ...
+# Subtest: sync-status: syncStatusView(undefined) does not throw
+ok 513 - sync-status: syncStatusView(undefined) does not throw
+  ---
+  duration_ms: 0.408644
+  type: 'test'
+  ...
+# sbGet error: boom
+# sbGet exception: network down
+# sbSet error: boom
+# sbSet exception: Error: network down
+#     at fromImpl (file:///home/claude/work/iapp-source-latest/tests/sync-store-io.test.js:88:28)
+#     at Object.from (file:///home/claude/work/iapp-source-latest/tests/sync-store-io.test.js:16:44)
+#     at sbSetStore (file:///home/claude/work/iapp-source-latest/src/modules/sync/store-io.js:49:35)
+#     at TestContext.<anonymous> (file:///home/claude/work/iapp-source-latest/tests/sync-store-io.test.js:90:22)
+#     at Test.runInAsyncScope (node:async_hooks:214:14)
+#     at Test.run (node:internal/test_runner/test:1047:25)
+#     at Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+#     at Test.postRun (node:internal/test_runner/test:1173:19)
+#     at Test.run (node:internal/test_runner/test:1101:12)
+#     at async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+# Subtest: sbGetStore: no client configured -> undefined, does not throw
+ok 514 - sbGetStore: no client configured -> undefined, does not throw
+  ---
+  duration_ms: 0.985448
+  type: 'test'
+  ...
+# Subtest: sbGetStore: row missing (maybeSingle -> null data) returns null
+ok 515 - sbGetStore: row missing (maybeSingle -> null data) returns null
+  ---
+  duration_ms: 0.399508
+  type: 'test'
+  ...
+# Subtest: sbGetStore: returns the stored value as-is for primitives, and a deep copy for objects/arrays
+ok 516 - sbGetStore: returns the stored value as-is for primitives, and a deep copy for objects/arrays
+  ---
+  duration_ms: 1.538264
+  type: 'test'
+  ...
+# Subtest: sbGetStore: a query error returns undefined without throwing
+ok 517 - sbGetStore: a query error returns undefined without throwing
+  ---
+  duration_ms: 0.826009
+  type: 'test'
+  ...
+# Subtest: sbGetStore: a thrown exception marks reachable=false and returns undefined
+ok 518 - sbGetStore: a thrown exception marks reachable=false and returns undefined
+  ---
+  duration_ms: 0.209772
+  type: 'test'
+  ...
+# Subtest: sbSetStore: successful upsert returns true
+ok 519 - sbSetStore: successful upsert returns true
+  ---
+  duration_ms: 0.280701
+  type: 'test'
+  ...
+# Subtest: sbSetStore: an upsert error returns false without throwing
+ok 520 - sbSetStore: an upsert error returns false without throwing
+  ---
+  duration_ms: 0.269921
+  type: 'test'
+  ...
+# Subtest: sbSetStore: a thrown exception marks reachable=false and returns false
+ok 521 - sbSetStore: a thrown exception marks reachable=false and returns false
+  ---
+  duration_ms: 0.452678
+  type: 'test'
+  ...
+# Subtest: queueLocal: marks a key dirty, snapshots the previous value as its base, and updates SyncStore.pending
+ok 522 - queueLocal: marks a key dirty, snapshots the previous value as its base, and updates SyncStore.pending
+  ---
+  duration_ms: 4.221539
+  type: 'test'
+  ...
+# Subtest: queueLocal: a second queue while already dirty does not overwrite the original base snapshot
+ok 523 - queueLocal: a second queue while already dirty does not overwrite the original base snapshot
+  ---
+  duration_ms: 0.584191
+  type: 'test'
+  ...
+# Subtest: flushKey: reads remote via the injected readRemote, merges, writes back via writeRemote, and clears the dirty flag
+ok 524 - flushKey: reads remote via the injected readRemote, merges, writes back via writeRemote, and clears the dirty flag
+  ---
+  duration_ms: 1.330566
+  type: 'test'
+  ...
+# Subtest: flushKey: a failed remote read leaves the key dirty and records an error on SyncStore
+ok 525 - flushKey: a failed remote read leaves the key dirty and records an error on SyncStore
+  ---
+  duration_ms: 0.650685
+  type: 'test'
+  ...
+# Subtest: isFlushing: true while a flush is in flight for that key, false once it settles
+ok 526 - isFlushing: true while a flush is in flight for that key, false once it settles
+  ---
+  duration_ms: 1.020401
+  type: 'test'
+  ...
+# Subtest: flushAll: nothing dirty is a no-op that resets pending to 0
+ok 527 - flushAll: nothing dirty is a no-op that resets pending to 0
+  ---
+  duration_ms: 0.55996
+  type: 'test'
+  ...
+# Subtest: flushAll: flushes every dirty key and reports syncing=false with pending=0 when done
+ok 528 - flushAll: flushes every dirty key and reports syncing=false with pending=0 when done
+  ---
+  duration_ms: 0.495649
+  type: 'test'
+  ...
+# Subtest: queueSave: queues locally then flushes, returning the flush result
+ok 529 - queueSave: queues locally then flushes, returning the flush result
+  ---
+  duration_ms: 0.539167
+  type: 'test'
+  ...
+# Subtest: queueSave: falls back to writing remote directly when the local queue itself fails
+ok 530 - queueSave: falls back to writing remote directly when the local queue itself fails
+  ---
+  duration_ms: 0.659822
+  type: 'test'
+  ...
+# Subtest: sbGet: not dirty -> reads remote, and caches locally only for a BACKUP_KEYS entry
+ok 531 - sbGet: not dirty -> reads remote, and caches locally only for a BACKUP_KEYS entry
+  ---
+  duration_ms: 0.476736
+  type: 'test'
+  ...
+# Subtest: sbGet: not dirty -> a key outside BACKUP_KEYS is not cached locally
+ok 532 - sbGet: not dirty -> a key outside BACKUP_KEYS is not cached locally
+  ---
+  duration_ms: 1.202491
+  type: 'test'
+  ...
+# Subtest: sbGet: a dirty key is served from the local cache and kicks off a background flush
+ok 533 - sbGet: a dirty key is served from the local cache and kicks off a background flush
+  ---
+  duration_ms: 7.918097
+  type: 'test'
+  ...
+# Subtest: sbSet: not dirty -> writes remote directly
+ok 534 - sbSet: not dirty -> writes remote directly
+  ---
+  duration_ms: 0.373404
+  type: 'test'
+  ...
+# Subtest: sbSet: a dirty key is flushed first so the new write does not get clobbered
+ok 535 - sbSet: a dirty key is flushed first so the new write does not get clobbered
+  ---
+  duration_ms: 0.277441
+  type: 'test'
+  ...
+# Subtest: sbMutateLocal: BACKUP_KEY always refuses (no offline queueing for backups)
+ok 536 - sbMutateLocal: BACKUP_KEY always refuses (no offline queueing for backups)
+  ---
+  duration_ms: 0.220223
+  type: 'test'
+  ...
+# Subtest: sbMutateLocal: queues the mutated value locally, emits the change, and kicks off a background flush
+ok 537 - sbMutateLocal: queues the mutated value locally, emits the change, and kicks off a background flush
+  ---
+  duration_ms: 0.523797
+  type: 'test'
+  ...
+# Subtest: sbMutateLocal: a mutator that returns {abort} leaves the stored value untouched
+ok 538 - sbMutateLocal: a mutator that returns {abort} leaves the stored value untouched
+  ---
+  duration_ms: 0.260042
+  type: 'test'
+  ...
+# Subtest: sbMutate: falls back to sbMutateLocal when the session cannot be confirmed (and not offline)
+ok 539 - sbMutate: falls back to sbMutateLocal when the session cannot be confirmed (and not offline)
+  ---
+  duration_ms: 0.39333
+  type: 'test'
+  ...
+# Subtest: sbMutate: dispatches to a registered table mutate for a key that table owns
+ok 540 - sbMutate: dispatches to a registered table mutate for a key that table owns
+  ---
+  duration_ms: 0.327324
+  type: 'test'
+  ...
+# Subtest: sbMutate: a key the table dispatcher does not own falls through to the generic read-modify-write loop
+ok 541 - sbMutate: a key the table dispatcher does not own falls through to the generic read-modify-write loop
+  ---
+  duration_ms: 0.263625
+  type: 'test'
+  ...
+# Subtest: sbMutate: the generic loop accepts the write once verify() sees it reflected back
+ok 542 - sbMutate: the generic loop accepts the write once verify() sees it reflected back
+  ---
+  duration_ms: 0.307449
+  type: 'test'
+  ...
+# Subtest: sbMutate: the generic loop retries when verify() rejects a stale post-write read, then succeeds
+ok 543 - sbMutate: the generic loop retries when verify() rejects a stale post-write read, then succeeds
+  ---
+  duration_ms: 266.45003
+  type: 'test'
+  ...
+# Subtest: sbMutate: the generic loop falls back to sbMutateLocal when the remote write fails (offline)
+ok 544 - sbMutate: the generic loop falls back to sbMutateLocal when the remote write fails (offline)
+  ---
+  duration_ms: 0.560962
+  type: 'test'
+  ...
+# Subtest: merge: untouched local record takes the remote copy
+ok 545 - merge: untouched local record takes the remote copy
+  ---
+  duration_ms: 2.188162
+  type: 'test'
+  ...
+# Subtest: merge: local edit wins over remote
+ok 546 - merge: local edit wins over remote
+  ---
+  duration_ms: 0.2131
+  type: 'test'
+  ...
+# Subtest: merge: keeps a record added offline and one added remotely
+ok 547 - merge: keeps a record added offline and one added remotely
+  ---
+  duration_ms: 0.126649
+  type: 'test'
+  ...
+# Subtest: merge: record deleted locally is not resurrected from an unchanged remote
+ok 548 - merge: record deleted locally is not resurrected from an unchanged remote
+  ---
+  duration_ms: 0.120056
+  type: 'test'
+  ...
+# Subtest: merge: record deleted remotely disappears if local did not touch it
+ok 549 - merge: record deleted remotely disappears if local did not touch it
+  ---
+  duration_ms: 0.229515
+  type: 'test'
+  ...
+# Subtest: merge: non-list data falls back to local
+ok 550 - merge: non-list data falls back to local
+  ---
+  duration_ms: 0.141089
+  type: 'test'
+  ...
+# Subtest: flush: nothing dirty is a no-op success
+ok 551 - flush: nothing dirty is a no-op success
+  ---
+  duration_ms: 0.430255
+  type: 'test'
+  ...
+# Subtest: flush: remote empty (null) uploads local as is and clears dirty
+ok 552 - flush: remote empty (null) uploads local as is and clears dirty
+  ---
+  duration_ms: 0.376136
+  type: 'test'
+  ...
+# Subtest: flush: merges an offline addition with remote changes and tells the UI
+ok 553 - flush: merges an offline addition with remote changes and tells the UI
+  ---
+  duration_ms: 0.645375
+  type: 'test'
+  ...
+# Subtest: flush: expired session never reads or writes and keeps the change queued
+ok 554 - flush: expired session never reads or writes and keeps the change queued
+  ---
+  duration_ms: 0.629308
+  type: 'test'
+  ...
+# Subtest: flush: network failure during auth is reported as connection error
+ok 555 - flush: network failure during auth is reported as connection error
+  ---
+  duration_ms: 0.215268
+  type: 'test'
+  ...
+# Subtest: flush: failed remote read never overwrites the server
+ok 556 - flush: failed remote read never overwrites the server
+  ---
+  duration_ms: 0.132456
+  type: 'test'
+  ...
+# Subtest: flush: failed write keeps the dirty flag
+ok 557 - flush: failed write keeps the dirty flag
+  ---
+  duration_ms: 0.13834
+  type: 'test'
+  ...
+# Subtest: flush: corrupt local data is reported, not uploaded
+ok 558 - flush: corrupt local data is reported, not uploaded
+  ---
+  duration_ms: 0.98547
+  type: 'test'
+  ...
+# Subtest: flush: edit made while writing keeps dirty, moves base, and flushes again
+ok 559 - flush: edit made while writing keeps dirty, moves base, and flushes again
+  ---
+  duration_ms: 0.334648
+  type: 'test'
+  ...
+# Subtest: flush: noCache keys are removed locally after a successful sync
+ok 560 - flush: noCache keys are removed locally after a successful sync
+  ---
+  duration_ms: 0.142685
+  type: 'test'
+  ...
+# Subtest: flush: concurrent calls share one run and isFlushing reports it
+ok 561 - flush: concurrent calls share one run and isFlushing reports it
+  ---
+  duration_ms: 0.175053
+  type: 'test'
+  ...
+# Subtest: applyTheme: switches C to the light palette and back to dark
+ok 562 - applyTheme: switches C to the light palette and back to dark
+  ---
+  duration_ms: 0.809666
+  type: 'test'
+  ...
+# Subtest: C keeps the same object identity across applyTheme calls (shared by reference)
+ok 563 - C keeps the same object identity across applyTheme calls (shared by reference)
+  ---
+  duration_ms: 0.165805
+  type: 'test'
+  ...
+# Subtest: THEMES: dark and light palettes define exactly the same set of color keys
+ok 564 - THEMES: dark and light palettes define exactly the same set of color keys
+  ---
+  duration_ms: 1.373979
+  type: 'test'
+  ...
+# Subtest: topBarSyncView: idle/online state is not busy and uses the status label as the title
+ok 565 - topBarSyncView: idle/online state is not busy and uses the status label as the title
+  ---
+  duration_ms: 2.066947
+  type: 'test'
+  ...
+# Subtest: topBarSyncView: offline always counts as busy, even with nothing pending and syncing false
+ok 566 - topBarSyncView: offline always counts as busy, even with nothing pending and syncing false
+  ---
+  duration_ms: 0.205427
+  type: 'test'
+  ...
+# Subtest: topBarSyncView: a truthy "syncing" prop overrides the label to the in-progress text unless offline
+ok 567 - topBarSyncView: a truthy "syncing" prop overrides the label to the in-progress text unless offline
+  ---
+  duration_ms: 0.190411
+  type: 'test'
+  ...
+# Subtest: topBarSyncView: "syncing" does not override the label while offline
+ok 568 - topBarSyncView: "syncing" does not override the label while offline
+  ---
+  duration_ms: 0.121041
+  type: 'test'
+  ...
+# Subtest: topBarSyncView: pending > 0 uses st.pendingKeys when given, maps to Arabic labels, and builds the pending title
+ok 569 - topBarSyncView: pending > 0 uses st.pendingKeys when given, maps to Arabic labels, and builds the pending title
+  ---
+  duration_ms: 0.280468
+  type: 'test'
+  ...
+# Subtest: topBarSyncView: pending > 0 without st.pendingKeys falls back to calling dirtyKeys()
+ok 570 - topBarSyncView: pending > 0 without st.pendingKeys falls back to calling dirtyKeys()
+  ---
+  duration_ms: 0.139705
+  type: 'test'
+  ...
+# Subtest: topBarSyncView: no pending but failed keys builds the error title from the error map
+ok 571 - topBarSyncView: no pending but failed keys builds the error title from the error map
+  ---
+  duration_ms: 0.154064
+  type: 'test'
+  ...
+# Subtest: sessionDisplayText: a doctor session with a matching primary profile shows the doctor's own name
+ok 572 - sessionDisplayText: a doctor session with a matching primary profile shows the doctor's own name
+  ---
+  duration_ms: 0.133669
+  type: 'test'
+  ...
+# Subtest: sessionDisplayText: a doctor session without a primary profile falls back to the session name
+ok 573 - sessionDisplayText: a doctor session without a primary profile falls back to the session name
+  ---
+  duration_ms: 0.302252
+  type: 'test'
+  ...
+# Subtest: sessionDisplayText: admin/secretary roles get their Arabic labels
+ok 574 - sessionDisplayText: admin/secretary roles get their Arabic labels
+  ---
+  duration_ms: 0.374326
+  type: 'test'
+  ...
+# Subtest: sessionDisplayText: any other role falls back to "موظف" (employee)
+ok 575 - sessionDisplayText: any other role falls back to "موظف" (employee)
+  ---
+  duration_ms: 0.164746
+  type: 'test'
+  ...
+# Subtest: SC: reads the live theme colors for each known status
+ok 576 - SC: reads the live theme colors for each known status
+  ---
+  duration_ms: 0.926285
+  type: 'test'
+  ...
+# Subtest: SC: an unknown status key is not present (legacy falls back to C.muted at the call site)
+ok 577 - SC: an unknown status key is not present (legacy falls back to C.muted at the call site)
+  ---
+  duration_ms: 0.191913
+  type: 'test'
+  ...
+# Subtest: inp: base style reads the live theme, extra styles are merged in and can override
+ok 578 - inp: base style reads the live theme, extra styles are merged in and can override
+  ---
+  duration_ms: 0.181416
+  type: 'test'
+  ...
+# Subtest: fieldLabelStyle: reads the live muted color
+ok 579 - fieldLabelStyle: reads the live muted color
+  ---
+  duration_ms: 0.152137
+  type: 'test'
+  ...
+# Subtest: secHeadLabelColor: given color wins, otherwise falls back to the accent color
+ok 580 - secHeadLabelColor: given color wins, otherwise falls back to the accent color
+  ---
+  duration_ms: 0.220063
+  type: 'test'
+  ...
+# Subtest: tagStyle: pill background is the color at ~13% opacity ("22" suffix)
+ok 581 - tagStyle: pill background is the color at ~13% opacity ("22" suffix)
+  ---
+  duration_ms: 2.25439
+  type: 'test'
+  ...
+# Subtest: XRAY_ICON: a data-URI SVG
+ok 582 - XRAY_ICON: a data-URI SVG
+  ---
+  duration_ms: 0.34785
+  type: 'test'
+  ...
+# Subtest: nextLoginMode: patient tab collapses to guest when the flag is off
+ok 583 - nextLoginMode: patient tab collapses to guest when the flag is off
+  ---
+  duration_ms: 1.964476
+  type: 'test'
+  ...
+# Subtest: nextLoginMode: staff tab is unaffected by the flag either way
+ok 584 - nextLoginMode: staff tab is unaffected by the flag either way
+  ---
+  duration_ms: 0.24891
+  type: 'test'
+  ...
+# Subtest: nextLoginMode: patient tab stays "patient" when the flag is on
+ok 585 - nextLoginMode: patient tab stays "patient" when the flag is on
+  ---
+  duration_ms: 0.101211
+  type: 'test'
+  ...
+# Subtest: nextLoginMode: guest requests pass through unchanged regardless of flag
+ok 586 - nextLoginMode: guest requests pass through unchanged regardless of flag
+  ---
+  duration_ms: 0.100062
+  type: 'test'
+  ...
+# Subtest: staffLoginFieldsMissing: blank username (after trim) or blank password blocks submit
+ok 587 - staffLoginFieldsMissing: blank username (after trim) or blank password blocks submit
+  ---
+  duration_ms: 0.2088
+  type: 'test'
+  ...
+# Subtest: staffLoginFieldsMissing: a password of only spaces is NOT trimmed (legacy quirk, preserved)
+ok 588 - staffLoginFieldsMissing: a password of only spaces is NOT trimmed (legacy quirk, preserved)
+  ---
+  duration_ms: 0.092157
+  type: 'test'
+  ...
+# Subtest: patientLoginFieldsMissing: blank code or blank name (after trim) blocks submit
+ok 589 - patientLoginFieldsMissing: blank code or blank name (after trim) blocks submit
+  ---
+  duration_ms: 0.152854
+  type: 'test'
+  ...
+# Subtest: normalizeTypedPatientCode: trims, uppercases, strips a leading P/P- and leading zeros
+ok 590 - normalizeTypedPatientCode: trims, uppercases, strips a leading P/P- and leading zeros
+  ---
+  duration_ms: 0.170462
+  type: 'test'
+  ...
+# Subtest: normalizeStoredPatientCode: same normalization but does NOT trim first (legacy asymmetry, preserved)
+ok 591 - normalizeStoredPatientCode: same normalization but does NOT trim first (legacy asymmetry, preserved)
+  ---
+  duration_ms: 0.311799
+  type: 'test'
+  ...
+# Subtest: findPatientByCodeAndName: matches on normalized code AND Arabic-normalized name
+ok 592 - findPatientByCodeAndName: matches on normalized code AND Arabic-normalized name
+  ---
+  duration_ms: 0.518755
+  type: 'test'
+  ...
+# Subtest: findPatientByCodeAndName: code matches but name does not -> null
+ok 593 - findPatientByCodeAndName: code matches but name does not -> null
+  ---
+  duration_ms: 0.157397
+  type: 'test'
+  ...
+# Subtest: findPatientByCodeAndName: no patients or no match -> null (never undefined)
+ok 594 - findPatientByCodeAndName: no patients or no match -> null (never undefined)
+  ---
+  duration_ms: 0.122295
+  type: 'test'
+  ...
+# Subtest: patientLoginLockKey: trims and uppercases the typed code, keeps the "P" (different normalization than the match above)
+ok 595 - patientLoginLockKey: trims and uppercases the typed code, keeps the "P" (different normalization than the match above)
+  ---
+  duration_ms: 0.125963
+  type: 'test'
+  ...
+# Subtest: option lists are the legacy VisitForm lists
+ok 596 - option lists are the legacy VisitForm lists
+  ---
+  duration_ms: 3.181576
+  type: 'test'
+  ...
+# Subtest: blankVisit: add-mode defaults, in legacy key order
+ok 597 - blankVisit: add-mode defaults, in legacy key order
+  ---
+  duration_ms: 0.41665
+  type: 'test'
+  ...
+# Subtest: initialVisitState: edit mode keeps the record, fills only a missing clinic
+ok 598 - initialVisitState: edit mode keeps the record, fills only a missing clinic
+  ---
+  duration_ms: 0.236378
+  type: 'test'
+  ...
+# Subtest: matchPriceForType: exact, substring both ways, first match wins
+ok 599 - matchPriceForType: exact, substring both ways, first match wins
+  ---
+  duration_ms: 0.153081
+  type: 'test'
+  ...
+# Subtest: matchPriceForType quirk: an unnamed price matches every type
+ok 600 - matchPriceForType quirk: an unnamed price matches every type
+  ---
+  duration_ms: 0.172298
+  type: 'test'
+  ...
+# Subtest: withVisitType: cost follows the matched price, otherwise kept
+ok 601 - withVisitType: cost follows the matched price, otherwise kept
+  ---
+  duration_ms: 0.13698
+  type: 'test'
+  ...
+# Subtest: visitTypeOptions / reference price hint
+ok 602 - visitTypeOptions / reference price hint
+  ---
+  duration_ms: 12.98655
+  type: 'test'
+  ...
+# Subtest: complaint select: value, handler, free-text input and badge
+ok 603 - complaint select: value, handler, free-text input and badge
+  ---
+  duration_ms: 0.285937
+  type: 'test'
+  ...
+# Subtest: togglePaid flips paid only
+ok 604 - togglePaid flips paid only
+  ---
+  duration_ms: 0.320868
+  type: 'test'
+  ...
+# Subtest: buildVisitPayload: add vs edit, key order, cost kept as typed
+ok 605 - buildVisitPayload: add vs edit, key order, cost kept as typed
+  ---
+  duration_ms: 0.488718
+  type: 'test'
+  ...
+1..605
+# tests 605
+# suites 0
+# pass 605
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 78970.825499
