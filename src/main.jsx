@@ -22,7 +22,8 @@ import {
   sbGetStore, sbSetStore,
   ROW_TABLES, rowList, rowUpsert, rowDelete, rowMutate,
   setRawIO, flushKey, isFlushing, flushAll, queueLocal, queueSave,
-  sbGet, sbSet, sbMutateLocal, sbMutate, setTableMutate
+  sbGet, sbSet, sbMutateLocal, sbMutate, setTableMutate,
+  setActor, logAudit, trashPut, saveAutoBackup
 } from './modules/sync/index.js';
 import {
   getDailyReportHTML, getPatientFileHTML, getRxHTML, getGlassesHTML,
@@ -109,9 +110,7 @@ globalThis.IAppModules.sync = {
   // Phase 8, batch 10 — sbGet/sbSet/sbMutateLocal/sbMutate (the layer other
   // code actually calls to read/write/mutate a synced key), and the audit/
   // trash/backup key config (AUDIT_KEY/TRASH_KEY/BACKUP_KEY/.../BACKUP_KEYS)
-  // sbGet and sbMutateLocal need. logAudit/trashPut/saveAutoBackup (which use
-  // these keys to build actual entries) stay in app-runtime.js -- a later
-  // batch.
+  // sbGet and sbMutateLocal need.
   AUDIT_KEY, TRASH_KEY, BACKUP_KEY, AUDIT_MAX, TRASH_MAX, TRASH_DAYS, BACKUP_KEEP, BACKUP_KEYS,
   sbGet, sbSet, sbMutateLocal, sbMutate, setTableMutate,
   // Phase 8, batch 12 — the generic "Core" dispatch for every per-table sync
@@ -119,7 +118,15 @@ globalThis.IAppModules.sync = {
   // iapp_expenses, iapp_recurring_expenses. setTableMutate's registered
   // dispatcher and _sbGetRaw/_sbSetRaw (still in app-runtime.js) route to
   // these exactly as before -- only where the functions live has changed.
-  ROW_TABLES, rowList, rowUpsert, rowDelete, rowMutate
+  ROW_TABLES, rowList, rowUpsert, rowDelete, rowMutate,
+  // Phase 8, batch 13 — logAudit/trashPut/saveAutoBackup, the functions that
+  // build actual audit/trash/backup entries using the keys above and write
+  // them through sbMutate/sbGet. They need "who did this" (CURRENT_USER in
+  // app-runtime.js, a legacy session variable far outside this batch's
+  // scope), so this module exposes setActor() the same way setRawIO/
+  // setTableMutate do -- app-runtime.js registers the real lookup right
+  // where actorName()/CURRENT_USER are already in scope.
+  setActor, logAudit, trashPut, saveAutoBackup
 };
 globalThis.IAppModules.print = {
   getDailyReportHTML, getPatientFileHTML, getRxHTML, getGlassesHTML,

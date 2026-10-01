@@ -394,54 +394,16 @@ const {
 } = window.IAppModules.sync;
 let CURRENT_USER = null;
 const actorName = () => CURRENT_USER ? CURRENT_USER.name || CURRENT_USER.username || "—" : "—";
-async function logAudit(action, details) {
-  try {
-    const entry = {
-      id: newId(),
-      ts: Date.now(),
-      by: actorName(),
-      role: CURRENT_USER ? CURRENT_USER.role : "",
-      action,
-      details: String(details || "").slice(0, 200)
-    };
-    await sbMutate(AUDIT_KEY, list => [entry, ...list].slice(0, AUDIT_MAX));
-  } catch (e) {
-    console.warn("audit failed", e);
-  }
-}
-function slimForTrash(rec) {
-  try {
-    if (JSON.stringify(rec).length < 200000) return rec;
-    const {
-      image,
-      img,
-      data,
-      thumb,
-      ...rest
-    } = rec;
-    return {
-      ...rest,
-      _imageDropped: true
-    };
-  } catch {
-    return rec;
-  }
-}
-async function trashPut(storeKey, items, label) {
-  const arr = (Array.isArray(items) ? items : [items]).filter(Boolean);
-  if (!arr.length) return false;
-  const cutoff = Date.now() - TRASH_DAYS * 24 * 3600 * 1000;
-  const stamped = arr.map(r => ({
-    id: newId(),
-    storeKey,
-    label: label || "",
-    deletedAt: Date.now(),
-    by: actorName(),
-    record: slimForTrash(r)
-  }));
-  const res = await sbMutate(TRASH_KEY, list => [...stamped, ...list.filter(t => t.deletedAt > cutoff)].slice(0, TRASH_MAX));
-  return res.ok;
-}
+// Phase 8, batch 13: logAudit/trashPut/saveAutoBackup (and their private
+// helpers slimForTrash/buildSnapshot) moved to
+// src/modules/sync/audit-trash-backup.js -- delegate below instead of
+// redefining them. They need "who did this" (actorName()/CURRENT_USER,
+// which stays here -- it's a legacy session variable mutated from many
+// places across the login/session-restore flow, far outside this batch's
+// scope), so the moved module exposes setActor() the same way setRawIO
+// (batch 9) and setTableMutate (batch 10) do.
+window.IAppModules.sync.setActor(() => ({ name: actorName(), role: CURRENT_USER ? CURRENT_USER.role : "" }));
+const { logAudit, trashPut, saveAutoBackup } = window.IAppModules.sync;
 async function trashRestore(entry) {
   if (!entry || !entry.storeKey || !entry.record) return false;
   const rec = entry.record;
@@ -456,37 +418,6 @@ async function trashRestore(entry) {
 }
 async function trashDrop(entryId) {
   await sbMutate(TRASH_KEY, list => list.filter(t => t.id !== entryId));
-}
-async function buildSnapshot() {
-  const data = {};
-  for (const k of BACKUP_KEYS) {
-    const v = await sbGet(k);
-    if (v !== undefined && v !== null) data[k] = v;else {
-      try {
-        const l = localStorage.getItem(k);
-        if (l) data[k] = JSON.parse(l);
-      } catch {}
-    }
-  }
-  return data;
-}
-async function saveAutoBackup(reason) {
-  const data = await buildSnapshot();
-  const size = JSON.stringify(data).length;
-  if (size > 4000000) {
-    console.warn("backup too large, skipped");
-    return false;
-  }
-  const snap = {
-    id: newId(),
-    at: Date.now(),
-    by: actorName(),
-    reason: reason || "تلقائي",
-    size,
-    data
-  };
-  const res = await sbMutate(BACKUP_KEY, list => [snap, ...list].slice(0, BACKUP_KEEP));
-  return res.ok;
 }
 async function maybeDailyBackup() {
   try {

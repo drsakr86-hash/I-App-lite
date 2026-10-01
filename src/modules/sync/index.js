@@ -14,3 +14,4 @@ export {
   setRawIO, flushKey, isFlushing, flushAll, queueLocal, queueSave,
   sbGet, sbSet, sbMutateLocal, sbMutate, setTableMutate
 } from './wiring.js';
+export { setActor, logAudit, trashPut, saveAutoBackup } from './audit-trash-backup.js';
