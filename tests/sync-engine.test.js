@@ -12,16 +12,22 @@ test('syncKeyLabel: known keys return their Arabic label, unknown keys pass thro
 });
 
 test('offlineNow: true only when navigator.onLine is exactly false', () => {
-  const orig = Object.getOwnPropertyDescriptor(globalThis.navigator, 'onLine');
+  // Node 21+ ships a built-in global `navigator`, but Node 20 (what CI runs)
+  // does not -- so this test must not assume one already exists. Stub our
+  // own, configurable either way, same pattern as sync-raw-io.test.js and
+  // auth-staff-login.test.js.
+  const hadNavigator = Object.prototype.hasOwnProperty.call(globalThis, 'navigator');
+  const origDescriptor = hadNavigator ? Object.getOwnPropertyDescriptor(globalThis, 'navigator') : undefined;
   try {
-    Object.defineProperty(globalThis.navigator, 'onLine', { value: false, configurable: true });
+    Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { onLine: false } });
     assert.equal(offlineNow(), true);
-    Object.defineProperty(globalThis.navigator, 'onLine', { value: true, configurable: true });
+    Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { onLine: true } });
     assert.equal(offlineNow(), false);
-    Object.defineProperty(globalThis.navigator, 'onLine', { value: undefined, configurable: true });
+    Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { onLine: undefined } });
     assert.equal(offlineNow(), false); // undefined !== false -> reported online
   } finally {
-    if (orig) Object.defineProperty(globalThis.navigator, 'onLine', orig);
+    if (hadNavigator) Object.defineProperty(globalThis, 'navigator', origDescriptor);
+    else delete globalThis.navigator;
   }
 });
 
