@@ -27,7 +27,8 @@ import {
 } from './modules/sync/index.js';
 import {
   getDailyReportHTML, getPatientFileHTML, getRxHTML, getGlassesHTML,
-  getRadiologyHTML, getAccountingReportHTML
+  getRadiologyHTML, getAccountingReportHTML,
+  printDoc, printViaIframe, whenPrintReady
 } from './modules/print/index.js';
 import {
   appointmentFromRow, appointmentToRow, diffAppointments, finishQueueEntries,
@@ -130,7 +131,10 @@ globalThis.IAppModules.sync = {
 };
 globalThis.IAppModules.print = {
   getDailyReportHTML, getPatientFileHTML, getRxHTML, getGlassesHTML,
-  getRadiologyHTML, getAccountingReportHTML
+  getRadiologyHTML, getAccountingReportHTML,
+  // Phase 8, batch 14 — printDoc/printViaIframe/whenPrintReady (plain DOM
+  // print-window/iframe utilities, no legacy-state dependency).
+  printDoc, printViaIframe, whenPrintReady
 };
 globalThis.IAppModules.appointments = {
   fromRow: appointmentFromRow, toRow: appointmentToRow, diff: diffAppointments, finishQueue: finishQueueEntries,

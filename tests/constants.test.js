@@ -4,7 +4,7 @@ import { CLINICS, clinicLabel, CLINIC_FILTERS, CLINICS_LIST, PATIENT_CLINICS, CL
 import { IMAGING_TYPES, IMAGING_EYES, IMAGING_REPORT_TEMPLATES, IMAGING_ORDER_STATUSES, imagingTypeName } from '../src/modules/constants/imaging.js';
 import { DEFAULT_TESTS, CAT_COLORS } from '../src/modules/constants/exams.js';
 import { EXP_CATS } from '../src/modules/constants/accounting.js';
-import { BOOKING_TABLE, localDateStr, localTimeStr } from '../src/modules/constants/misc.js';
+import { BOOKING_TABLE, localDateStr, localTimeStr, localISO, newId, emailKey, ROLE_LABEL, MIN_PW_LEN, GUARD_KEY } from '../src/modules/constants/misc.js';
 
 // ---- clinics ----
 
@@ -94,4 +94,48 @@ test('BOOKING_TABLE is the expected localStorage/table key', () => {
 test('localDateStr / localTimeStr: match the expected format', () => {
   assert.match(localDateStr(), /^\d{4}-\d{2}-\d{2}$/);
   assert.match(localTimeStr(), /^\d{2}:\d{2}$/);
+});
+
+// ---- Phase 8, batch 14: small standalone helpers/constants moved out of
+// public/legacy/app-runtime.js ----
+
+test('localISO: formats a given date in the local timezone as YYYY-MM-DD', () => {
+  assert.match(localISO(new Date('2024-03-05T10:00:00Z')), /^\d{4}-\d{2}-\d{2}$/);
+});
+
+test('localISO: defaults to "now" when called with no argument', () => {
+  assert.match(localISO(), /^\d{4}-\d{2}-\d{2}$/);
+});
+
+test('newId: returns a timestamp-based number close to Date.now()', () => {
+  const before = Date.now();
+  const a = newId();
+  const after = Date.now();
+  assert.equal(typeof a, 'number');
+  // a = Date.now() + a small random jitter (0..996), so it can briefly read
+  // slightly above "after" too -- bound it loosely rather than asserting
+  // strict ordering across two separate calls (which is not guaranteed when
+  // both land in the same millisecond and the second rolls a smaller jitter).
+  assert.ok(a >= before && a <= after + 1000);
+});
+
+test('emailKey: trims, lowercases, and tolerates non-string/empty input', () => {
+  assert.equal(emailKey('  Foo@BAR.com '), 'foo@bar.com');
+  assert.equal(emailKey(''), '');
+  assert.equal(emailKey(undefined), '');
+  assert.equal(emailKey(null), '');
+});
+
+test('ROLE_LABEL: has an Arabic label for every staff role', () => {
+  assert.deepEqual(ROLE_LABEL, {
+    admin: 'مدير',
+    doctor: 'طبيب',
+    secretary: 'سكرتارية',
+    employee: 'موظف'
+  });
+});
+
+test('MIN_PW_LEN / GUARD_KEY: expected values', () => {
+  assert.equal(MIN_PW_LEN, 6);
+  assert.equal(GUARD_KEY, 'iapp_login_guard');
 });

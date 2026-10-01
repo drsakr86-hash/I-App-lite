@@ -12,11 +12,10 @@ if (!window.IAppModules || !window.IAppModules.rpc || !window.IAppModules.patien
   document.body.innerHTML = '<p style="font:16px sans-serif;text-align:center;margin:40px">تعذر تحميل وحدات التطبيق — أعد تحميل الصفحة</p>';
   throw new Error("IAppModules bridge is missing");
 }
-function localISO(d) {
-  d = d || new Date();
-  const z = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
-  return z.toISOString().slice(0, 10);
-}
+// Phase 8, batch 14: localISO moved to src/modules/constants/misc.js (a
+// bare, self-contained helper with no dependency on other legacy state) --
+// delegate below instead of redefining it.
+const { localISO } = window.IAppModules.constants;
 function escHTML(s) {
   return String(s).replace(/[&<>"']/g, c => ({
     "&": "&amp;",
@@ -44,7 +43,11 @@ function normArabic(s) {
 const normPhone = s => String(s || "").replace(/\D/g, "").replace(/^(20|0020)/, "0");
 const PW_ITER = 30000;
 const DEFAULT_ADMIN_PW = "admin123";
-const MIN_PW_LEN = 6;
+// Phase 8, batch 14: MIN_PW_LEN moved to src/modules/constants/misc.js (a
+// bare constant; the password-migration/validation logic that reads it
+// stays here, out of scope for this batch) -- delegate instead of
+// redefining it.
+const { MIN_PW_LEN } = window.IAppModules.constants;
 const _SHA_K = (() => {
   const k = [];
   let n = 2;
@@ -203,12 +206,9 @@ async function verifyPassword(user, pw) {
 // Pure logic moved to src/modules/auth/session.js (unit-tested there);
 // this just delegates so behavior stays byte-identical.
 const publicUser = u => window.IAppModules.auth.publicUser(u);
-const ROLE_LABEL = {
-  admin: "مدير",
-  doctor: "طبيب",
-  secretary: "سكرتارية",
-  employee: "موظف"
-};
+// Phase 8, batch 14: ROLE_LABEL moved to src/modules/constants/misc.js (a
+// bare lookup object) -- delegate instead of redefining it.
+const { ROLE_LABEL } = window.IAppModules.constants;
 async function migrateUsers() {
   let stored = null;
   try {
@@ -234,7 +234,10 @@ async function migrateUsers() {
   }
   saveUsers(next);
 }
-const GUARD_KEY = "iapp_login_guard";
+// Phase 8, batch 14: GUARD_KEY moved to src/modules/constants/misc.js (a
+// bare localStorage-key string; the login-lockout logic that reads it stays
+// here, out of scope for this batch) -- delegate instead of redefining it.
+const { GUARD_KEY } = window.IAppModules.constants;
 function _guards() {
   try {
     const g = JSON.parse(localStorage.getItem(GUARD_KEY));
@@ -273,7 +276,9 @@ function clearLoginFails(k) {
   } catch {}
 }
 const fmtWait = s => s >= 60 ? Math.ceil(s / 60) + " دقيقة" : s + " ثانية";
-const emailKey = e => String(e || "").trim().toLowerCase();
+// Phase 8, batch 14: emailKey moved to src/modules/constants/misc.js (a
+// bare normalization helper) -- delegate instead of redefining it.
+const { emailKey } = window.IAppModules.constants;
 async function resolveProfile(email) {
   await Promise.race([pullUsers().catch(() => false), new Promise(r => setTimeout(() => r(false), 5000))]);
   const key = emailKey(email);
@@ -455,7 +460,9 @@ async function restoreSnapshot(data, label) {
 }
 const isActiveApt = a => !!a && !a.cancelled && a.status !== "cancelled" && a.waitStatus !== "cancelled";
 const SLOT_CAPACITY = 1;
-const newId = () => Date.now() + Math.floor(Math.random() * 997);
+// Phase 8, batch 14: newId moved to src/modules/constants/misc.js (a bare
+// id-generator helper) -- delegate instead of redefining it.
+const { newId } = window.IAppModules.constants;
 // Phase 8, batch 1: the theme system (palettes, the shared C object, the
 // subscriber store, applyTheme/setTheme/useTheme) moved to
 // src/modules/theme/index.js — this is now the single source of truth for
@@ -7804,96 +7811,11 @@ function Appointments({
     onNo: () => setModal(null)
   }));
 }
-function whenPrintReady(doc, cb) {
-  let done = false;
-  const go = () => {
-    if (!done) {
-      done = true;
-      cb();
-    }
-  };
-  const started = Date.now();
-  const poll = () => {
-    if (done) return;
-    try {
-      const links = [...doc.querySelectorAll('link[rel="stylesheet"]')];
-      const cssReady = links.every(l => l.sheet);
-      if (cssReady || Date.now() - started > 2000) {
-        const fams = (doc.body && doc.body.dataset.fonts || "").split(",").filter(Boolean);
-        Promise.all(fams.map(f => doc.fonts.load("16px '" + f + "'").catch(() => {})).concat(fams.map(f => doc.fonts.load("700 16px '" + f + "'").catch(() => {})))).then(() => doc.fonts.ready).then(() => setTimeout(go, 120)).catch(go);
-        return;
-      }
-    } catch (e) {
-      go();
-      return;
-    }
-    setTimeout(poll, 120);
-  };
-  setTimeout(poll, 50);
-  setTimeout(go, 3500);
-}
-function printDoc(html) {
-  let win = null;
-  try {
-    win = window.open("", "_blank");
-  } catch (e) {
-    win = null;
-  }
-  if (win && win.document) {
-    win.document.open();
-    win.document.write(html);
-    win.document.close();
-    win.focus();
-    whenPrintReady(win.document, () => {
-      try {
-        win.print();
-      } catch (e) {
-        printViaIframe(html);
-      }
-    });
-    return;
-  }
-  printViaIframe(html);
-}
-function printViaIframe(html) {
-  const old = document.getElementById("__print_iframe__");
-  if (old) old.remove();
-  const iframe = document.createElement("iframe");
-  iframe.id = "__print_iframe__";
-  iframe.setAttribute("aria-hidden", "true");
-  Object.assign(iframe.style, {
-    position: "fixed",
-    right: "0",
-    bottom: "0",
-    width: "0",
-    height: "0",
-    border: "0",
-    visibility: "hidden"
-  });
-  document.body.appendChild(iframe);
-  let printed = false;
-  const triggerPrint = () => {
-    if (printed) return;
-    printed = true;
-    try {
-      const fw = iframe.contentWindow;
-      fw.focus();
-      fw.print();
-    } catch (e) {
-      alert("تعذر فتح نافذة الطباعة على هذا الجهاز");
-    }
-    setTimeout(() => {
-      try {
-        iframe.remove();
-      } catch (e) {}
-    }, 60000);
-  };
-  const doc = iframe.contentWindow.document;
-  doc.open();
-  doc.write(html);
-  doc.close();
-  whenPrintReady(doc, triggerPrint);
-}
+// Phase 8, batch 14: whenPrintReady/printDoc/printViaIframe moved to
+// src/modules/print/dom-print.js (plain browser-DOM print-window/iframe
+// utilities -- no dependency on any other legacy state) -- delegate below
+// instead of redefining them.
+const { whenPrintReady, printDoc, printViaIframe } = window.IAppModules.print;
 // Moved to src/modules/print/templates.js (getRxHTMLRaw; RX_PAD and the
 // SAKR_LOGO_* constants moved with it), wrapped with safeTemplate there and
 // exposed via the bridge — same output, no behavior change.

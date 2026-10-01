@@ -27,3 +27,4 @@ export {
   getRadiologyHTMLRaw,
   getAccountingReportHTMLRaw
 } from './templates.js';
+export { printDoc, printViaIframe, whenPrintReady } from './dom-print.js';
