@@ -14,7 +14,7 @@
 - `src/services/`: عميل Supabase المشترك، استدعاءات RPC (مهلة، إعادة محاولة، منع التكرار)، حماية الجلسة `auth.js`، التخزين.
 - `src/modules/`: patients, visits, examinations, prescriptions, investigations, imaging, appointments (تحويل الصفوف، فروق التعديل، إنهاء الطابور بعد الكشف).
 - `src/app/permissions.js`: مصفوفة الصلاحيات حسب الدور.
-- `public/legacy/app-runtime.js`: الواجهة الأصلية (~20 ألف سطر)، يُنقل منها تدريجيًا إلى `src/`.
+- (الواجهة الأصلية `public/legacy/app-runtime.js` حُذفت بعد اكتمال الترحيل؛ الإشارات إليها في التعليقات تاريخية فقط.)
 - `public/sw.js`: Service Worker للعمل بدون إنترنت.
 - `public/queue-display.html`: شاشة نداء المرضى (تقرأ الطابور العام بدون تسجيل دخول).
 - `tests/`: اختبارات `node --test`.

@@ -75,9 +75,15 @@ export function getPatientFileHTMLRaw(patient, visits, exams, prescriptions, pri
   const cl = clinic || {};
   const address = cl.address || "";
   const phone = cl.phone || "";
-  const pVisits = visits.filter(v => v.patientId === p.id).sort((a, b) => b.date.localeCompare(a.date));
+  // Dates can be missing on legacy rows: never call string methods on undefined.
+  const byDateDesc = (x, y) => String(y.date || "").localeCompare(String(x.date || ""));
+  const pVisits = (visits || []).filter(v => v.patientId === p.id).sort(byDateDesc);
   const totalPaid = pVisits.reduce((s, v) => s + (v.paid ? Number(v.cost || 0) : 0), 0);
-  const lastExam = exams.filter(e => e.patientId === p.id).sort((a, b) => b.date.localeCompare(a.date))[0];
+  // Investigation requests live in the same list as examinations; they are not clinical examinations.
+  const isRequest = e => e.status === "requested" || (Array.isArray(e.requestedTests) && e.requestedTests.length > 0);
+  const pExams = (exams || []).filter(e => e.patientId === p.id && !isRequest(e)).sort(byDateDesc);
+  const lastExam = pExams[0];
+  const pRx = (prescriptions || []).filter(r => r.patientId === p.id).sort(byDateDesc);
   const date = new Date().toLocaleDateString("ar-EG", {
     year: "numeric",
     month: "long",
@@ -121,12 +127,18 @@ export function getPatientFileHTMLRaw(patient, visits, exams, prescriptions, pri
     <div class="info"><span>الحساسية</span><b>${p.allergies || "—"}</b></div>
     <div class="info"><span>إجمالي المدفوع</span><b>${totalPaid.toLocaleString()} ج.م</b></div>
   </div>
-  ${lastExam ? `<h3>آخر فحص سريري (${lastExam.date})</h3>
+  ${lastExam ? `<h3>آخر فحص سريري (${lastExam.date})${lastExam.doctor ? " · " + lastExam.doctor : ""}</h3>
   <table><tr><th>حدة الإبصار</th><th>ضغط العين</th><th>التشخيص</th></tr>
   <tr><td>يمنى: ${lastExam.visualAcuityR || "—"} · يسرى: ${lastExam.visualAcuityL || "—"}</td><td>يمنى: ${lastExam.iopR || "—"} · يسرى: ${lastExam.iopL || "—"}</td><td>${lastExam.diagnosis || "—"}</td></tr></table>` : ""}
+  ${pExams.length > 1 ? `<h3>سجل الفحوصات (${pExams.length})</h3>
+  <table><tr><th>التاريخ</th><th>الطبيب</th><th>حدة الإبصار (ي / ش)</th><th>ضغط العين (ي / ش)</th><th>التشخيص</th><th>خطة العلاج</th><th>المتابعة</th></tr>
+  ${pExams.map(e => `<tr><td>${e.date || "—"}</td><td>${e.doctor || "—"}</td><td>${e.visualAcuityR || "—"} / ${e.visualAcuityL || "—"}</td><td>${e.iopR || "—"} / ${e.iopL || "—"}</td><td>${e.diagnosis || "—"}</td><td>${e.treatmentPlan || "—"}</td><td>${e.followUp || "—"}</td></tr>`).join("")}</table>` : ""}
+  ${pRx.length > 0 ? `<h3>الوصفات (${pRx.length})</h3>
+  <table><tr><th>التاريخ</th><th>الطبيب</th><th>الأدوية / النظارة</th></tr>
+  ${pRx.map(r => `<tr><td>${r.date || "—"}</td><td>${r.doctor || "—"}</td><td>${typeof r.medicines === "string" ? r.medicines : (Array.isArray(r.medicines) ? r.medicines.map(m => (m && m.name) || m || "").join("، ") : "") || r.notes || "—"}</td></tr>`).join("")}</table>` : ""}
   ${pVisits.length > 0 ? `<h3>سجل الزيارات (${pVisits.length})</h3>
   <table><tr><th>التاريخ</th><th>النوع</th><th>الطبيب</th><th>النتيجة</th><th>التكلفة</th><th>الدفع</th></tr>
-  ${pVisits.map(v => `<tr><td>${v.date}</td><td>${v.type}</td><td>${v.doctor}</td><td>${v.result || "—"}</td><td>${Number(v.cost || 0).toLocaleString()} ج.م</td><td>${v.paid ? "✓" : "✗"}</td></tr>`).join("")}</table>` : ""}
+  ${pVisits.map(v => `<tr><td>${v.date || "—"}</td><td>${v.type || "—"}</td><td>${v.doctor || "—"}</td><td>${v.result || "—"}</td><td>${Number(v.cost || 0).toLocaleString()} ج.م</td><td>${v.paid ? "✓" : "✗"}</td></tr>`).join("")}</table>` : ""}
   <div class="footer">
     <div>${address ? `📍 ${address}` : ""} ${phone ? `· 📞 ${phone}` : ""}</div>
     <div>I App · تقرير بتاريخ ${date}</div>
