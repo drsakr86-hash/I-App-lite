@@ -4,9 +4,10 @@
 // its dead post-gate fallback JSX. Pure list filtering/sorting/code-
 // generation already live in src/modules/patients/list.js and are reused
 // here, not re-derived.
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { trashPut, logAudit } from '../sync/index.js';
 import { sbGet, sbMutate } from '../sync/wiring.js';
+import { runExamCoreSync, readExamMarkers, writeExamMarkers } from '../patient-file/exam-core-sync.js';
 import { offlineNow } from '../sync/engine.js';
 import { getSB, iappRpc } from '../data-access/index.js';
 import { localISO } from '../constants/misc.js';
@@ -22,6 +23,11 @@ export function usePatientsOrchestration({
   doctorNames = [], primaryDoctor, prices = [], clinic, initOpenId, initNewName, onInitDone,
   customTests = []
 }) {
+  // Always-current view of the visits list for writes that happen after an
+  // `await` (a render-time closure would be seconds stale by then and a
+  // setVisits(next) built from it would silently drop concurrent changes).
+  const visitsRef = useRef(visits);
+  visitsRef.current = visits;
   const [search, setSearch] = useState(initNewName || '');
   const [openFile, setOpenFile] = useState(null);
 
@@ -59,6 +65,7 @@ export function usePatientsOrchestration({
     // Phase 33 fix (M1): only reuse a same-day visit by patient+date when the doctor
     // actually matches (or both sides are genuinely blank) — matching on "either side
     // is blank" could silently attach an examination to an unrelated visit.
+    const visits = visitsRef.current || [];
     const existing = (coreVisitId && visits.find(v => String(v._coreId || '') === String(coreVisitId))) ||
       (shadowId && visits.find(v => String(v.id) === String(shadowId))) ||
       visits.find(v => Number(v.patientId) === pid && String(v.date || '').slice(0, 10) === day &&
@@ -93,10 +100,11 @@ export function usePatientsOrchestration({
     return rec;
   };
 
-  const saveExam = async f => {
+  const saveExam = async (f, opts = {}) => {
     const ex = exams.find(e => e.id === f.id);
     const next = ex ? exams.map(e => (e.id === f.id ? f : e)) : [...exams, f];
     const legacyResult = await setExams(next);
+    if (opts.onLocalSaved) opts.onLocalSaved();
     // Finishing the examination closes the patient's queue entry (called / in room -> done).
     try {
       const examDate = String(f.date || localISO()).slice(0, 10);
@@ -105,60 +113,34 @@ export function usePatientsOrchestration({
         patientId: f.patientId, patient: examPatient, date: examDate
       })).catch(() => {});
     } catch {}
-    let coreSynced = false;
-    let coreError = null;
-    // Phase 33 fix (H1/M4): resolve the Core visit id first, then write the legacy
-    // visit shadow exactly ONCE below. Calling ensureLegacyVisitShadow twice (before
-    // and after the Core sync) read `visits` from a stale closure both times, so the
-    // second call could silently discard a concurrent update to the same array
-    // (lost-update race) — and it always cost a second, unnecessary sync round-trip.
-    let visitId = null;
+    // Core write-through (see exam-core-sync.js): independent steps, create-RPCs
+    // only run for values that changed since the last successful sync.
+    let sync = { status: 'offline', coreSynced: false, visitId: null, steps: [], error: 'offline', markers: null, markersChanged: false };
     try {
       const sb = getSB();
       if (sb && !offlineNow()) {
-        const { data: syncedVisitId, error } = await iappRpc(sb, 'iapp_sync_examination_core', {
-          p_exam: f,
-          p_patient_code: patients.find(p => p.id === f.patientId)?.patientCode || ''
+        const stored = readExamMarkers(f.id);
+        const examForSync = { ...f, _coreSync: { ...stored, ...(f._coreSync || {}) } };
+        sync = await runExamCoreSync({
+          exam: examForSync,
+          patientCode: patients.find(p => p.id === f.patientId)?.patientCode || '',
+          call: (name, args) => iappRpc(sb, name, args),
+          findVisitId: async legacyVisitId => (await sb.from('iapp_visits_core').select('id').eq('legacy_id', legacyVisitId).maybeSingle()).data?.id || null
         });
-        if (error) throw error;
-        coreSynced = true;
-
-        // Phase 18: use the visit id returned by the Core write-through RPC.
-        // This avoids an extra read and keeps diagnosis/treatment/follow-up linked to the same visit.
-        const legacyVisitId = `exam:${f.id}`;
-        visitId = syncedVisitId || null;
-        if (!visitId) visitId = (await sb.from('iapp_visits_core').select('id').eq('legacy_id', legacyVisitId).maybeSingle()).data?.id || null;
-        if (visitId) {
-          if (String(f.diagnosis || '').trim()) {
-            const { error: e1 } = await iappRpc(sb, 'iapp_create_diagnosis_core', {
-              p_visit_id: visitId, p_diagnosis: String(f.diagnosis).trim(), p_laterality: null,
-              p_is_primary: true, p_status: 'active', p_notes: null
-            });
-            if (e1) throw e1;
-          }
-          if (String(f.treatmentPlan || '').trim()) {
-            const { error: e2 } = await iappRpc(sb, 'iapp_create_treatment_core', {
-              p_visit_id: visitId, p_treatment: String(f.treatmentPlan).trim(), p_eye: null,
-              p_instructions: null, p_notes: null
-            });
-            if (e2) throw e2;
-          }
+        if (sync.markersChanged) {
+          writeExamMarkers(f.id, sync.markers);
+          try {
+            await sbMutate('iapp_exams', list => list.map(e => (String(e.id) === String(f.id) ? { ...e, _coreSync: sync.markers } : e)));
+          } catch (e) { console.warn('[exam core markers]', e?.message || e); }
         }
-        if (String(f.followUp || '').trim()) {
-          const { error: e3 } = await iappRpc(sb, 'iapp_create_followup_core', {
-            p_patient_id: Number(f.patientId), p_followup_date: String(f.followUp).slice(0, 10),
-            p_visit_id: visitId, p_reason: 'متابعة', p_notes: null, p_status: 'planned',
-            p_doctor_name: f.doctor || ''
-          });
-          if (e3) throw e3;
-        }
-      } else {
-        coreError = 'offline';
       }
     } catch (e) {
-      coreError = e?.message || String(e);
+      sync = { ...sync, status: 'failed', error: e?.message || String(e) };
       console.warn('[core examination sync]', e);
     }
+    const visitId = sync.visitId;
+    const coreSynced = sync.coreSynced;
+    const coreError = sync.error;
     // Phase 30: an examination itself establishes a clinical encounter locally,
     // even if Core/Supabase is temporarily unavailable — written once, with whichever
     // coreVisitId we ended up resolving (or null if Core sync didn't happen).
@@ -171,7 +153,7 @@ export function usePatientsOrchestration({
     if (!coreSynced && coreError && legacyResult?.queued !== true) {
       console.warn('Examination saved in legacy store; Core sync pending', coreError);
     }
-    return { legacyResult, coreSynced, coreError };
+    return { legacyResult, coreSynced, coreError, status: sync.status, steps: sync.steps };
   };
 
   const saveRadiologyRequest = async rec => {
@@ -182,7 +164,10 @@ export function usePatientsOrchestration({
     // Investigation requests are clinical events too: create/link a visit when possible.
     try {
       const sb = getSB();
-      if (sb && !offlineNow() && rec.patientId) {
+      // A request whose Core steps already failed (rec.coreSyncError) is NOT silently
+      // re-sent here: that is a non-idempotent write and is retried only by the explicit
+      // "resync" action.
+      if (sb && !offlineNow() && rec.patientId && !rec.coreSyncError) {
         let visitId = rec.coreVisitId || null;
         if (!visitId) {
           const { data, error } = await createClinicalVisitCore(sb, {
@@ -222,10 +207,12 @@ export function usePatientsOrchestration({
     logAudit('حذف فحص', (rec && rec.date) || id);
   };
 
-  const saveVisit = async f => {
+  const saveVisit = async (f, opts = {}) => {
     const ex = visits.find(v => v.id === f.id);
     const next = ex ? visits.map(v => (v.id === f.id ? f : v)) : [...visits, f];
-    setVisits(next);
+    const legacyResult = await setVisits(next);
+    if (opts.onLocalSaved) opts.onLocalSaved();
+    let coreError = null;
     try {
       const sb = getSB();
       if (sb && !offlineNow()) {
@@ -234,19 +221,26 @@ export function usePatientsOrchestration({
           p_visit: f, p_patient_code: patient?.patientCode || ''
         });
         if (error) throw error;
+      } else {
+        coreError = 'offline';
       }
     } catch (e) {
-      console.warn('[core visit sync]', e?.message || e);
+      coreError = e?.message || String(e);
+      console.warn('[core visit sync]', coreError);
     }
+    return { legacyResult, coreSynced: !coreError, coreError };
   };
 
-  const saveRx = async updated => {
+  const saveRx = async (updated, opts = {}) => {
     const old = prescriptions || [];
     const changed = (updated || []).find(r => {
       const prev = old.find(x => x.id === r.id);
       return !prev || JSON.stringify(prev) !== JSON.stringify(r);
     });
     const legacyResult = await setRx(updated || []);
+    if (opts.onLocalSaved) opts.onLocalSaved();
+    let coreError = null;
+    if (changed && offlineNow()) coreError = 'offline';
     if (changed && !offlineNow()) {
       try {
         const sb = getSB();
@@ -280,13 +274,16 @@ export function usePatientsOrchestration({
             });
           }
           const { error } = await iappRpc(sb, 'iapp_create_prescription_core', rxCoreParams(changed, coreVisitId, localISO()));
-          if (error) console.warn('[core prescription sync]', error);
+          if (error) { coreError = error?.message || String(error); console.warn('[core prescription sync]', error); }
+        } else {
+          coreError = 'no-client';
         }
       } catch (e) {
+        coreError = e?.message || String(e);
         console.warn('[core prescription sync]', e);
       }
     }
-    return legacyResult;
+    return { legacyResult, coreSynced: !!changed && !coreError, coreError };
   };
 
   const delVisit = async id => {
