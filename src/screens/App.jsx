@@ -132,7 +132,13 @@ export default function App() {
   useEffect(() => {
     if (!alertsShown && session) {
       setAlertsShown(true);
-      setTimeout(() => setShowAlerts(true), 800);
+      let seenToday = false;
+      try {
+        const d = new Date().toDateString();
+        seenToday = localStorage.getItem("iapp_alerts_day") === d;
+        if (!seenToday) localStorage.setItem("iapp_alerts_day", d);
+      } catch {}
+      if (!seenToday) setTimeout(() => setShowAlerts(true), 800);
     }
   }, [session]);
   const handleLogin = (u, remember) => {
