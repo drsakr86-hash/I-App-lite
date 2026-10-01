@@ -5,15 +5,12 @@ import {
 } from '../modules/accounting/model.js';
 import { Modal, Confirm, Btn } from '../components/common.jsx';
 import { ExpenseForm, RecurringExpenseForm } from '../components/forms/index.js';
-
-const L = () => globalThis.IAppLegacy;
+import { C } from '../modules/theme/index.js';
+import { Field, inp } from '../modules/ui/atoms.jsx';
+import { clinicLabel, localISO, CLINICS, CLINIC_FILTERS, EXP_CATS } from '../modules/constants/index.js';
+import { printDoc, getAccountingReportHTML } from '../modules/print/index.js';
 
 export default function Accounting({ visits, expenses, setExpenses, recurringExpenses, setRecurringExpenses, doctors, clinic }) {
-  const {
-    C, Field, inp, clinicLabel, localISO, printDoc,
-    CLINICS, CLINIC_FILTERS, EXP_CATS, getAccountingReportHTML
-  } = L();
-
   const [period, setPeriod] = useState('month');
   const [clinicFilter, setClinicFilter] = useState('');
   const [modal, setModal] = useState(null);

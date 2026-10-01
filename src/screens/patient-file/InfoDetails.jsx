@@ -1,12 +1,11 @@
 import React from 'react';
 import { latestExamByDateTime, ageLabel } from '../../modules/patient-file/model.js';
-
-const L = () => globalThis.IAppLegacy;
+import { C } from '../../modules/theme/index.js';
+import { SecHead } from '../../modules/ui/atoms.jsx';
 
 // Patient file — "info" tab. Presentational port of the legacy PatientFile JSX;
 // all state and handlers come from the legacy function through ctx.
 export default function InfoDetails({ ctx }) {
-  const { C, SecHead } = L();
   const { curPatient, exams, totalSpent, visits } = ctx;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>

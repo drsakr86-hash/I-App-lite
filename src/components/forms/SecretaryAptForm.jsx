@@ -4,15 +4,13 @@ import {
   matchSecretaryPrice, withSecretaryAptType, withNewPatientMode, withExistingPatientMode, findPickedPatient,
   withPickedPatient, toggleSecretaryPaid, secretaryAptError, buildSecretaryAptPayload
 } from './secretary-forms-model.js';
+import { C } from '../../modules/theme/index.js';
+import { inp } from '../../modules/ui/atoms.jsx';
+import { localISO, clinicLabel, CLINICS_LIST } from '../../modules/constants/index.js';
 
-const L = () => globalThis.IAppLegacy;
-
-// Front-desk appointment add/edit form (secretary app). Port of the legacy
-// runtime's SecretaryAptForm (public/legacy/app-runtime.js), which stays in
-// place for the legacy screens. Theme C, inp, localISO, clinicLabel and
-// CLINICS_LIST are read from the bridge.
+// Front-desk appointment add/edit form (secretary app). Exact port of the
+// legacy runtime's SecretaryAptForm (public/legacy/app-runtime.js).
 export default function SecretaryAptForm({ initial, patients, appointments = [], prices = [], onSave, onClose }) {
-  const { C, inp, localISO, clinicLabel, CLINICS_LIST } = L();
   const [mode, setMode] = useState(() => initialSecretaryAptMode(initial));
   const [f, setF] = useState(() => initialSecretaryAptState(initial, localISO()));
   const [costTouched, setCostTouched] = useState(() => initialCostTouched(initial));

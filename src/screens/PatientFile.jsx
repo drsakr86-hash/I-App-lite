@@ -14,19 +14,18 @@ import ImageViewer from './patient-file/ImageViewer.jsx';
 import { Modal, Confirm } from '../components/common.jsx';
 import { PatientEditForm, RxForm, VisitForm, ExamForm } from '../components/forms/index.js';
 import { PrintModal } from '../components/modals/index.js';
-
-const L = () => globalThis.IAppLegacy;
+import { C } from '../modules/theme/index.js';
+import { SC, Tag, XRAY_ICON } from '../modules/ui/atoms.jsx';
+import TopBar from '../components/TopBar.jsx';
+import { getPatientFileHTML, printDoc } from '../modules/print/index.js';
 
 // Patient file (full-screen). Presentational only: every useState/useEffect,
-// the Core 360 load, uploads, saves and deletes stay in the legacy
-// PatientFile function, which passes its values and handlers in `ctx`.
-// Child forms (VisitForm, ExamForm, RxForm, PatientEditForm) come from
-// src/components/forms and PrintModal from src/components/modals.
+// the Core 360 load, uploads, saves and deletes live in the data layer
+// (src/modules/patient-file/use-patient-file.js), which passes its values
+// and handlers in `ctx`. Child forms (VisitForm, ExamForm, RxForm,
+// PatientEditForm) come from src/components/forms and PrintModal from
+// src/components/modals.
 export default function PatientFile({ ctx }) {
-  const {
-    C, SC, Tag, TopBar,
-    XRAY_ICON, getPatientFileHTML, printDoc
-  } = L();
   const {
     TABS, tab, setTab, modal, setModal, delTarget, setDelTarget, viewImg, curPatient, visits, patientRecords, rxList,
     clinic, doctorNames, prices, primaryDoctor, onClose, onSaveExam, onSaveVisit, handlePatientSave,

@@ -5,18 +5,17 @@ import {
   withDatePicked, withTimePicked, withDateTimeCleared, withTimeCleared, shouldReturnToTimeStep, guestInfoError,
   bookingSummaryRows, bookButtonLabel
 } from './booking-form-model.js';
-
-const L = () => globalThis.IAppLegacy;
+import { C } from '../../modules/theme/index.js';
+import { inp } from '../../modules/ui/atoms.jsx';
+import { localISO, PATIENT_CLINICS, CLINIC_CODE } from '../../modules/constants/index.js';
+import { getSB } from '../../modules/data-access/index.js';
 
 // Patient booking wizard (patient app): guest info (guests only) → clinic →
-// date → time → confirm. Port of the legacy runtime's BookingForm
-// (public/legacy/app-runtime.js), which stays in place for the legacy
-// screens. The form only walks the steps and fills PatientApp's bookForm;
-// PatientApp's doBook (onBook) validates and submits, unchanged. Theme C,
-// inp, localISO, getSB, PATIENT_CLINICS and CLINIC_CODE are read from the
-// bridge (the clinic list is the same instance PatientApp uses).
+// date → time → confirm. Exact port of the legacy runtime's BookingForm
+// (public/legacy/app-runtime.js). The form only walks the steps and fills
+// PatientApp's bookForm; PatientApp's doBook (onBook) validates and submits,
+// unchanged. (The clinic list is the same instance PatientApp uses.)
 export default function BookingForm({ patient, bookForm, setBookForm, booking, onBook, slotsVersion }) {
-  const { C, inp, localISO, getSB, PATIENT_CLINICS, CLINIC_CODE } = L();
   const [step, setStep] = useState(initialBookingStep(patient.isGuest));
   const [selClinic, setSelClinic] = useState(null);
   const [availDates, setAvailDates] = useState([]);

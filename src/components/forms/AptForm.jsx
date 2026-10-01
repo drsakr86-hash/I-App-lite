@@ -2,16 +2,12 @@ import React, { useState } from 'react';
 import { Btn } from '../common.jsx';
 import { C } from '../../modules/theme/index.js';
 import { Field, inp } from '../../modules/ui/atoms.jsx';
-import { CLINICS } from '../../modules/constants/index.js';
+import { CLINICS, localISO } from '../../modules/constants/index.js';
 import { DEFAULT_APT_DOCTOR_NAMES, initialAptState, aptSaveOutcome } from './apt-form-model.js';
 
-const L = () => globalThis.IAppLegacy;
-
-// Appointment add/edit form. Port of the legacy runtime's AptForm
-// (public/legacy/app-runtime.js), which stays in place for the legacy
-// screens. localISO is read from the bridge (not yet moved to a module).
+// Appointment add/edit form. Exact port of the legacy runtime's AptForm
+// (public/legacy/app-runtime.js).
 export default function AptForm({ initial, onSave, onClose, doctorNames = DEFAULT_APT_DOCTOR_NAMES, appointments = [] }) {
-  const { localISO } = L();
   const [f, setF] = useState(() => initialAptState(initial, localISO(), CLINICS[0].v));
   const [err, setErr] = useState('');
   const s = k => e => setF(v => ({ ...v, [k]: e.target.value }));

@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { buildQueueView, estimateWait, fmtWait, transitions } from '../modules/queue/index.js';
-
-// Theme, labels and the realtime call channel still live in the legacy
-// runtime; they are reached through this bridge (see exposeLegacyBridge).
-const L = () => globalThis.IAppLegacy;
+import { C } from '../modules/theme/index.js';
+import { clinicLabel } from '../modules/constants/index.js';
+import { inp } from '../modules/ui/atoms.jsx';
+import { broadcastCall, callChannel } from '../modules/realtime/index.js';
 
 const btn = (C, tone, extra = {}) => ({
   background: C[tone] + '22',
@@ -67,7 +67,6 @@ function Row({ C, a, sub, children, border, single, dim }) {
 }
 
 export default function WaitingRoom({ apts, today, onUpdateApt, onCollect, doctorNames = [] }) {
-  const { C, clinicLabel, inp, broadcastCall, callChannel } = L();
   useEffect(() => { callChannel(); }, []);
 
   const priorityKey = 'iapp_priority_doctor_' + today;

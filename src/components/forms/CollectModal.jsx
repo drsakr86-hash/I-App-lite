@@ -1,16 +1,14 @@
 import React, { useState } from 'react';
 import { matchCollectPrice, initialCollectCost, initialCollectPaid } from './secretary-forms-model.js';
+import { C } from '../../modules/theme/index.js';
+import { inp } from '../../modules/ui/atoms.jsx';
 
-const L = () => globalThis.IAppLegacy;
-
-// Payment collection form (secretary app, "💰 تحصيل"). Port of the legacy
-// runtime's CollectModal (public/legacy/app-runtime.js), which stays in place
-// for the legacy screens. onSave(cost, paid) receives the cost exactly as
-// typed (a string, or the stored/matched value when untouched) and the paid
-// flag — the contract SecretaryApp's handleSaveCollect expects. Theme C and
-// inp are read from the bridge.
+// Payment collection form (secretary app, "💰 تحصيل"). Exact port of the
+// legacy runtime's CollectModal (public/legacy/app-runtime.js). onSave(cost,
+// paid) receives the cost exactly as typed (a string, or the stored/matched
+// value when untouched) and the paid flag — the contract SecretaryApp's
+// handleSaveCollect expects.
 export default function CollectModal({ apt, prices = [], onSave, onClose }) {
-  const { C, inp } = L();
   const matched = matchCollectPrice(prices, apt.type);
   const [cost, setCost] = useState(initialCollectCost(apt, matched));
   const [paid, setPaid] = useState(initialCollectPaid(apt));

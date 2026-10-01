@@ -45,23 +45,21 @@ test('password visibility, button label and opacity', () => {
   assert.equal(loginButtonOpacity(true), 0.7);
 });
 
-// The port must keep authentication behind the bridge: the component calls
-// the legacy authenticateStaff exactly like the legacy LoginScreen does, and
-// no authentication logic lives in src/.
-test('LoginScreen port calls the bridged authenticateStaff, same shape as legacy', () => {
+// Final batch: the component now imports authenticateStaff directly from
+// src/modules/auth/staff-login.js (no more legacy bridge) but calls it with
+// exactly the same arguments/result handling as the legacy LoginScreen did.
+test('LoginScreen port calls authenticateStaff, same shape as legacy', () => {
   const jsx = readFileSync(new URL('../src/components/forms/LoginScreen.jsx', import.meta.url), 'utf8');
   const model = readFileSync(new URL('../src/components/forms/login-form-model.js', import.meta.url), 'utf8');
-  assert.ok(jsx.includes("const { C, Field, inp, authenticateStaff } = L();"));
+  assert.ok(jsx.includes("import { authenticateStaff } from '../../modules/auth/staff-login.js';"));
   assert.ok(SRC.includes('authenticateStaff(username, password).then(r => {'));
   assert.ok(jsx.includes('authenticateStaff(username, password).then(r => {'));
   assert.ok(SRC.includes('onLogin(r.user, remember);') && jsx.includes('onLogin(r.user, remember);'));
   assert.ok(SRC.includes('} else setError(r.error);') && jsx.includes('} else setError(r.error);'));
-  // Code only (comments may name what stays in the runtime).
+  // The component itself still has no inline auth logic -- it only calls
+  // the imported authenticateStaff (login-form-model.js never touches this).
   const code = s => s.split('\n').filter(l => !l.trim().startsWith('//')).join('\n');
   for (const s of [jsx, model]) {
-    assert.ok(!/signInWithPassword|registerLoginFail|lockRemaining|resolveProfile|getSB|sb\.auth|supabase/i.test(code(s)));
+    assert.ok(!/signInWithPassword|registerLoginFail|lockRemaining|resolveProfile|sb\.auth|supabase/i.test(code(s)));
   }
-  const runtime = readFileSync(new URL('../public/legacy/app-runtime.js', import.meta.url), 'utf8');
-  const bridge = runtime.slice(runtime.indexOf('globalThis.IAppLegacy = Object.assign('));
-  assert.ok(/\bauthenticateStaff\b/.test(bridge.slice(0, bridge.indexOf('});'))));
 });

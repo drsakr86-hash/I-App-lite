@@ -4,17 +4,21 @@ import {
   resolveStudyTarget, buildStudyRecord, buildImageMeta, buildImagingExamRecord
 } from "../modules/imaging/model.js";
 import { Modal, Btn } from "../components/common.jsx";
-
-const L = () => globalThis.IAppLegacy;
+import { C } from "../modules/theme/index.js";
+import { Field, inp, SecHead, Tag } from "../modules/ui/atoms.jsx";
+import { printDoc } from "../modules/print/index.js";
+import { sbGet, sbSet } from "../modules/sync/wiring.js";
+import { getSB, iappRpc } from "../modules/data-access/index.js";
+import { offlineNow } from "../modules/sync/engine.js";
+import { trashPut, logAudit } from "../modules/sync/index.js";
+import {
+  localDateStr, localTimeStr,
+  IMAGING_TYPES, IMAGING_EYES, IMAGING_REPORT_TEMPLATES, IMAGING_ORDER_STATUSES, imagingTypeName
+} from "../modules/constants/index.js";
+import { imagingStudyParams as imagingStudyRpcParams } from "../modules/imaging/index.js";
+import { singleImagingOrderParams as imagingSingleOrderParams } from "../modules/investigations/index.js";
 
 export default function ImagingCenter({ patients, primary, clinic }) {
-  const {
-    C, Field, inp, SecHead, Tag, printDoc,
-    sbGet, sbSet, getSB, iappRpc, offlineNow, trashPut, logAudit,
-    localDateStr, localTimeStr,
-    IMAGING_TYPES, IMAGING_EYES, IMAGING_REPORT_TEMPLATES, IMAGING_ORDER_STATUSES,
-    imagingTypeName, imagingStudyRpcParams, imagingSingleOrderParams
-  } = L();
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [patientSearch, setPatientSearch] = useState("");
   const [type, setType] = useState("oct");

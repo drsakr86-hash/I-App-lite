@@ -4,14 +4,12 @@ import {
   GENDERS, BLOOD_TYPES, PATIENT_STATUSES, PATIENT_EDIT_TABS, PATIENT_EDIT_DEFAULT_TAB,
   initialPatientEditState, buildPatientEditPayload
 } from './patient-form-model.js';
+import { C } from '../../modules/theme/index.js';
+import { Field, inp } from '../../modules/ui/atoms.jsx';
 
-const L = () => globalThis.IAppLegacy;
-
-// Tabbed "edit medical file" form of the patient file. Port of the legacy
-// runtime's PatientEditForm (public/legacy/app-runtime.js), which stays in
-// place for the legacy screens. Theme C, Field and inp are read from the bridge.
+// Tabbed "edit medical file" form of the patient file. Exact port of the
+// legacy runtime's PatientEditForm (public/legacy/app-runtime.js).
 export default function PatientEditForm({ patient, onSave, onClose }) {
-  const { C, Field, inp } = L();
   const [tab, setTab] = useState(PATIENT_EDIT_DEFAULT_TAB);
   const [f, setF] = useState(() => initialPatientEditState(patient));
   const s = k => e => setF(v => ({ ...v, [k]: e.target.value }));

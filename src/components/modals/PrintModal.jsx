@@ -4,18 +4,15 @@ import {
   printDoctorName, printPatient, GLASSES_HEADERS, GLASSES_ROWS, GLASSES_KEYS, glassesCell,
   medicinePreview, moreMedicinesCount, hasMoreMedicines
 } from './print-modal-model.js';
-
-const L = () => globalThis.IAppLegacy;
+import { C } from '../../modules/theme/index.js';
+import { printDoc, getGlassesHTML, getRxHTML } from '../../modules/print/index.js';
 
 // "Choose what to print" sheet for a prescription (Prescriptions list and the
-// patient file). Port of the legacy runtime's PrintModal
-// (public/legacy/app-runtime.js), which stays in place for the legacy
-// screens. The documents are built by the runtime's getGlassesHTML /
-// getRxHTML templates and printed with printDoc, all read from the bridge
-// and called with exactly the legacy arguments. Theme C is read from the
-// bridge too.
+// patient file). Exact port of the legacy runtime's PrintModal
+// (public/legacy/app-runtime.js). The documents are built by
+// getGlassesHTML/getRxHTML and printed with printDoc, called with exactly
+// the legacy arguments.
 export default function PrintModal({ rx, patient, onClose, primaryDoctor, clinic }) {
-  const { C, printDoc, getGlassesHTML, getRxHTML } = L();
   const docName = printDoctorName(primaryDoctor);
   const p = printPatient(patient);
   return (

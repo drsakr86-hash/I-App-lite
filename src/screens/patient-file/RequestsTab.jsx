@@ -1,12 +1,13 @@
 import React from 'react';
 import { Btn } from '../../components/common.jsx';
-
-const L = () => globalThis.IAppLegacy;
+import { C } from '../../modules/theme/index.js';
+import { Tag, inp } from '../../modules/ui/atoms.jsx';
+import { IMAGING_ORDER_STATUSES } from '../../modules/constants/index.js';
+import { getRadiologyHTML, printDoc } from '../../modules/print/index.js';
 
 // Patient file — "requests" tab. Presentational port of the legacy PatientFile JSX;
 // all state and handlers come from the legacy function through ctx.
 export default function RequestsTab({ ctx }) {
-  const { C, IMAGING_ORDER_STATUSES, Tag, getRadiologyHTML, inp, printDoc } = L();
   const { allRequestTests, clinic, curPatient, cycleRequestEye, imagingOrders, primaryDoctor, requestEye, requestNotes, requestSaved, requestTests, requests, savePatientRadiologyRequest, setRequestEye, setRequestNotes, toggleRequestTest } = ctx;
   return (
     <div>

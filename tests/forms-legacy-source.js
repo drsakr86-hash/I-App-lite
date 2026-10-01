@@ -1,9 +1,16 @@
-// Test helper: pulls literal values straight out of the legacy runtime
-// source (public/legacy/app-runtime.js), so the form models are pinned to
-// the legacy values rather than to a copy that could drift.
+// Test helper: pulls literal values out of a frozen snapshot of the legacy
+// runtime source, so the form models stay pinned to the exact legacy values
+// they were ported from.
+//
+// Final batch: public/legacy/app-runtime.js itself is deleted (React is now
+// the only runtime -- see the migration roadmap). These pin tests still earn
+// their keep as a permanent record of "the port matches what legacy did",
+// so rather than deleting them, this helper now reads a frozen copy kept
+// only for tests: tests/fixtures/legacy-app-runtime-snapshot.js. It is never
+// built, served, or imported by the app -- see that file's own header.
 import { readFileSync } from 'node:fs';
 
-const SRC = readFileSync(new URL('../public/legacy/app-runtime.js', import.meta.url), 'utf8');
+const SRC = readFileSync(new URL('./fixtures/legacy-app-runtime-snapshot.js', import.meta.url), 'utf8');
 
 // Body of a top-level legacy function, from "function Name(" to the next
 // top-level declaration.

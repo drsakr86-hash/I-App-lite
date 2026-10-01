@@ -6,14 +6,13 @@ import {
   initialExamState, chiefComplaintSelectValue, withChiefComplaintSelect, chiefComplaintInputShown,
   chiefComplaintBadgeShown, isIopHigh, anyIopHigh, prevStep, nextStep, buildExamPayload
 } from './exam-form-model.js';
+import { C } from '../../modules/theme/index.js';
+import { Field, SecHead, inp } from '../../modules/ui/atoms.jsx';
+import { localISO } from '../../modules/constants/misc.js';
 
-const L = () => globalThis.IAppLegacy;
-
-// Three-step examination add/edit form. Port of the legacy runtime's ExamForm
-// (public/legacy/app-runtime.js), which stays in place for the legacy screens.
-// Theme C, Field, SecHead, inp and localISO are read from the bridge.
+// Three-step examination add/edit form. Exact port of the legacy runtime's
+// ExamForm (public/legacy/app-runtime.js).
 export default function ExamForm({ initial, patientId, onSave, onClose, doctorNames = DEFAULT_DOCTOR_NAMES }) {
-  const { C, Field, SecHead, inp, localISO } = L();
   const [f, setF] = useState(() => initialExamState(initial, localISO()));
   const [step, setStep] = useState(0);
   const s = k => e => setF(v => ({ ...v, [k]: e.target.value }));

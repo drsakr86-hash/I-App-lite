@@ -3,14 +3,12 @@ import { Btn } from '../common.jsx';
 import {
   GENDERS, BLOOD_TYPES, PATIENT_STATUSES, initialPatientState, canSavePatient, buildPatientPayload
 } from './patient-form-model.js';
+import { Field, inp } from '../../modules/ui/atoms.jsx';
+import { localISO } from '../../modules/constants/misc.js';
 
-const L = () => globalThis.IAppLegacy;
-
-// New/edit patient form of the Patients screen. Port of the legacy runtime's
-// PatientForm (public/legacy/app-runtime.js), which stays in place for the
-// legacy screens. Theme C, Field, inp and localISO are read from the bridge.
+// New/edit patient form of the Patients screen. Exact port of the legacy
+// runtime's PatientForm (public/legacy/app-runtime.js).
 export default function PatientForm({ initial, onSave, onClose }) {
-  const { Field, inp, localISO } = L();
   const [f, setF] = useState(() => initialPatientState(initial, localISO()));
   const s = k => e => setF(v => ({ ...v, [k]: e.target.value }));
   return (

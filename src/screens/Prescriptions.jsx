@@ -3,8 +3,8 @@ import { findPatientForRx, eyeRows } from '../modules/prescriptions/index.js';
 import { Modal, Confirm, Btn } from '../components/common.jsx';
 import { RxForm } from '../components/forms/index.js';
 import { PrintModal } from '../components/modals/index.js';
-
-const L = () => globalThis.IAppLegacy;
+import { C } from '../modules/theme/index.js';
+import { trashPut, logAudit } from '../modules/sync/index.js';
 
 const iconBtn = (bg, color, extra = {}) => ({
   background: bg, borderRadius: 8, padding: '6px 10px', color, fontSize: 11,
@@ -12,7 +12,6 @@ const iconBtn = (bg, color, extra = {}) => ({
 });
 
 export default function Prescriptions({ prescriptions, setRx, patients, doctorNames = [], primaryDoctor, clinic }) {
-  const { C, trashPut, logAudit } = L();
   const [modal, setModal] = useState(null);
   const [viewRx, setViewRx] = useState(null);
   const [printRx, setPrintRx] = useState(null);

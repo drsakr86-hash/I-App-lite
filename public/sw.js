@@ -1,5 +1,5 @@
 // I App — Service Worker
-const VERSION = "iapp-v10-20260928"; // Phase 7: React default for everyone — clean cache slate
+const VERSION = "iapp-v11-20261001"; // Final batch: legacy runtime deleted — clean cache slate
 const SHELL = "iapp-shell-" + VERSION;
 const IMGS = "iapp-img-" + VERSION;
 const FONTS = "iapp-font-" + VERSION;
@@ -10,8 +10,10 @@ self.addEventListener("install", event => {
     caches.open(SHELL)
       .then(async cache => {
         // Vite hashes asset names, so read them from the built index.html
-        // and precache them together with the legacy runtime (offline support).
-        const urls = ["./", "./index.html", "./legacy/app-runtime.js", "./queue-display.html"];
+        // and precache them for offline support. The legacy runtime
+        // (./legacy/app-runtime.js) is gone -- React is now the only
+        // runtime -- so it is no longer in this list.
+        const urls = ["./", "./index.html", "./queue-display.html"];
         try {
           const html = await (await fetch("./index.html", { cache: "no-store" })).text();
           for (const m of html.matchAll(/(?:src|href)="(\.\/assets\/[^"]+)"/g)) urls.push(m[1]);

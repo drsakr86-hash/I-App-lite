@@ -1,10 +1,8 @@
 import React from 'react';
-
-const L = () => globalThis.IAppLegacy;
+import { C } from '../../modules/theme/index.js';
 
 // Full-screen image viewer (viewImg) of the patient file.
 export default function ImageViewer({ ctx }) {
-  const { C } = L();
   const { setViewImg, viewImg } = ctx;
   return (
     <div

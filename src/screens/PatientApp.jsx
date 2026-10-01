@@ -10,15 +10,17 @@ import {
 } from "../modules/patient-app/model.js";
 import { Modal, Toast } from "../components/common.jsx";
 import { BookingForm } from "../components/forms/index.js";
-
-const L = () => globalThis.IAppLegacy;
+import { C } from "../modules/theme/index.js";
+import { inp } from "../modules/ui/atoms.jsx";
+import { sbGet, sbSet, sbMutate } from "../modules/sync/wiring.js";
+import { getSB } from "../modules/data-access/index.js";
+import { localISO, BOOKING_TABLE, PATIENT_CLINICS, CLINIC_CODE, clinicDisplay } from "../modules/constants/index.js";
 
 // "⭐ قيّم زيارتك" modal body (only used inside PatientApp).
 // QUIRK: "لاحقاً" calls the same onDone as a successful submit, so skipping
 // also marks the visit rated; the submit has no double-click guard and does a
 // read-modify-write of iapp_ratings via sbGet/sbSet (not sbMutate).
 function RatingPrompt({ visit, patient, onDone }) {
-  const { C, inp, sbGet, sbSet, localISO } = L();
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
   const [sent, setSent] = useState(false);
@@ -101,10 +103,6 @@ function RatingPrompt({ visit, patient, onDone }) {
 }
 
 export default function PatientApp({ patient, onLogout }) {
-  const {
-    C, localISO, sbGet, sbMutate, getSB, BOOKING_TABLE,
-    PATIENT_CLINICS, CLINIC_CODE, clinicDisplay
-  } = L();
   const [tab, setTab] = useState(initialTab(patient));
   const [appointments, setAppointments] = useState([]);
   const [prescriptions, setPrescriptions] = useState([]);

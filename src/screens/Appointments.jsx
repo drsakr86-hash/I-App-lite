@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { ALL_DOCTORS, listAppointments, countDone, findPatientForApt, whatsappReminderUrl } from '../modules/appointments/index.js';
 import { Modal, Confirm, Btn } from '../components/common.jsx';
 import { AptForm } from '../components/forms/index.js';
-
-const L = () => globalThis.IAppLegacy;
+import { C } from '../modules/theme/index.js';
+import { clinicLabel } from '../modules/constants/index.js';
+import { sbGet } from '../modules/sync/wiring.js';
+import { trashPut, logAudit } from '../modules/sync/index.js';
 
 const iconBox = (C, bg, extra = {}) => ({
   width: 32, height: 32, borderRadius: 10, background: bg,
@@ -12,7 +14,6 @@ const iconBox = (C, bg, extra = {}) => ({
 });
 
 export default function Appointments({ appointments, setAppointments, doctorNames = [], patients = [], onPatientClick, session }) {
-  const { C, clinicLabel, sbGet, trashPut, logAudit } = L();
   const [filter, setFilter] = useState(ALL_DOCTORS);
   const [showDone, setShowDone] = useState(false);
   const [modal, setModal] = useState(null);

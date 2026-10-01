@@ -10,13 +10,20 @@ import {
 import { Modal, Toast, ThemeToggle } from "../components/common.jsx";
 import { LoginScreen, SecretaryAptForm, CollectModal } from "../components/forms/index.js";
 import { RemindersModal } from "../components/modals/index.js";
-
-const L = () => globalThis.IAppLegacy;
+import { C } from "../modules/theme/index.js";
+import { inp } from "../modules/ui/atoms.jsx";
+import { localISO, clinicLabel, BOOKING_TABLE, CLINICS_LIST } from "../modules/constants/index.js";
+import { useSyncStatus } from "../modules/sync/engine.js";
+import { sbGet, sbMutate } from "../modules/sync/wiring.js";
+import { getSB } from "../modules/data-access/index.js";
+import { trashPut, logAudit } from "../modules/sync/index.js";
+import { newId } from "../modules/constants/misc.js";
+import { waOpen, waReminderText } from "../modules/notifications/index.js";
+import WaitingRoom from "./WaitingRoom.jsx";
 
 // The secretary app's own small filter button (the legacy component shadows the
 // shared Btn with this one inside SecretaryApp).
 function SecBtn({ children, onClick, color, active }) {
-  const { C } = L();
   return (
     <button
       onClick={onClick}
@@ -39,11 +46,6 @@ function SecBtn({ children, onClick, color, active }) {
 const badge = (bg, color) => ({ background: bg, color, borderRadius: 6, padding: "1px 6px", fontSize: 9, fontWeight: 700 });
 
 export default function SecretaryApp() {
-  const {
-    C, inp, localISO, useSyncStatus, clinicLabel,
-    sbGet, sbMutate, getSB, trashPut, logAudit, newId, BOOKING_TABLE,
-    waOpen, waReminderText, CLINICS_LIST, WaitingRoom, useNewScreen
-  } = L();
   const [session, setSession] = useState(() => {
     try {
       const p = localStorage.getItem("iapp_session");
@@ -396,14 +398,13 @@ export default function SecretaryApp() {
 
       {tab === "waiting" && (
         <div style={{ flex: 1, overflowY: "auto" }}>
-          {/* Same opt-in gate as App()'s waiting tab. */}
-          {React.createElement(useNewScreen("WaitingRoom") ? window.IAppModules.screens.WaitingRoom : WaitingRoom, {
-            apts,
-            today,
-            onUpdateApt: updateApt,
-            onCollect: setCollectApt,
-            doctorNames: todayDoctorNames(apts, today)
-          })}
+          <WaitingRoom
+            apts={apts}
+            today={today}
+            onUpdateApt={updateApt}
+            onCollect={setCollectApt}
+            doctorNames={todayDoctorNames(apts, today)}
+          />
         </div>
       )}
 

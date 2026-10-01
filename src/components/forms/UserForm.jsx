@@ -3,16 +3,14 @@ import { Btn } from '../common.jsx';
 import {
   USER_ROLE_OPTIONS, USER_PASSWORD_NOTE, initialUserState, isUserFormValid, buildUserPayload, userSaveLabel
 } from './settings-forms-model.js';
+import { C } from '../../modules/theme/index.js';
+import { Field, inp } from '../../modules/ui/atoms.jsx';
 
-const L = () => globalThis.IAppLegacy;
-
-// Staff user add/edit form (Settings). Port of the legacy runtime's UserForm
-// (public/legacy/app-runtime.js), which stays in place for the legacy
-// screens. Theme C, Field and inp are read from the bridge. The form only
-// checks email/name shape; duplicate and last-admin checks happen in the
-// awaited onSave (the Settings screen), whose message comes back as `error`.
+// Staff user add/edit form (Settings). Exact port of the legacy runtime's
+// UserForm (public/legacy/app-runtime.js). The form only checks email/name
+// shape; duplicate and last-admin checks happen in the awaited onSave (the
+// Settings screen), whose message comes back as `error`.
 export default function UserForm({ initial, onSave, onClose, error }) {
-  const { C, Field, inp } = L();
   const [f, setF] = useState(() => initialUserState(initial));
   const s = k => e => setF(v => ({ ...v, [k]: e.target.value }));
   const [saving, setSaving] = useState(false);

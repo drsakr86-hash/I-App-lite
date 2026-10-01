@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { buildDashboardStats, averageRating, todayQueueGroups, recentAppointments, emergencyPatients } from '../modules/dashboard/index.js';
-
-const L = () => globalThis.IAppLegacy;
+import { C } from '../modules/theme/index.js';
+import { clinicLabel, localISO } from '../modules/constants/index.js';
+import { useSyncStatus } from '../modules/sync/engine.js';
+import { sbGet } from '../modules/sync/wiring.js';
 
 function StatCard({ C, s }) {
   return (
@@ -20,7 +22,6 @@ function StatCard({ C, s }) {
 }
 
 export default function Dashboard({ patients, appointments, visits, primary, onDailyReport, onPatientClick }) {
-  const { C, clinicLabel, localISO, useSyncStatus, sbGet } = L();
   const sync = useSyncStatus();
   const today = new Date().toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   const todayStr = localISO();

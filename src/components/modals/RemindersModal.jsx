@@ -1,15 +1,14 @@
 import React from 'react';
 import { tomorrowOf, reminderRows, reminderButtonLabel, reminderTypeLabel } from './reminders-modal-model.js';
+import { C } from '../../modules/theme/index.js';
+import { localISO, clinicLabel } from '../../modules/constants/index.js';
+import { waOpen, waReminderText } from '../../modules/notifications/index.js';
 
-const L = () => globalThis.IAppLegacy;
-
-// "Tomorrow's appointments" WhatsApp reminder list (secretary app). Port of
-// the legacy runtime's RemindersModal (public/legacy/app-runtime.js), which
-// stays in place for the legacy screens. onMark(apt) is called only when
-// WhatsApp was actually opened (waOpen returned true). Theme C, localISO,
-// clinicLabel, waOpen and waReminderText are read from the bridge.
+// "Tomorrow's appointments" WhatsApp reminder list (secretary app). Exact
+// port of the legacy runtime's RemindersModal (public/legacy/app-runtime.js).
+// onMark(apt) is called only when WhatsApp was actually opened (waOpen
+// returned true).
 export default function RemindersModal({ apts, onClose, onMark }) {
-  const { C, localISO, clinicLabel, waOpen, waReminderText } = L();
   const tomorrow = localISO(tomorrowOf(new Date()));
   const rows = reminderRows(apts, tomorrow);
   return (

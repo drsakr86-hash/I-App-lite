@@ -1,12 +1,11 @@
 import React from 'react';
 import { timelineSourceEvents, filterTimeline } from '../../modules/patient-file/model.js';
-
-const L = () => globalThis.IAppLegacy;
+import { C } from '../../modules/theme/index.js';
+import { inp } from '../../modules/ui/atoms.jsx';
 
 // Patient file — "timeline" tab. Presentational port of the legacy PatientFile JSX;
 // all state and handlers come from the legacy function through ctx.
 export default function TimelineTab({ ctx }) {
-  const { C, inp } = L();
   const { coreJourneyCount, coreJourneyEvents, coreSource, exams, images, requests, rxList, setTimelineFilter, setTimelineSearch, timelineFilter, timelineSearch, visits } = ctx;
   const allEvents = timelineSourceEvents({ coreSource, coreJourneyEvents, visits, requests, exams, rxList, images }, C);
   const events = filterTimeline(allEvents, timelineFilter, timelineSearch);

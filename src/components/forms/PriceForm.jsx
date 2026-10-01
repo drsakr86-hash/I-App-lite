@@ -1,14 +1,12 @@
 import React, { useState } from 'react';
 import { Btn } from '../common.jsx';
 import { PRICE_ICONS, initialPriceState, canSavePrice } from './settings-forms-model.js';
+import { C } from '../../modules/theme/index.js';
+import { Field, inp } from '../../modules/ui/atoms.jsx';
 
-const L = () => globalThis.IAppLegacy;
-
-// Service price add/edit form (Settings). Port of the legacy runtime's
-// PriceForm (public/legacy/app-runtime.js), which stays in place for the
-// legacy screens. Theme C, Field and inp are read from the bridge.
+// Service price add/edit form (Settings). Exact port of the legacy runtime's
+// PriceForm (public/legacy/app-runtime.js).
 export default function PriceForm({ initial, onSave, onClose }) {
-  const { C, Field, inp } = L();
   const [f, setF] = useState(() => initialPriceState(initial));
   const s = k => e => setF(v => ({ ...v, [k]: e.target.value }));
   return (

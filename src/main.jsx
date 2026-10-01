@@ -82,19 +82,15 @@ import { INJ_KEY, INJ_DRUGS } from './modules/followups/index.js';
 import GlobalSearch from './components/GlobalSearch.jsx';
 import DataTools from './components/DataTools.jsx';
 import { maybeDailyBackup } from './modules/datatools/index.js';
+import ThemeRoot from './app/ThemeRoot.jsx';
 
-// Migration bridge: keep the proven production runtime intact while the
-// build system and service layer move to Vite. The legacy runtime reaches the
-// new services only through globalThis.IAppModules and always keeps a
-// fallback to its own inline implementation if a module is missing.
-globalThis.React = React;
-globalThis.ReactDOM = ReactDOM;
-// Phase 6, batch 2 (real routing, part A): HashRouter needs no server-side
-// rewrite rules, so it works as-is on GitHub Pages (unlike a path-based
-// BrowserRouter, which would 404 on a hard refresh/direct link without one).
-globalThis.HashRouter = HashRouter;
-globalThis.useNavigate = useNavigate;
-globalThis.useLocation = useLocation;
+// Final batch: the legacy runtime is gone, so React/ReactDOM/HashRouter no
+// longer need to be exposed as globals for it to read -- every screen below
+// imports directly. globalThis.IAppModules remains: it's real internal
+// plumbing a few modules use on purpose (src/modules/data-access/index.js's
+// iappRpc, src/modules/sync/engine.js's ensureAuthed,
+// src/modules/appointments/core.js), not a legacy-only bridge, so it's wired
+// exactly as before.
 globalThis.supabase = { createClient };
 // One shared Supabase client (legacy getSB() reuses this instance).
 getSupabaseClient();
@@ -283,17 +279,20 @@ globalThis.IAppModules.search = { GlobalSearch };
 // src/modules/datatools/.
 globalThis.IAppModules.datatools = { DataTools, maybeDailyBackup };
 
-const legacyScript = document.createElement('script');
-legacyScript.src = import.meta.env.BASE_URL + 'legacy/app-runtime.js?v=' + __BUILD_ID__;
-legacyScript.async = false;
-legacyScript.onload = () => console.log('I-App legacy runtime loaded');
-legacyScript.onerror = (e) => console.error('I-App legacy runtime failed to load', e);
-document.body.appendChild(legacyScript);
+// Final batch: React is now the only runtime. The legacy script
+// (public/legacy/app-runtime.js) and its IAppLegacy bridge are gone; every
+// screen above is wired directly. This is the same render tree legacy's own
+// bootstrap built (ThemeRoot -> UnifiedErrorBoundary -> UnifiedRouter), just
+// invoked directly instead of through a second script tag.
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(
+  React.createElement(HashRouter, null, React.createElement(ThemeRoot, null))
+);
 
 // Offline support (production build only; the dev server must not be cached).
 if (import.meta.env.PROD && 'serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register(import.meta.env.BASE_URL + 'sw.js?v=20260928')
+    navigator.serviceWorker.register(import.meta.env.BASE_URL + 'sw.js?v=20261001')
       .catch(e => console.warn('SW register failed', e));
   });
 }

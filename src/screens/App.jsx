@@ -1,28 +1,36 @@
 import React, { useState, useEffect } from "react";
-import { getDailyReportHTML } from "../modules/print/index.js";
+import { getDailyReportHTML, printDoc } from "../modules/print/index.js";
+import { C } from "../modules/theme/index.js";
+import { useDB } from "../modules/data/index.js";
+import { SEED } from "../modules/constants/seed.js";
+import { getUsers, saveUsers } from "../modules/auth/staff-login.js";
+import { sbGet } from "../modules/sync/wiring.js";
+import { refreshPending } from "../modules/sync/engine.js";
+import { localISO } from "../modules/constants/misc.js";
+import LoginScreen from "../components/forms/LoginScreen.jsx";
+import TopBar from "../components/TopBar.jsx";
+import BottomNav from "../components/BottomNav.jsx";
+import FollowUpCentre from "../components/FollowUpCentre.jsx";
+import GlobalSearch from "../components/GlobalSearch.jsx";
+import { Toast } from "../components/common.jsx";
+import Dashboard from "./Dashboard.jsx";
+import PatientsContainer from "./PatientsContainer.jsx";
+import Appointments from "./Appointments.jsx";
+import WaitingRoom from "./WaitingRoom.jsx";
+import Prescriptions from "./Prescriptions.jsx";
+import Radiology from "./Radiology.jsx";
+import ImagingCenter from "./ImagingCenter.jsx";
+import Accounting from "./Accounting.jsx";
+import Settings from "./Settings.jsx";
 
-const L = () => globalThis.IAppLegacy;
-
-// Doctor-app shell (Phase 6, batch 1). Pixel/behavior-identical port of the
-// legacy App() function in public/legacy/app-runtime.js — same state, same
-// effects, same screens object, same render tree. Gated via useNewScreen("App"),
-// exactly like SecretaryApp/PatientApp before it.
-//
-// Deliberately NOT changed in this batch (left for a later batch, per the
-// "small batches" approach):
-//  - no real React Router yet — tab-based local state, exactly as legacy
-//  - the Patients tab keeps calling the LEGACY Patients component with no
-//    useNewScreen gate, exactly as legacy does today. The already-migrated
-//    src/screens/Patients.jsx has a different prop contract (list-only,
-//    expects the parent to own search state and an onOpenFile callback for
-//    PatientFile) and is not a drop-in replacement here — wiring it in is
-//    its own batch, not a one-line gate addition.
+// Doctor-app shell. Exact port of the legacy runtime's App()
+// (public/legacy/app-runtime.js) -- same state, same effects, same screens
+// object, same render tree. Final batch: every screen below is the real
+// React component directly (no more useNewScreen(...) gate -- there is no
+// legacy fallback left to gate against), including the Patients tab, now
+// wired to PatientsContainer (src/screens/PatientsContainer.jsx), which owns
+// the search state and onOpenFile callback PatientFile needs.
 export default function App() {
-  const {
-    C, useDB, SEED, getUsers, saveUsers, sbGet, refreshPending, localISO, printDoc,
-    LoginScreen, TopBar, BottomNav, FollowUpCentre, GlobalSearch, Toast, useNewScreen,
-    Dashboard, Patients, Appointments, WaitingRoom, Prescriptions, Radiology, ImagingCenter, Accounting, Settings
-  } = L();
 
   const [session, setSession] = useState(() => {
     try {
@@ -172,7 +180,7 @@ export default function App() {
     );
   }
   const screens = {
-    dashboard: React.createElement(useNewScreen("Dashboard") ? window.IAppModules.screens.Dashboard : Dashboard, {
+    dashboard: React.createElement(Dashboard, {
       patients, appointments, visits, primary, clinic,
       onDailyReport: () => {
         const html = getDailyReportHTML(localISO(), patients, visits, appointments, primary, clinic);
@@ -187,9 +195,7 @@ export default function App() {
         setTab("patients");
       }
     }),
-    // Kept exactly as legacy: always the legacy Patients component, no
-    // useNewScreen gate (see the note at the top of this file).
-    patients: React.createElement(Patients, {
+    patients: React.createElement(PatientsContainer, {
       patients, setPatients,
       initOpenId: patOpenId,
       initNewName: patNewName,
@@ -200,7 +206,7 @@ export default function App() {
       exams, setExams, prescriptions, setRx, visits, setVisits,
       doctorNames, primaryDoctor: primary, prices, clinic, session, customTests
     }),
-    appointments: React.createElement(useNewScreen("Appointments") ? window.IAppModules.screens.Appointments : Appointments, {
+    appointments: React.createElement(Appointments, {
       appointments, setAppointments, doctorNames, patients, session,
       onPatientClick: (name, p) => {
         if (p && p.id) {
@@ -211,22 +217,22 @@ export default function App() {
         setTab("patients");
       }
     }),
-    waiting: React.createElement(useNewScreen("WaitingRoom") ? window.IAppModules.screens.WaitingRoom : WaitingRoom, {
+    waiting: React.createElement(WaitingRoom, {
       apts: appointments, today: localISO(), onUpdateApt: updateSharedAppointment, onCollect: () => {}, doctorNames
     }),
-    prescriptions: React.createElement(useNewScreen("Prescriptions") ? window.IAppModules.screens.Prescriptions : Prescriptions, {
+    prescriptions: React.createElement(Prescriptions, {
       prescriptions, setRx, patients, doctorNames, primaryDoctor: primary, clinic
     }),
-    radiology: React.createElement(useNewScreen("Radiology") ? window.IAppModules.screens.Radiology : Radiology, {
+    radiology: React.createElement(Radiology, {
       patients, customTests, setCustomTests, setExams, primary, clinic
     }),
-    imaging: React.createElement(useNewScreen("ImagingCenter") ? window.IAppModules.screens.ImagingCenter : ImagingCenter, {
+    imaging: React.createElement(ImagingCenter, {
       patients, primary, clinic
     }),
-    accounting: React.createElement(useNewScreen("Accounting") ? window.IAppModules.screens.Accounting : Accounting, {
+    accounting: React.createElement(Accounting, {
       visits, expenses, setExpenses, recurringExpenses, setRecurringExpenses, doctors, clinic
     }),
-    settings: React.createElement(useNewScreen("Settings") ? window.IAppModules.screens.Settings : Settings, {
+    settings: React.createElement(Settings, {
       patients, appointments, prescriptions, exams, visits, doctors, setDoctors,
       prices, setPrices, clinic, setClinic, onReset: reset, users, setUsers, session, onLogout: handleLogout
     })

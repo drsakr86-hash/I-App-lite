@@ -1,12 +1,10 @@
 import React from 'react';
 import { compareRows } from '../../modules/patient-file/model.js';
-
-const L = () => globalThis.IAppLegacy;
+import { C } from '../../modules/theme/index.js';
 
 // Patient file — "compare" tab. Presentational port of the legacy PatientFile JSX;
 // all state and handlers come from the legacy function through ctx.
 export default function CompareTab({ ctx }) {
-  const { C } = L();
   const { exams } = ctx;
   return (
     <div>

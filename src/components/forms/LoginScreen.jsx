@@ -3,17 +3,14 @@ import {
   LOGIN_EMPTY_ERROR, LOGIN_REMEMBER_DEFAULT, loginFieldsMissing, passwordInputType, showPassIcon,
   loginButtonLabel, loginButtonOpacity
 } from './login-form-model.js';
+import { C } from '../../modules/theme/index.js';
+import { Field, inp } from '../../modules/ui/atoms.jsx';
+import { authenticateStaff } from '../../modules/auth/staff-login.js';
 
-const L = () => globalThis.IAppLegacy;
-
-// Staff login form (used by the secretary app). Port of the legacy runtime's
-// LoginScreen (public/legacy/app-runtime.js), which stays in place for the
-// legacy screens. Only the form shell is ported: the credential check is the
-// legacy runtime's authenticateStaff, called through the bridge exactly as
-// the legacy LoginScreen calls it (same arguments, same result handling).
-// Theme C, Field and inp are also read from the bridge.
+// Staff login form (used by the secretary app). Exact port of the legacy
+// runtime's LoginScreen (public/legacy/app-runtime.js). The credential check
+// is authenticateStaff, called with the same arguments and result handling.
 export default function LoginScreen({ onLogin }) {
-  const { C, Field, inp, authenticateStaff } = L();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);

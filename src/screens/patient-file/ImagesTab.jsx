@@ -1,11 +1,10 @@
 import React from 'react';
-
-const L = () => globalThis.IAppLegacy;
+import { C } from '../../modules/theme/index.js';
+import { Field, XRAY_ICON, inp } from '../../modules/ui/atoms.jsx';
 
 // Patient file — "images" tab. Presentational port of the legacy PatientFile JSX;
 // all state and handlers come from the legacy function through ctx.
 export default function ImagesTab({ ctx }) {
-  const { C, Field, XRAY_ICON, inp } = L();
   const { aiAnalysis, analyzeImage, delImage, handleImgUpload, imageEye, imageFilter, imageType, images, imgError, imgLoading, setAiAnalysis, setImageEye, setImageFilter, setImageType, setImgError, setViewImg, updateImgNotes, uploadProgress } = ctx;
   return (
     <div>

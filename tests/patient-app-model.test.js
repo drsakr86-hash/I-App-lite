@@ -17,9 +17,11 @@ import {
 // they're imported directly rather than scraped from the legacy source text.
 import { CLINIC_CODE, clinicDisplay } from '../src/modules/constants/clinics.js';
 
-// Legacy constants/helpers pulled straight from the runtime so these tests
-// fail if the runtime and the module ever drift apart.
-const RUNTIME = readFileSync(new URL('../public/legacy/app-runtime.js', import.meta.url), 'utf8');
+// Legacy constants/helpers pulled from a frozen snapshot of the runtime
+// (public/legacy/app-runtime.js is deleted in the final batch -- see
+// tests/forms-legacy-source.js's header) so these tests still fail if the
+// port and the legacy original it was pinned from ever drift apart.
+const RUNTIME = readFileSync(new URL('./fixtures/legacy-app-runtime-snapshot.js', import.meta.url), 'utf8');
 const grab = re => { const m = RUNTIME.match(re); assert.ok(m, 'legacy source not found: ' + re); return m[0]; };
 const legacy = new Function(
   grab(/function normArabic\(s\) \{[\s\S]*?\n\}/) + '\n' +

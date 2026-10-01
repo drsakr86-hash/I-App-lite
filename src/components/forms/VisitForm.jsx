@@ -5,14 +5,13 @@ import {
   visitTypeOptions, referencePriceShown, referencePriceText, withComplaintSelect, complaintSelectValue,
   customComplaintShown, customComplaintValue, complaintBadgeShown, togglePaid, buildVisitPayload
 } from './visit-form-model.js';
+import { C } from '../../modules/theme/index.js';
+import { Field, inp } from '../../modules/ui/atoms.jsx';
+import { localISO, CLINICS } from '../../modules/constants/index.js';
 
-const L = () => globalThis.IAppLegacy;
-
-// Visit add/edit form. Port of the legacy runtime's VisitForm
-// (public/legacy/app-runtime.js), which stays in place for the legacy screens.
-// Theme C, Field, inp, localISO and CLINICS are read from the bridge.
+// Visit add/edit form. Exact port of the legacy runtime's VisitForm
+// (public/legacy/app-runtime.js).
 export default function VisitForm({ initial, patientId, onSave, onClose, doctorNames = DEFAULT_DOCTOR_NAMES, prices = [] }) {
-  const { C, Field, inp, localISO, CLINICS } = L();
   const [f, setF] = useState(() => initialVisitState(initial, localISO(), CLINICS[0].v));
   // Legacy dead state: set on complaint select, never read.
   const [customComplaint, setCustomComplaint] = useState('');

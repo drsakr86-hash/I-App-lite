@@ -2,16 +2,12 @@ import React, { useState } from 'react';
 import { Btn } from '../common.jsx';
 import { C } from '../../modules/theme/index.js';
 import { Field, inp } from '../../modules/ui/atoms.jsx';
-import { CLINICS, EXP_CATS } from '../../modules/constants/index.js';
+import { CLINICS, EXP_CATS, localISO } from '../../modules/constants/index.js';
 import { initialExpenseState, isValidExpense, buildExpenseSavePayload } from './accounting-forms-model.js';
 
-const L = () => globalThis.IAppLegacy;
-
-// One-off expense add/edit form. Port of the legacy runtime's ExpenseForm
-// (public/legacy/app-runtime.js), which stays in place for the legacy
-// screens. localISO is read from the bridge (not yet moved to a module).
+// One-off expense add/edit form. Exact port of the legacy runtime's
+// ExpenseForm (public/legacy/app-runtime.js).
 export default function ExpenseForm({ initial, onSave, onClose }) {
-  const { localISO } = L();
   const [f, setF] = useState(() => initialExpenseState(initial, localISO(), EXP_CATS[0][0]));
   const s = k => e => setF(v => ({ ...v, [k]: e.target.value }));
   const valid = isValidExpense(f);

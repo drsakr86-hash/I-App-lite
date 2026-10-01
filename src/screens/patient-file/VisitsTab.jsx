@@ -1,12 +1,12 @@
 import React from 'react';
 import { Btn } from '../../components/common.jsx';
-
-const L = () => globalThis.IAppLegacy;
+import { C } from '../../modules/theme/index.js';
+import { Tag } from '../../modules/ui/atoms.jsx';
+import InjectionsSection from '../../components/InjectionsSection.jsx';
 
 // Patient file — "visits" tab. Presentational port of the legacy PatientFile JSX;
 // all state and handlers come from the legacy function through ctx.
 export default function VisitsTab({ ctx }) {
-  const { C, InjectionsSection, Tag } = L();
   const { patient, setDelTarget, setModal, totalSpent, visits } = ctx;
   return (
     <div>

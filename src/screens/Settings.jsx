@@ -7,18 +7,18 @@ import {
 } from '../modules/settings/model.js';
 import { Modal, Confirm, Btn } from '../components/common.jsx';
 import { DoctorForm, PriceForm, UserForm } from '../components/forms/index.js';
-
-const L = () => globalThis.IAppLegacy;
+import { C } from '../modules/theme/index.js';
+import { Field, inp } from '../modules/ui/atoms.jsx';
+import { logAudit, saveAutoBackup } from '../modules/sync/index.js';
+import { getSB } from '../modules/data-access/index.js';
+import { localISO, newId, emailKey, ROLE_LABEL, MIN_PW_LEN, GUARD_KEY } from '../modules/constants/index.js';
+import DataTools from '../components/DataTools.jsx';
+import { getUsers } from '../modules/auth/staff-login.js';
 
 export default function Settings({
   patients, appointments, prescriptions, exams, visits, doctors, setDoctors, prices, setPrices,
   clinic, setClinic, onReset, users, setUsers, session, onLogout
 }) {
-  const {
-    C, Field, inp, logAudit, getSB, localISO,
-    DataTools, getUsers, newId, emailKey,
-    ROLE_LABEL, MIN_PW_LEN, GUARD_KEY, saveAutoBackup
-  } = L();
 
   const [confirm, setConfirm] = useState(false);
   const [modal, setModal] = useState(null);

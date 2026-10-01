@@ -1,3 +1,15 @@
+// FROZEN TEST FIXTURE -- not part of the app, never built or served.
+//
+// This is a byte-for-byte snapshot of public/legacy/app-runtime.js as it
+// stood right before the final migration batch deleted that file (React
+// became the only runtime; see claude/react-migration-roadmap.md). Dozens of
+// unit tests across this project pin a ported module's behavior/strings
+// against "what legacy actually did" by reading this file (see
+// tests/forms-legacy-source.js). Deleting the live legacy file removed the
+// app's dependency on it, but not the tests' reason for comparing against
+// it, so this copy is kept here on purpose. Do not import it from src/, and
+// do not "clean it up" -- it is a historical record, not dead code.
+
 
 const {
   useState,

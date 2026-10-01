@@ -1,11 +1,9 @@
 import React from 'react';
-
-const L = () => globalThis.IAppLegacy;
+import { C } from '../../modules/theme/index.js';
 
 // Patient file — "rx" tab. Presentational port of the legacy PatientFile JSX;
 // all state and handlers come from the legacy function through ctx.
 export default function RxTab({ ctx }) {
-  const { C } = L();
   const { onDeleteRx, rxList, setModal } = ctx;
   return (
     <div>

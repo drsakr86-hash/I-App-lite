@@ -5,11 +5,13 @@ import {
   filterVisibleTests, filterPatientResults, buildRequestedTests, buildExamRecord
 } from '../modules/radiology/model.js';
 import { Btn } from '../components/common.jsx';
-
-const L = () => globalThis.IAppLegacy;
+import { C } from '../modules/theme/index.js';
+import { Field, inp } from '../modules/ui/atoms.jsx';
+import { sbGet } from '../modules/sync/wiring.js';
+import { localISO } from '../modules/constants/misc.js';
+import { getRadiologyHTML, printDoc } from '../modules/print/index.js';
 
 export default function Radiology({ patients, customTests, setCustomTests, setExams, primary, clinic }) {
-  const { C, Field, inp, sbGet, localISO, getRadiologyHTML, printDoc } = L();
   const CAT_COLORS = {
     'شبكية': C.accent,
     'جلوكوما': C.teal,
