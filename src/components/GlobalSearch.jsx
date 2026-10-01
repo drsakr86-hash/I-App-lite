@@ -3,7 +3,7 @@
 // component instead of a legacy function. Its only dependency (C) was
 // already moved in an earlier batch, so this moves as a self-contained
 // component; the filtering itself lives in global-search-model.js.
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { C } from '../modules/theme/index.js';
 import { globalSearchResults } from './global-search-model.js';
 

@@ -3,6 +3,7 @@
 // of a legacy function. Every dependency it needs (C, useSyncStatus,
 // dirtyKeys, syncKeyLabel, flushAll, ThemeToggle) was already moved in
 // earlier batches, so this one moves as a self-contained component.
+import React from 'react';
 import { C } from '../modules/theme/index.js';
 import { useSyncStatus, dirtyKeys, syncKeyLabel, flushAll } from '../modules/sync/index.js';
 import { ThemeToggle } from './common.jsx';

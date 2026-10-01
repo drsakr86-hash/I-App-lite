@@ -4,7 +4,7 @@
 // sbGet, waOpen, waFollowUpText, localISO, and the pure overdueFollowUps/
 // dueInjections helpers) was already moved in earlier batches, so this moves
 // as a self-contained component.
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { C } from '../modules/theme/index.js';
 import { sbGet } from '../modules/sync/index.js';
 import { localISO } from '../modules/constants/misc.js';

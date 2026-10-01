@@ -3,7 +3,7 @@
 // component instead of a legacy function. Every dependency it needs was
 // already moved in earlier batches; the merge/restore/trash orchestration
 // itself lives in src/modules/datatools/datatools-core.js.
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { C } from '../modules/theme/index.js';
 import { sbGet } from '../modules/sync/index.js';
 import { BACKUP_KEY, TRASH_KEY, AUDIT_KEY, TRASH_DAYS } from '../modules/sync/engine.js';

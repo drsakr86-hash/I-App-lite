@@ -3,6 +3,7 @@
 // instead of a legacy function. Its only dependencies (C, XRAY_ICON) were
 // already moved in earlier batches, so this one moves as a self-contained
 // component.
+import React from 'react';
 import { C } from '../modules/theme/index.js';
 import { XRAY_ICON } from '../modules/ui/atoms.jsx';
 import { navItemsForRole } from './bottomnav-model.js';
