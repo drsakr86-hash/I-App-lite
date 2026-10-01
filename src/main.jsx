@@ -68,6 +68,7 @@ import { getSB, iappRpc } from './modules/data-access/index.js';
 import { Btn, Modal, Confirm, Toast, ThemeToggle } from './components/common.jsx';
 import MedicinesStep from './components/forms/MedicinesStep.jsx';
 import { waOpen, waReminderText, waFollowUpText } from './modules/notifications/index.js';
+import { callChannel, broadcastCall } from './modules/realtime/index.js';
 
 // Migration bridge: keep the proven production runtime intact while the
 // build system and service layer move to Vite. The legacy runtime reaches the
@@ -230,6 +231,10 @@ globalThis.IAppModules.forms = { MedicinesStep };
 // other not-yet-moved legacy state (normPhone is duplicated, see the
 // module), so they move as a self-contained trio.
 globalThis.IAppModules.notifications = { waOpen, waReminderText, waFollowUpText };
+// Phase 8, batch 17 -- callChannel/broadcastCall (the real-time patient-call
+// broadcast channel WaitingRoom's call/recall buttons use): self-contained
+// aside from getSB (already moved in batch 4), so it moves on its own.
+globalThis.IAppModules.realtime = { callChannel, broadcastCall };
 
 const legacyScript = document.createElement('script');
 legacyScript.src = import.meta.env.BASE_URL + 'legacy/app-runtime.js?v=' + __BUILD_ID__;

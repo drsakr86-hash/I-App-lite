@@ -15609,50 +15609,10 @@ function CollectModal({
     }
   }, "💰 حفظ التحصيل")));
 }
-let _callCh = null,
-  _callReady = null;
-function callChannel() {
-  const sb = getSB();
-  if (!sb) return null;
-  if (!_callCh) {
-    _callCh = sb.channel("iapp_queue_calls", {
-      config: {
-        broadcast: {
-          self: false
-        }
-      }
-    });
-    _callReady = new Promise(res => {
-      try {
-        _callCh.subscribe(st => {
-          if (st === "SUBSCRIBED") res(true);
-        });
-      } catch (e) {
-        res(false);
-      }
-    });
-  }
-  return _callCh;
-}
-async function broadcastCall(a, repeat) {
-  const ch = callChannel();
-  if (!ch) return;
-  await Promise.race([_callReady, new Promise(r => setTimeout(r, 2500))]);
-  try {
-    await ch.send({
-      type: "broadcast",
-      event: "call",
-      payload: {
-        id: a.id,
-        calledAt: a.calledAt || "",
-        repeat: repeat || "",
-        patient: a.patient || "",
-        clinic: a.clinic || "",
-        doctor: a.doctor || ""
-      }
-    });
-  } catch (e) {}
-}
+// Phase 8, batch 17: callChannel/broadcastCall (the real-time patient-call
+// broadcast channel) moved to src/modules/realtime/call-channel.js --
+// delegate below instead of redefining them.
+const { callChannel, broadcastCall } = window.IAppModules.realtime;
 // Bridge for screens migrated to src/screens (theme object is shared by reference).
 globalThis.IAppLegacy = Object.assign(globalThis.IAppLegacy || {}, {
   C, clinicLabel, inp, broadcastCall, callChannel,
