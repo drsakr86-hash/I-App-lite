@@ -20,6 +20,7 @@ import {
   isDirty, dirtyKeys, refreshPending, ensureAuthed, tq,
   AUDIT_KEY, TRASH_KEY, BACKUP_KEY, AUDIT_MAX, TRASH_MAX, TRASH_DAYS, BACKUP_KEEP, BACKUP_KEYS,
   sbGetStore, sbSetStore,
+  ROW_TABLES, rowList, rowUpsert, rowDelete, rowMutate,
   setRawIO, flushKey, isFlushing, flushAll, queueLocal, queueSave,
   sbGet, sbSet, sbMutateLocal, sbMutate, setTableMutate
 } from './modules/sync/index.js';
@@ -108,15 +109,17 @@ globalThis.IAppModules.sync = {
   // Phase 8, batch 10 — sbGet/sbSet/sbMutateLocal/sbMutate (the layer other
   // code actually calls to read/write/mutate a synced key), and the audit/
   // trash/backup key config (AUDIT_KEY/TRASH_KEY/BACKUP_KEY/.../BACKUP_KEYS)
-  // sbGet and sbMutateLocal need. This is NOT the per-table "Core" read/
-  // write for appointments/visits/exams/... -- sbMutate dispatches to it via
-  // setTableMutate() (registered in app-runtime.js, same pattern as
-  // setRawIO), and it stays in app-runtime.js for now; see the roadmap for
-  // why this was split into its own batch. logAudit/trashPut/saveAutoBackup
-  // (which use these keys to build actual entries) also stay in
-  // app-runtime.js -- a later batch.
+  // sbGet and sbMutateLocal need. logAudit/trashPut/saveAutoBackup (which use
+  // these keys to build actual entries) stay in app-runtime.js -- a later
+  // batch.
   AUDIT_KEY, TRASH_KEY, BACKUP_KEY, AUDIT_MAX, TRASH_MAX, TRASH_DAYS, BACKUP_KEEP, BACKUP_KEYS,
-  sbGet, sbSet, sbMutateLocal, sbMutate, setTableMutate
+  sbGet, sbSet, sbMutateLocal, sbMutate, setTableMutate,
+  // Phase 8, batch 12 — the generic "Core" dispatch for every per-table sync
+  // target other than appointments (which moved in batch 11): iapp_visits,
+  // iapp_expenses, iapp_recurring_expenses. setTableMutate's registered
+  // dispatcher and _sbGetRaw/_sbSetRaw (still in app-runtime.js) route to
+  // these exactly as before -- only where the functions live has changed.
+  ROW_TABLES, rowList, rowUpsert, rowDelete, rowMutate
 };
 globalThis.IAppModules.print = {
   getDailyReportHTML, getPatientFileHTML, getRxHTML, getGlassesHTML,

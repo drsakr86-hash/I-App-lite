@@ -9,6 +9,7 @@ export {
   AUDIT_KEY, TRASH_KEY, BACKUP_KEY, AUDIT_MAX, TRASH_MAX, TRASH_DAYS, BACKUP_KEEP, BACKUP_KEYS
 } from './engine.js';
 export { sbGetStore, sbSetStore } from './store-io.js';
+export { ROW_TABLES, rowList, rowUpsert, rowDelete, rowMutate } from './row-tables.js';
 export {
   setRawIO, flushKey, isFlushing, flushAll, queueLocal, queueSave,
   sbGet, sbSet, sbMutateLocal, sbMutate, setTableMutate
