@@ -903,112 +903,21 @@ async function ensureKiosk() {
     return false;
   }
 }
-const APT_KEY = "iapp_appointments";
-const APT_TABLE = "iapp_appointments";
-const APT_HISTORY_DAYS = 365;
 // Phase 76-80: all mapping and payload builders live in src/modules/* (unit-tested)
 // and reach the runtime through the Vite bridge (window.IAppModules).
-const _apt = () => window.IAppModules.appointments;
-const aptFromRow = r => _apt().fromRow(r);
-const aptToRow = a => _apt().toRow(a);
 const rxCoreParams = (rx, visitId, today) => window.IAppModules.prescriptions.paramsFromLegacy(rx, { visitId, today });
 const imagingRequestOrderParams = o => window.IAppModules.investigations.imagingRequestParams(o);
 const imagingSingleOrderParams = o => window.IAppModules.investigations.singleImagingOrderParams(o);
 const imagingStudyRpcParams = o => window.IAppModules.imaging.studyParams(o);
-async function aptList() {
-  try {
-    const sb = getSB();
-    if (!sb) return undefined;
-    const from = new Date();
-    from.setDate(from.getDate() - APT_HISTORY_DAYS);
-    if (offlineNow()) return undefined;
-    const {
-      data,
-      error
-    } = await tq(sb.from(APT_TABLE).select("*").gte("date", localISO(from)).order("date", {
-      ascending: true
-    }));
-    if (error) {
-      console.warn("aptList", error.message);
-      return undefined;
-    }
-    const list = (data || []).map(aptFromRow);
-    if (!isDirty(APT_KEY)) LS.set(APT_KEY, JSON.stringify(list));
-    return list;
-  } catch (e) {
-    console.warn("aptList", e);
-    return undefined;
-  }
-}
-async function aptUpsert(a) {
-  const sb = getSB();
-  if (!sb) return false;
-  const {
-    error
-  } = await tq(sb.from(APT_TABLE).upsert(aptToRow(a), {
-    onConflict: "id"
-  }));
-  if (error) console.warn("aptUpsert", error.message);
-  return !error;
-}
-async function aptDelete(id) {
-  const sb = getSB();
-  if (!sb) return false;
-  const {
-    error
-  } = await tq(sb.from(APT_TABLE).delete().eq("id", Number(id)));
-  if (error) console.warn("aptDelete", error.message);
-  return !error;
-}
-async function aptMutate(mutator, verify) {
-  const base = await aptList();
-  if (base === undefined) return {
-    ok: false,
-    error: "offline"
-  };
-  const next = mutator(base);
-  if (next && !Array.isArray(next) && next.abort) return {
-    ok: false,
-    error: next.abort,
-    data: base
-  };
-  const { changed, removed } = _apt().diff(base, next);
-  let ok = true;
-  for (const a of changed) {
-    if (!(await aptUpsert(a))) ok = false;
-  }
-  for (const a of removed) {
-    if (!(await aptDelete(a.id))) ok = false;
-  }
-  if (!ok) return {
-    ok: false,
-    error: "offline",
-    data: base
-  };
-  try {
-    localStorage.setItem(APT_KEY, JSON.stringify(next));
-  } catch {}
-  if (verify) {
-    const check = await aptList();
-    if (Array.isArray(check) && verify(check)) return {
-      ok: true,
-      data: check
-    };
-    return {
-      ok: false,
-      error: "conflict",
-      data: check || next
-    };
-  }
-  return {
-    ok: true,
-    data: next
-  };
-}
-async function aptSetAll(list) {
-  const res = await aptMutate(() => list);
-  return res.ok;
-}
+// Phase 8, batch 11: the appointments "Core" sync functions (APT_KEY/
+// APT_TABLE/APT_HISTORY_DAYS and aptList/aptUpsert/aptDelete/aptMutate/
+// aptSetAll -- the actual Supabase reads/writes for the iapp_appointments
+// table) moved to src/modules/appointments/core.js -- delegate below instead
+// of redefining them.
+const {
+  APT_KEY, APT_TABLE, APT_HISTORY_DAYS,
+  aptList, aptUpsert, aptDelete, aptMutate, aptSetAll
+} = window.IAppModules.appointments;
 const ROW_TABLES = {
   iapp_visits: {
     table: "iapp_visits",

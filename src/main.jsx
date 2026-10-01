@@ -27,7 +27,11 @@ import {
   getDailyReportHTML, getPatientFileHTML, getRxHTML, getGlassesHTML,
   getRadiologyHTML, getAccountingReportHTML
 } from './modules/print/index.js';
-import { appointmentFromRow, appointmentToRow, diffAppointments, finishQueueEntries } from './modules/appointments/index.js';
+import {
+  appointmentFromRow, appointmentToRow, diffAppointments, finishQueueEntries,
+  APT_KEY, APT_TABLE, APT_HISTORY_DAYS,
+  aptList, aptUpsert, aptDelete, aptMutate, aptSetAll
+} from './modules/appointments/index.js';
 import { can, ROLES } from './app/permissions.js';
 import {
   STAFF_ROLES, SESSION_TTL_REMEMBER, SESSION_TTL_TEMP, publicUser, buildCompactSession,
@@ -118,7 +122,16 @@ globalThis.IAppModules.print = {
   getDailyReportHTML, getPatientFileHTML, getRxHTML, getGlassesHTML,
   getRadiologyHTML, getAccountingReportHTML
 };
-globalThis.IAppModules.appointments = { fromRow: appointmentFromRow, toRow: appointmentToRow, diff: diffAppointments, finishQueue: finishQueueEntries };
+globalThis.IAppModules.appointments = {
+  fromRow: appointmentFromRow, toRow: appointmentToRow, diff: diffAppointments, finishQueue: finishQueueEntries,
+  // Phase 8, batch 11 — the appointments "Core" sync functions (the actual
+  // Supabase reads/writes and the mutate/diff loop for the iapp_appointments
+  // table). app-runtime.js delegates to these instead of redefining them; see
+  // the roadmap for how sbMutate's setTableMutate hook and _sbGetRaw/
+  // _sbSetRaw reach them.
+  APT_KEY, APT_TABLE, APT_HISTORY_DAYS,
+  aptList, aptUpsert, aptDelete, aptMutate, aptSetAll
+};
 globalThis.IAppModules.auth = {
   can,
   ROLES,
