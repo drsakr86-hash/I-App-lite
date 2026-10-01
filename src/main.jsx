@@ -67,6 +67,7 @@ import { SC, inp, Field, SecHead, Tag, XRAY_ICON } from './modules/ui/atoms.jsx'
 import { getSB, iappRpc } from './modules/data-access/index.js';
 import { Btn, Modal, Confirm, Toast, ThemeToggle } from './components/common.jsx';
 import MedicinesStep from './components/forms/MedicinesStep.jsx';
+import { waOpen, waReminderText, waFollowUpText } from './modules/notifications/index.js';
 
 // Migration bridge: keep the proven production runtime intact while the
 // build system and service layer move to Vite. The legacy runtime reaches the
@@ -224,6 +225,11 @@ globalThis.IAppModules.common = { Btn, Modal, Confirm, Toast, ThemeToggle };
 // used directly by the new RxForm.jsx and reached by the legacy runtime's
 // own RxForm through this bridge instead of a second local definition.
 globalThis.IAppModules.forms = { MedicinesStep };
+// Phase 8, batch 16 — WhatsApp reminder helpers (waOpen/waReminderText/
+// waFollowUpText): pure URL-building + window.open, no dependency on any
+// other not-yet-moved legacy state (normPhone is duplicated, see the
+// module), so they move as a self-contained trio.
+globalThis.IAppModules.notifications = { waOpen, waReminderText, waFollowUpText };
 
 const legacyScript = document.createElement('script');
 legacyScript.src = import.meta.env.BASE_URL + 'legacy/app-runtime.js?v=' + __BUILD_ID__;

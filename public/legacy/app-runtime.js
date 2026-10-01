@@ -1288,32 +1288,12 @@ function LoginScreen({
 // getPatientFileHTMLRaw), wrapped with safeTemplate there and exposed via
 // the bridge — same output, no behavior change.
 const { getDailyReportHTML, getPatientFileHTML } = window.IAppModules.print;
-const WA_COUNTRY = "20";
-function waNumber(phone) {
-  let d = normPhone(phone);
-  if (!d) return "";
-  if (d.startsWith("00")) d = d.slice(2);
-  if (d.startsWith("0")) d = d.slice(1);
-  if (!d.startsWith(WA_COUNTRY)) d = WA_COUNTRY + d;
-  return d;
-}
-function waOpen(phone, text) {
-  const n = waNumber(phone);
-  if (!n) {
-    alert("لا يوجد رقم هاتف صحيح لهذا المريض");
-    return false;
-  }
-  window.open("https://wa.me/" + n + "?text=" + encodeURIComponent(text), "_blank");
-  return true;
-}
-const firstName = n => String(n || "").trim().split(/\s+/)[0] || "";
-const CLINIC_BRAND = "عيادة د. عبدالستار صقر";
-function waReminderText(a) {
-  return "أهلاً " + firstName(a.patient) + " 🌿\n" + "تذكير بموعدك في " + CLINIC_BRAND + "\n" + "📅 " + (a.date || "") + "   ⏰ " + (a.time || "") + "\n" + "📍 " + clinicLabel(a.clinic) + "\n\n" + "برجاء الرد بالتأكيد، أو التواصل معنا لتعديل الموعد.";
-}
-function waFollowUpText(name, when, reason) {
-  return "أهلاً " + firstName(name) + " 🌿\n" + (reason || "موعد المتابعة الخاص بك") + " كان محدداً بتاريخ " + (when || "") + "\n" + "برجاء التواصل معنا لتحديد موعد جديد في " + CLINIC_BRAND + ".";
-}
+// Phase 8, batch 16: WA_COUNTRY/waNumber/waOpen/firstName/CLINIC_BRAND/
+// waReminderText/waFollowUpText (the WhatsApp reminder helpers) moved to
+// src/modules/notifications/whatsapp.js -- delegate below instead of
+// redefining them. normPhone stays here (used all over the file well
+// outside this batch's scope); the moved module keeps its own exact copy.
+const { waOpen, waReminderText, waFollowUpText } = window.IAppModules.notifications;
 // Phase 8, batch 15: RX_TPL_KEY/loadRxTemplates/refreshRxTemplates/
 // addRxTemplate/deleteRxTemplate (the saved-Rx-templates helpers used only
 // by MedicinesStep) moved to src/modules/prescriptions/rx-templates.js,
