@@ -13,6 +13,7 @@ export default function TreatmentTab({ ctx }) {
       {exams.filter(e => e.treatmentPlan).map(ex => (
         <div
           key={ex.id}
+          data-rec={String(ex.id)}
           style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 14, marginBottom: 12 }}
         >
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>

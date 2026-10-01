@@ -19,6 +19,7 @@ export default function VisitsTab({ ctx }) {
       {visits.map(v => (
         <div
           key={v.id}
+          data-rec={String(v.id)}
           style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 14, marginBottom: 12 }}
         >
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
@@ -61,6 +62,9 @@ export default function VisitsTab({ ctx }) {
             </div>
             <div style={{ display: "flex", gap: 6 }}>
               <div
+                role="button"
+                tabIndex={0}
+                onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.currentTarget.click(); } }}
                 onClick={() => setModal({
                   editVisit: v
                 })}
@@ -76,6 +80,9 @@ export default function VisitsTab({ ctx }) {
                 ✏
               </div>
               <div
+                role="button"
+                tabIndex={0}
+                onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.currentTarget.click(); } }}
                 onClick={() => setDelTarget({
                   type: "visit",
                   id: v.id

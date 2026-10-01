@@ -1,0 +1,68 @@
+// Render smoke test: mounts the real PatientFile screen (all tabs) with the real
+// hook, a mocked Supabase client, and synthetic data that includes the shapes that
+// used to crash it (Core prescription with a medicines ARRAY, undated records).
+// Run with:  npm run test:smoke   (bundles with esbuild, then runs under node)
+import React from 'react';
+import TestRenderer, { act } from 'react-test-renderer';
+
+const store = new Map();
+globalThis.localStorage = { getItem: k => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, String(v)), removeItem: k => store.delete(k), get length() { return store.size; }, key: i => [...store.keys()][i] ?? null };
+globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+const b = () => { const x = { select: () => x, eq: () => x, order: () => x, upsert: () => x, delete: () => x, abortSignal: () => x, retry: () => x, maybeSingle: () => x, then: (r, j) => Promise.resolve({ data: null, error: null }).then(r, j) }; return x; };
+const file = {
+  found: true, patient_code: 'T-1',
+  visits: [{ id: 'cv1', visit_date: '2026-01-02', visit_type: 'clinic' }, { id: 'cv2' }],
+  examinations: [{ id: 'cx1', examination_date: '2026-01-02', diagnosis_summary: 'DME', treatment_plan: 'Anti-VEGF', followup_date: '2026-02-01', visit_id: 'cv1' }],
+  prescriptions: [{ id: 'cr1', prescription_date: '2026-01-03', medicines: [{ name: 'Drop A', dose: '3x' }] }],
+  investigation_orders: [{ id: 3, ordered_at: '2026-01-04T08:00:00Z', test_name: 'OCT' }],
+  imaging_orders: [{ id: 4, investigation_order_id: 3 }],
+  imaging_studies: [{ id: 9, cloudinary_public_id: 'p1', cloudinary_url: 'https://example.invalid/p1.jpg', study_type: 'OCT' }],
+  diagnoses: [{ id: 1, visit_id: 'cvX', diagnosis: 'Cataract' }], followups: [{ id: 1, followup_date: '2026-05-05', reason: 'IOP' }]
+};
+globalThis.__IAppSupabaseClient = {
+  rpc: async name => (name === 'iapp_get_patient_360_timeline' ? { data: file, error: null } : { data: null, error: { message: 'x' } }),
+  from: () => b(), channel: () => { const c = { on: () => c, subscribe: () => c }; return c; }, removeChannel() {}
+};
+const { rpcSafe } = await import('../../src/services/rpc.js');
+globalThis.window = globalThis.window || { __iappSyncInit: true };
+globalThis.window.IAppModules = { rpc: { safe: rpcSafe }, auth: { ensureSession: async () => ({ ok: true }) } };
+globalThis.IAppModules = globalThis.window.IAppModules;
+
+const { default: PatientFileContainer } = await import('../../src/screens/PatientFileContainer.jsx');
+const { default: PatientFile } = await import('../../src/screens/PatientFile.jsx');
+const { usePatientFile } = await import('../../src/modules/patient-file/use-patient-file.js');
+
+const patient = { id: 1, name: 'مريض تجريبي', patientCode: 'T-1', age: 40, gender: 'ذكر', phone: '010', status: 'نشط' };
+const props = {
+  patient, allExams: [{ id: 5, patientId: 1, date: '2026-02-02', diagnosis: 'local', doctor: 'د. ت' }, { id: 6, patientId: 1 }],
+  allRx: [{ id: 7, patientId: 1, date: '2026-02-03', medicines: 'نص', notes: 'n' }], allVisits: [{ id: 8, patientId: 1 }],
+  onClose() {}, onUpdatePatient() {}, onSaveExam: async () => ({}), onDelExam() {}, onSaveVisit: async () => ({}), onDelVisit() {},
+  onSaveRx: async () => ({}), onSaveRadiologyRequest: async () => {}, doctorNames: ['د. ت'], primaryDoctor: { name: 'د. ت' }, prices: [], clinic: {}, customTests: []
+};
+let ctxRef;
+const Wrapper = () => { ctxRef = usePatientFile(props); return <PatientFile ctx={ctxRef} />; };
+let renderer;
+await act(async () => { renderer = TestRenderer.create(<Wrapper />); });
+await act(async () => { await new Promise(r => setTimeout(r, 30)); });
+const text = () => JSON.stringify(renderer.toJSON());
+let failures = 0;
+for (const id of ['info', 'timeline', 'visits', 'exams', 'requests', 'treatment', 'rx', 'images', 'compare']) {
+  try {
+    await act(async () => { ctxRef.setTab(id); });
+    const t = text();
+    if (!t || t.length < 100) throw new Error('empty render');
+    console.log('ok   tab', id, t.length);
+  } catch (e) { failures++; console.error('FAIL tab', id, e.message); }
+}
+await act(async () => { ctxRef.setTab('rx'); });
+if (!text().includes('Drop A')) { failures++; console.error('FAIL Core medicines array not rendered as text'); } else console.log('ok   core medicines array rendered');
+await act(async () => { ctxRef.setTab('timeline'); });
+const tl = text();
+if (!tl.includes('Cataract') || !tl.includes('IOP')) { failures++; console.error('FAIL Core diagnosis/follow-up missing from timeline'); } else console.log('ok   core diagnosis + follow-up on timeline');
+for (const m of ['addExam', 'addVisit', 'addRx', 'editPatient']) {
+  try { await act(async () => { ctxRef.setModal(m); }); if (text().length < 200) throw new Error('empty'); await act(async () => { ctxRef.setModal(null); }); console.log('ok   modal', m); } catch (e) { failures++; console.error('FAIL modal', m, e.message); }
+}
+renderer.unmount();
+if (failures) { console.error(failures, 'smoke failure(s)'); process.exit(1); }
+console.log('smoke: all passed');
+process.exit(0);

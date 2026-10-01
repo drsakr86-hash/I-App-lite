@@ -5,7 +5,7 @@ import { Field, XRAY_ICON, inp } from '../../modules/ui/atoms.jsx';
 // Patient file — "images" tab. Presentational port of the legacy PatientFile JSX;
 // all state and handlers come from the legacy function through ctx.
 export default function ImagesTab({ ctx }) {
-  const { aiAnalysis, analyzeImage, delImage, handleImgUpload, imageEye, imageFilter, imageType, images, imgError, imgLoading, setAiAnalysis, setImageEye, setImageFilter, setImageType, setImgError, setViewImg, updateImgNotes, uploadProgress } = ctx;
+  const { aiAnalysis, analyzeImage, delImage, handleImgUpload, imageEye, imageFilter, imageOrderId, imageType, images, imagingOrders, editImgNotesLocal, setImageOrderId, imgError, imgLoading, setAiAnalysis, setImageEye, setImageFilter, setImageType, setImgError, setViewImg, updateImgNotes, uploadProgress } = ctx;
   return (
     <div>
       <div
@@ -25,6 +25,14 @@ export default function ImagesTab({ ctx }) {
             </select>
           </Field>
         </div>
+        <Field label="ربط بطلب فحص (اختياري)">
+          <select style={inp()} value={imageOrderId} onChange={e => setImageOrderId(e.target.value)}>
+            <option value="">— بدون ربط —</option>
+            {(imagingOrders || []).map(o => (
+              <option key={o.id} value={o.id}>{o.date} · {(o.tests || []).map(t => t.name).join(" + ") || o.id}</option>
+            ))}
+          </select>
+        </Field>
         <div style={{ display: "flex", gap: 6, overflowX: "auto", marginTop: 6 }}>
           {["الكل", "OCT", "OCTA", "Fundus Photography", "FFA", "Optos UWF", "Visual Field", "Pentacam", "B-Scan", "UBM", "Other"].map(x => (
             <button
@@ -132,6 +140,7 @@ export default function ImagesTab({ ctx }) {
         {images.filter(img => imageFilter === "الكل" || img.type === imageFilter).map(img => (
           <div
             key={img.id}
+            data-rec={String(img.id)}
             style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, overflow: "hidden" }}
           >
             {img.src ? (
@@ -192,9 +201,10 @@ export default function ImagesTab({ ctx }) {
               >
                 {img.name}
               </div>
+              {img.orderId && (<div style={{ color: C.muted, fontSize: 10, marginBottom: 6 }}>{"🔗 مرتبطة بالطلب "}{img.orderId}</div>)}
               <textarea
                 value={img.notes || ""}
-                onChange={e => updateImgNotes(img.id, e.target.value)}
+                onChange={e => editImgNotesLocal(img.id, e.target.value)}
                 onBlur={e => updateImgNotes(img.id, e.target.value)}
                 placeholder="ملاحظات (نوع الفحص، النتيجة...)"
                 rows={2}

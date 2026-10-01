@@ -29,6 +29,7 @@ export default function PatientsContainer({
     }
     return (
       <PatientFileContainer
+        key={p.id}
         patient={p}
         allExams={exams}
         allRx={prescriptions}

@@ -11,6 +11,7 @@ import TreatmentTab from './patient-file/TreatmentTab.jsx';
 import RxTab from './patient-file/RxTab.jsx';
 import ImagesTab from './patient-file/ImagesTab.jsx';
 import ImageViewer from './patient-file/ImageViewer.jsx';
+import StatusBar from './patient-file/StatusBar.jsx';
 import { Modal, Confirm } from '../components/common.jsx';
 import { PatientEditForm, RxForm, VisitForm, ExamForm } from '../components/forms/index.js';
 import { PrintModal } from '../components/modals/index.js';
@@ -25,6 +26,12 @@ import { getPatientFileHTML, printDoc } from '../modules/print/index.js';
 // and handlers in `ctx`. Child forms (VisitForm, ExamForm, RxForm,
 // PatientEditForm) come from src/components/forms and PrintModal from
 // src/components/modals.
+// Marks the open form as edited (input/change events bubble from every field), so
+// closing the sheet by the backdrop, the x or Cancel asks before discarding.
+function Dirty({ onDirty, children }) {
+  return <div onInputCapture={onDirty} onChangeCapture={onDirty}>{children}</div>;
+}
+
 export default function PatientFile({ ctx }) {
   const {
     TABS, tab, setTab, modal, setModal, delTarget, setDelTarget, viewImg, curPatient, visits, patientRecords, rxList,
@@ -100,36 +107,43 @@ export default function PatientFile({ ctx }) {
           </div>
           <div style={{ display: "flex", gap: 6, marginTop: 4, alignItems: "center" }}>
             <Tag label={curPatient.status} color={SC[curPatient.status] || C.muted}/>
-            <span
+            <button
+              type="button"
               onClick={() => setModal("editPatient")}
               style={{
                 color: C.accent,
                 fontSize: 11,
                 cursor: "pointer",
                 background: C.accent + "22",
+                border: "none",
                 borderRadius: 8,
                 padding: "2px 8px"
               }}
             >
               ✏ تعديل الملف
-            </span>
-            <span
+            </button>
+            <button
+              type="button"
               onClick={() => printDoc(getPatientFileHTML(curPatient, visits, patientRecords, rxList, primaryDoctor, clinic))}
               style={{
                 color: C.purple,
                 fontSize: 11,
                 cursor: "pointer",
                 background: C.purple + "22",
+                border: "none",
                 borderRadius: 8,
                 padding: "2px 8px"
               }}
             >
               🖨️ طباعة
-            </span>
+            </button>
           </div>
         </div>
       </div>
+      <StatusBar ctx={ctx} />
       <div
+        role="tablist"
+        aria-label="أقسام ملف المريض"
         style={{
           display: "flex",
           margin: "0 16px 14px",
@@ -140,10 +154,15 @@ export default function PatientFile({ ctx }) {
         }}
       >
         {TABS.map(t => (
-          <div
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === t.id}
             key={t.id}
             onClick={() => setTab(t.id)}
             style={{
+              border: "none",
+              font: "inherit",
               flex: "0 0 auto",
               textAlign: "center",
               padding: "8px 10px",
@@ -170,10 +189,10 @@ export default function PatientFile({ ctx }) {
               ) : t.icon}
             </div>
             {t.label}
-          </div>
+          </button>
         ))}
       </div>
-      <div style={{ padding: "0 16px 100px" }}>
+      <div style={{ padding: "0 16px 100px" }} role="tabpanel">
         {tab === "info" && <InfoSummary ctx={ctx} />}
         {tab === "timeline" && <TimelineTab ctx={ctx} />}
         {tab === "info" && <InfoDetails ctx={ctx} />}
@@ -187,22 +206,22 @@ export default function PatientFile({ ctx }) {
       </div>
       {viewImg && <ImageViewer ctx={ctx} />}
       {modal === "editPatient" && (
-        <Modal title="تعديل الملف الطبي" onClose={() => setModal(null)}>
+        <Modal title="تعديل الملف الطبي" onClose={() => setModal(null)}><Dirty onDirty={ctx.markModalDirty}>
           <PatientEditForm patient={curPatient} onSave={handlePatientSave} onClose={() => setModal(null)}/>
-        </Modal>
+        </Dirty></Modal>
       )}
       {modal === "addRx" && (
-        <Modal title="وصفة جديدة" onClose={() => setModal(null)}>
+        <Modal title="وصفة جديدة" onClose={() => setModal(null)}><Dirty onDirty={ctx.markModalDirty}>
           <RxForm
             patients={[curPatient]}
             doctorNames={doctorNames}
             onSave={onAddRxSave}
             onClose={() => setModal(null)}
           />
-        </Modal>
+        </Dirty></Modal>
       )}
       {modal && modal.editRx && (
-        <Modal title="تعديل الوصفة" onClose={() => setModal(null)}>
+        <Modal title="تعديل الوصفة" onClose={() => setModal(null)}><Dirty onDirty={ctx.markModalDirty}>
           <RxForm
             patients={[curPatient]}
             doctorNames={doctorNames}
@@ -210,10 +229,10 @@ export default function PatientFile({ ctx }) {
             onSave={onEditRxSave}
             onClose={() => setModal(null)}
           />
-        </Modal>
+        </Dirty></Modal>
       )}
       {modal === "addVisit" && (
-        <Modal title="زيارة جديدة" onClose={() => setModal(null)}>
+        <Modal title="زيارة جديدة" onClose={() => setModal(null)}><Dirty onDirty={ctx.markModalDirty}>
           <VisitForm
             doctorNames={doctorNames}
             prices={prices}
@@ -224,10 +243,10 @@ export default function PatientFile({ ctx }) {
             }}
             onClose={() => setModal(null)}
           />
-        </Modal>
+        </Dirty></Modal>
       )}
       {modal && modal.editVisit && (
-        <Modal title="تعديل الزيارة" onClose={() => setModal(null)}>
+        <Modal title="تعديل الزيارة" onClose={() => setModal(null)}><Dirty onDirty={ctx.markModalDirty}>
           <VisitForm
             doctorNames={doctorNames}
             prices={prices}
@@ -239,10 +258,10 @@ export default function PatientFile({ ctx }) {
             }}
             onClose={() => setModal(null)}
           />
-        </Modal>
+        </Dirty></Modal>
       )}
       {modal === "addExam" && (
-        <Modal title="فحص جديد" onClose={() => setModal(null)}>
+        <Modal title="فحص جديد" onClose={() => setModal(null)}><Dirty onDirty={ctx.markModalDirty}>
           <ExamForm
             doctorNames={doctorNames}
             patientId={curPatient.id}
@@ -252,10 +271,10 @@ export default function PatientFile({ ctx }) {
             }}
             onClose={() => setModal(null)}
           />
-        </Modal>
+        </Dirty></Modal>
       )}
       {modal && modal.editExam && (
-        <Modal title="تعديل الفحص" onClose={() => setModal(null)}>
+        <Modal title="تعديل الفحص" onClose={() => setModal(null)}><Dirty onDirty={ctx.markModalDirty}>
           <ExamForm
             doctorNames={doctorNames}
             initial={modal.editExam}
@@ -266,7 +285,7 @@ export default function PatientFile({ ctx }) {
             }}
             onClose={() => setModal(null)}
           />
-        </Modal>
+        </Dirty></Modal>
       )}
       {modal && modal.printRx && (
         <PrintModal

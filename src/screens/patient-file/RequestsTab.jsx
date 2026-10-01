@@ -8,7 +8,7 @@ import { getRadiologyHTML, printDoc } from '../../modules/print/index.js';
 // Patient file — "requests" tab. Presentational port of the legacy PatientFile JSX;
 // all state and handlers come from the legacy function through ctx.
 export default function RequestsTab({ ctx }) {
-  const { allRequestTests, clinic, curPatient, cycleRequestEye, imagingOrders, primaryDoctor, requestEye, requestNotes, requestSaved, requestTests, requests, savePatientRadiologyRequest, setRequestEye, setRequestNotes, toggleRequestTest } = ctx;
+  const { allRequestTests, clinic, curPatient, cycleRequestEye, imagingOrders, primaryDoctor, requestEye, requestNotes, requestResult, requestSaving, requestTests, requests, resyncRequest, savePatientRadiologyRequest, setRequestEye, setRequestNotes, toggleRequestTest } = ctx;
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
@@ -39,7 +39,9 @@ export default function RequestsTab({ ctx }) {
           <span style={{ color: C.muted, fontSize: 11 }}>العين الافتراضية</span>
           {[["OU", "كلتا العينين"], ["OD", "اليمنى"], ["OS", "اليسرى"]].map(([v, l]) => (
             <button
+              type="button"
               key={v}
+              aria-pressed={requestEye === v}
               onClick={() => setRequestEye(v)}
               style={{
                 background: requestEye === v ? C.accent + "22" : "transparent",
@@ -62,6 +64,10 @@ export default function RequestsTab({ ctx }) {
             return (
               <div
                 key={t.id}
+                role="checkbox"
+                aria-checked={on}
+                tabIndex={0}
+                onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleRequestTest(t.id); } }}
                 onClick={() => toggleRequestTest(t.id)}
                 style={{
                   background: on ? C.accent + "12" : C.bg,
@@ -127,7 +133,7 @@ export default function RequestsTab({ ctx }) {
           style={{ ...inp(), resize: "none", marginTop: 12, fontSize: 11 }}
         />
         <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-          <Btn full onClick={savePatientRadiologyRequest}>🧪 Save Investigation Order</Btn>
+          <Btn full onClick={requestSaving ? () => {} : savePatientRadiologyRequest}>{requestSaving ? "⏳ جاري الحفظ..." : "🧪 Save Investigation Order"}</Btn>
           <Btn
             outline
             onClick={() => {
@@ -138,22 +144,28 @@ export default function RequestsTab({ ctx }) {
             🖨️ طباعة
           </Btn>
         </div>
-        {requestSaved && (
-          <div
-            style={{
-              marginTop: 9,
-              background: C.success + "11",
-              border: `1px solid ${C.success}33`,
-              borderRadius: 9,
-              padding: 8,
-              color: C.success,
-              fontSize: 11,
-              fontWeight: 700
-            }}
-          >
-            ✓ Investigation Order saved and linked to patient file
-          </div>
-        )}
+        {requestResult && (() => {
+          const ok = requestResult.status === "saved";
+          const bad = requestResult.status === "failed";
+          const color = ok ? C.success : bad ? C.danger : C.gold;
+          return (
+            <div
+              role={bad ? "alert" : "status"}
+              style={{
+                marginTop: 9,
+                background: color + "11",
+                border: `1px solid ${color}33`,
+                borderRadius: 9,
+                padding: 8,
+                color,
+                fontSize: 11,
+                fontWeight: 700
+              }}
+            >
+              {ok ? "✓ " : bad ? "✕ " : "⚠ "}{requestResult.message}
+            </div>
+          );
+        })()}
       </div>
       {requests.length > 0 && (
         <div>
@@ -161,6 +173,7 @@ export default function RequestsTab({ ctx }) {
           {requests.slice().sort((a, b) => String(b.date || "").localeCompare(String(a.date || ""))).map(r => (
             <div
               key={r.id}
+              data-rec={String(r.id)}
               style={{ background: C.card, border: `1px solid ${C.gold}33`, borderRadius: 12, padding: 11, marginBottom: 8 }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
@@ -188,7 +201,16 @@ export default function RequestsTab({ ctx }) {
               </div>
               {r.notes && (<div style={{ color: C.muted, fontSize: 10, marginTop: 5 }}>{"📝 "}{r.notes}</div>)}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
-                <span style={{ color: C.teal, fontSize: 10 }}>✓ محفوظ في الملف</span>
+                {r.coreSyncError ? (
+                  <span style={{ color: C.gold, fontSize: 10 }}>
+                    {"⚠ محفوظ هنا فقط — لم يُزامن مع السجل المركزي "}
+                    <button type="button" onClick={() => resyncRequest(r)} style={{ background: C.gold + "22", border: "none", borderRadius: 6, color: C.gold, fontSize: 10, padding: "2px 7px", cursor: "pointer" }}>إعادة المزامنة</button>
+                  </span>
+                ) : (
+                  <span style={{ color: C.teal, fontSize: 10 }}>
+                    {r._sources && r._sources.includes("core") ? "✓ مسجل في السجل المركزي" : "✓ محفوظ في الملف"}
+                  </span>
+                )}
                 <button
                   onClick={() => printDoc(getRadiologyHTML(Object.fromEntries((r.requestedTests || []).map(t => [t.id, t.eye || "OU"])), curPatient, r.notes, primaryDoctor, allRequestTests, clinic))}
                   style={{

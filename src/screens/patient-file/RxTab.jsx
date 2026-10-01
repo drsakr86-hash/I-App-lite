@@ -1,5 +1,6 @@
 import React from 'react';
 import { C } from '../../modules/theme/index.js';
+import { medicinesToText } from '../../modules/patient-file/normalize.js';
 
 // Patient file — "rx" tab. Presentational port of the legacy PatientFile JSX;
 // all state and handlers come from the legacy function through ctx.
@@ -10,6 +11,9 @@ export default function RxTab({ ctx }) {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
         <div style={{ color: C.text, fontWeight: 700, fontSize: 14 }}>الوصفات ({rxList.length})</div>
         <div
+          role="button"
+          tabIndex={0}
+          onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.currentTarget.click(); } }}
           onClick={() => setModal("addRx")}
           style={{
             background: `linear-gradient(135deg,${C.accent},${C.teal})`,
@@ -28,12 +32,16 @@ export default function RxTab({ ctx }) {
       {rxList.map(rx => (
         <div
           key={rx.id}
+          data-rec={String(rx.id)}
           style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 14, marginBottom: 12 }}
         >
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
             <div style={{ color: C.accent, fontWeight: 700, fontSize: 13 }}>{rx.date}{" · "}{rx.eye}</div>
             <div style={{ display: "flex", gap: 6 }}>
               <div
+                role="button"
+                tabIndex={0}
+                onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.currentTarget.click(); } }}
                 onClick={() => setModal({
                   editRx: rx
                 })}
@@ -50,6 +58,9 @@ export default function RxTab({ ctx }) {
                 ✏ تعديل
               </div>
               <div
+                role="button"
+                tabIndex={0}
+                onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.currentTarget.click(); } }}
                 onClick={() => onDeleteRx(rx)}
                 style={{
                   background: C.danger + "22",
@@ -85,16 +96,19 @@ export default function RxTab({ ctx }) {
               )}
             </div>
           )}
-          {rx.medicines && (
+          {medicinesToText(rx.medicines).trim() && (
             <div
               style={{ background: C.gold + "11", border: `1px solid ${C.gold}33`, borderRadius: 10, padding: 10, marginBottom: 8 }}
             >
               <div style={{ color: C.gold, fontSize: 11, fontWeight: 700, marginBottom: 3 }}>💊 الأدوية</div>
-              <div style={{ color: C.text, fontSize: 12, whiteSpace: "pre-line" }}>{rx.medicines}</div>
+              <div style={{ color: C.text, fontSize: 12, whiteSpace: "pre-line" }}>{medicinesToText(rx.medicines)}</div>
             </div>
           )}
           {rx.notes && (<div style={{ color: C.muted, fontSize: 11, marginBottom: 8, fontStyle: "italic" }}>{rx.notes}</div>)}
           <div
+            role="button"
+            tabIndex={0}
+            onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.currentTarget.click(); } }}
             onClick={() => setModal({
               printRx: rx
             })}

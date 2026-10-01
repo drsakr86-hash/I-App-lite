@@ -16,15 +16,19 @@ export default function ExamsTab({ ctx }) {
       {exams.map(ex => (
         <div
           key={ex.id}
+          data-rec={String(ex.id)}
           style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 14, marginBottom: 12 }}
         >
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
             <div>
               <div style={{ color: C.accent, fontWeight: 700, fontSize: 13 }}>{ex.date}</div>
-              <div style={{ color: C.muted, fontSize: 11 }}>{ex.doctor}</div>
+              <div style={{ color: C.muted, fontSize: 11 }}>{ex.doctor}{ex._sources && !ex._sources.includes("legacy") ? " · سجل مركزي" : ""}</div>
             </div>
             <div style={{ display: "flex", gap: 6 }}>
               <div
+                role="button"
+                tabIndex={0}
+                onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.currentTarget.click(); } }}
                 onClick={() => setModal({
                   editExam: ex
                 })}
@@ -40,6 +44,9 @@ export default function ExamsTab({ ctx }) {
                 ✏
               </div>
               <div
+                role="button"
+                tabIndex={0}
+                onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.currentTarget.click(); } }}
                 onClick={() => setDelTarget({
                   type: "exam",
                   id: ex.id

@@ -1,20 +1,41 @@
-// Live data layer behind the patient-file screen (src/screens/PatientFile.jsx
-// is purely presentational and only reads the `ctx` object this hook
-// builds). Exact port of the legacy runtime's PatientFile() orchestrator
-// (public/legacy/app-runtime.js) -- every useState/effect/handler it ran on
-// every render, not just its dead post-gate fallback JSX.
-import { useState, useEffect } from 'react';
+// Live data layer behind the patient-file screen (src/screens/PatientFile.jsx is
+// presentational and only reads the `ctx` object this hook builds).
+//
+// Data flow (see docs/PATIENT360.md):
+//   legacy stores (props)  ┐
+//   Core 360 payload       ├─> normalizePatientFile() ─> exams/requests/visits/rx/images
+//   image metadata store   ┘                         └─> buildPatientTimeline()
+//
+// Rules this hook enforces:
+//   * every async load is guarded by an `active` flag, so a response that arrives
+//     after the patient changed (or the file closed) is discarded;
+//   * the component is mounted with key={patient.id} (PatientsContainer), so no
+//     state can leak from one patient to the next;
+//   * every save runs through a per-operation lock (double click = one write);
+//   * a success message is shown only when every required step succeeded; partial
+//     and local-only outcomes are reported as such.
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { C } from '../theme/index.js';
 import { getSB, iappRpc } from '../data-access/index.js';
-import { offlineNow, busOn, isDirty, LS } from '../sync/engine.js';
-import { sbGet, sbSet, queueSave } from '../sync/wiring.js';
+import { offlineNow, busOn, isDirty, LS, useSyncStatus } from '../sync/engine.js';
+import { sbGet, queueSave, sbMutate } from '../sync/wiring.js';
 import { trashPut, logAudit } from '../sync/index.js';
-import { localISO, localDateStr, localTimeStr } from '../constants/misc.js';
+import { localDateStr, localTimeStr, localISO } from '../constants/misc.js';
 import { DEFAULT_TESTS } from '../constants/exams.js';
 import { createClinicalVisitCore } from '../visits/core.js';
 import { imagingRequestParams } from '../investigations/investigation.mapper.js';
 import { getPatient360 } from '../patients/index.js';
 import { EYE_CYCLE } from '../radiology/model.js';
+import { normalizePatientFile, buildPatientTimeline, filterPatientTimeline, coreFileMatchesPatient } from './normalize.js';
+import { submitInvestigationRequest, resyncInvestigationRequest } from './request-workflow.js';
+
+const CLD_CLOUD = 'daihhusnc';
+const CLD_PRESET = 'iapp_clinic';
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+const DIRTY_MODAL_MSG = 'لديك تغييرات غير محفوظة. هل تريد تجاهلها وإغلاق النافذة؟';
+
+const isCoreOnly = rec => !!rec && Array.isArray(rec._sources) && rec._sources.length > 0 && !rec._sources.includes('legacy');
+const errMsg = e => (e && (e.message || e.hint)) || String(e || 'خطأ غير معروف');
 
 export function usePatientFile({
   patient, allExams, allRx, allVisits, onClose, onUpdatePatient,
@@ -24,79 +45,162 @@ export function usePatientFile({
   const [tab, setTab] = useState('info');
   const [timelineSearch, setTimelineSearch] = useState('');
   const [timelineFilter, setTimelineFilter] = useState('All');
-  const [modal, setModal] = useState(null);
-  const [delTarget, setDelTarget] = useState(null);
-  // Phase 18: declare Core Patient 360 state before any derived values use it.
-  const [coreFile, setCoreFile] = useState(null);
-  const [coreLoaded, setCoreLoaded] = useState(false);
-  const [coreSource, setCoreSource] = useState('none');
-  const [coreRequests, setCoreRequests] = useState([]);
-  const [coreImages, setCoreImages] = useState([]);
-  // Phase 18 fix: requestSaved must be declared before the Core-sync useEffect
-  // below, which lists it in its dependency array.
-  const [requestSaved, setRequestSaved] = useState(false);
+  const [modal, setModalRaw] = useState(null);
+  const [delTarget, setDelTargetRaw] = useState(null);
+  const [saveStatus, setSaveStatus] = useState(null); // { kind, message, at }
+  const [focusRec, setFocusRec] = useState(null);
 
-  const coreExams = (coreFile?.examinations || []).map(e => ({
-    id: e.legacy_id && /^\d+$/.test(String(e.legacy_id)) ? Number(e.legacy_id) : e.id,
-    patientId: patient.id,
-    date: e.examination_date || String(e.created_at || '').slice(0, 10),
-    doctor: e.doctor_name || '',
-    visualAcuityR: e.visual_acuity_od || '',
-    visualAcuityL: e.visual_acuity_os || '',
-    iopR: e.iop_od || '',
-    iopL: e.iop_os || '',
-    anteriorSegment: e.anterior_segment || '',
-    posteriorSegment: e.posterior_segment || '',
-    colorVision: e.color_vision || '',
-    contrast: e.contrast || '',
-    coverTest: e.cover_test || '',
-    diagnosis: e.diagnosis_summary || '',
-    treatmentPlan: e.treatment_plan || '',
-    followUp: e.followup_date || '',
-    notes: e.notes || '',
-    _core: true
-  }));
-  const coreVisits = (coreFile?.visits || []).map(v => ({
-    id: v.id, patientId: patient.id, date: v.visit_date || String(v.created_at || '').slice(0, 10),
-    type: v.visit_type || 'visit', doctor: v.doctor_name || '', complaint: v.chief_complaint || '',
-    result: v.clinical_summary || '', notes: v.notes || '', cost: v.cost || 0, paid: !!v.paid, nextVisit: v.next_visit || '',
-    _core: true, _coreId: v.id
-  }));
-  const coreRx = (coreFile?.prescriptions || []).map(r => ({
-    id: r.legacy_id && /^\d+$/.test(String(r.legacy_id)) ? Number(r.legacy_id) : r.id,
-    patientId: patient.id, date: r.prescription_date || r.date || '', eye: r.eye || 'OU', sphR: r.sph_od || r.sphR || '', sphL: r.sph_os || r.sphL || '',
-    cylR: r.cyl_od || r.cylR || '', cylL: r.cyl_os || r.cylL || '', axisR: r.axis_od || r.axisR || '', axisL: r.axis_os || r.axisL || '',
-    add: r.add_power || r.add || '', medicines: r.medicines || [], notes: r.notes || '', patient: patient.name, _core: true
-  }));
-  const mergeCore = (legacy, core, keyFn) => {
-    const out = Array.isArray(legacy) ? [...legacy] : [];
-    const seen = new Set(out.map(keyFn));
-    core.forEach(item => { const k = keyFn(item); if (!seen.has(k)) { out.push(item); seen.add(k); } });
-    return out;
-  };
-  const patientRecords = mergeCore(allExams.filter(e => e.patientId === patient.id), coreExams, e => String(e.id));
-  const requests = [
-    ...patientRecords.filter(e => e.status === 'requested' || (e.requestedTests && e.requestedTests.length)),
-    ...coreRequests.filter(r => !patientRecords.some(e => e.imagingOrderId && e.imagingOrderId === r.imagingOrderId))
-  ];
-  const exams = patientRecords.filter(e => !(e.status === 'requested' || (e.requestedTests && e.requestedTests.length)));
-  const rxList = mergeCore(allRx.filter(r => r.patientId === patient.id), coreRx, r => String(r.id));
-  const visits = mergeCore(allVisits.filter(v => v.patientId === patient.id), coreVisits, v => String(v._coreId || v.id))
-    .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
-  // Phase 29: the backend contract exposes normalized arrays rather than a
-  // separate journey field. Keep the merged arrays as the compatibility layer.
-  const coreJourneyCount = (coreFile?.visits?.length || 0) + (coreFile?.examinations?.length || 0) +
-    (coreFile?.diagnoses?.length || 0) + (coreFile?.treatments?.length || 0) +
-    (coreFile?.prescriptions?.length || 0) + (coreFile?.investigation_orders?.length || 0) +
-    (coreFile?.imaging_studies?.length || 0) + (coreFile?.followups?.length || 0);
-  const coreJourneyEvents = Array.isArray(coreFile?.journey) ? coreFile.journey.map(e => {
-    const typeMap = { visit: 'زيارة', examination: 'فحص', diagnosis: 'تشخيص', treatment: 'علاج', prescription: 'وصفة', investigation: 'طلب أشعة', imaging: 'صورة', followup: 'متابعة' };
-    const iconMap = { visit: '🩺', examination: '🔍', diagnosis: '🧬', treatment: '💊', prescription: '📋', investigation: '🩻', imaging: '🖼️', followup: '📅' };
-    const colorMap = { visit: C.teal, examination: C.accent, diagnosis: C.gold, treatment: C.gold, prescription: C.gold, investigation: C.gold, imaging: C.purple, followup: C.teal };
-    const t = e?.event_type || 'visit';
-    return { date: e?.event_date || '', time: e?.event_time || '', type: typeMap[t] || t, title: e?.title || typeMap[t] || 'Clinical Event', detail: e?.detail || '', doctor: e?.doctor || '', icon: iconMap[t] || '🩺', color: colorMap[t] || C.teal };
-  }) : [];
-  const totalSpent = visits.reduce((s, v) => s + (v.paid ? Number(v.cost || 0) : 0), 0);
+  const activeRef = useRef(true);
+  useEffect(() => { activeRef.current = true; return () => { activeRef.current = false; }; }, []);
+  const locks = useRef(new Set());
+  const modalDirty = useRef(false);
+
+  const report = useCallback((kind, message) => {
+    if (activeRef.current) setSaveStatus({ kind, message, at: Date.now() });
+  }, []);
+  const dismissStatus = useCallback(() => setSaveStatus(null), []);
+
+  // Per-operation lock: a second call with the same key while the first is
+  // running is ignored (double click / double Enter).
+  const exclusive = useCallback(async (key, fn) => {
+    if (locks.current.has(key)) return undefined;
+    locks.current.add(key);
+    try { return await fn(); } finally { locks.current.delete(key); }
+  }, []);
+
+  // ---- modal handling with unsaved-changes protection ------------------------
+  const setModal = useCallback(next => {
+    if (next === null) {
+      if (modalDirty.current && !window.confirm(DIRTY_MODAL_MSG)) return;
+      modalDirty.current = false;
+    } else {
+      modalDirty.current = false;
+    }
+    setModalRaw(next);
+  }, []);
+  const closeModalClean = useCallback(() => { modalDirty.current = false; setModalRaw(null); }, []);
+  const markModalDirty = useCallback(() => { modalDirty.current = true; }, []);
+
+  // ---- Core Patient 360 load ---------------------------------------------------
+  const [coreFile, setCoreFile] = useState(null);
+  const [coreSource, setCoreSource] = useState('none');
+  const [coreStatus, setCoreStatus] = useState({ state: 'idle', error: null, loadedAt: null });
+  const [refreshTick, setRefreshTick] = useState(0);
+  const refreshAll = useCallback(() => setRefreshTick(n => n + 1), []);
+
+  useEffect(() => {
+    let active = true;
+    const code = patient && patient.patientCode;
+    const sb = getSB();
+    if (!sb || !code) { setCoreStatus({ state: 'unavailable', error: null, loadedAt: null }); return undefined; }
+    if (offlineNow()) { setCoreStatus(s => ({ ...s, state: 'offline' })); return undefined; }
+    setCoreStatus(s => ({ ...s, state: 'loading', error: null }));
+    getPatient360(sb, code).then(data => {
+      if (!active) return;
+      const raw = data && typeof data === 'object' ? data : null;
+      const file = raw ? { ...raw, ...(raw.patient || {}) } : null;
+      if (!file || !coreFileMatchesPatient(file, patient)) {
+        setCoreStatus({ state: 'error', error: 'بيانات السجل المركزي لا تخص هذا المريض وتم تجاهلها', loadedAt: null });
+        return;
+      }
+      setCoreFile(file);
+      setCoreSource(file._source || '360');
+      setCoreStatus({ state: 'ready', error: null, loadedAt: file._loadedAt || new Date().toISOString() });
+    }).catch(e => {
+      if (!active) return;
+      console.warn('Core Patient 360 unavailable; using legacy Patient File:', errMsg(e));
+      setCoreStatus(s => ({ state: 'error', error: errMsg(e), loadedAt: s.loadedAt }));
+    });
+    return () => { active = false; };
+  }, [patient.id, patient.patientCode, refreshTick]);
+
+  // ---- image metadata (iapp_imgmeta_<patientId>) ----------------------------------
+  const metaKey = 'iapp_imgmeta_' + patient.id;
+  const [metaImages, setMetaImages] = useState(() => {
+    try { const c = LS.get('iapp_imgmeta_' + patient.id); const p = c ? JSON.parse(c) : []; return Array.isArray(p) ? p : []; } catch { return []; }
+  });
+  const [viewImg, setViewImg] = useState(null);
+  const [imgLoading, setImgLoading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(null);
+  const [imgError, setImgError] = useState(null);
+  const [aiAnalysis, setAiAnalysis] = useState({});
+  const [imageType, setImageType] = useState('OCT');
+  const [imageEye, setImageEye] = useState('OU');
+  const [imageOrderId, setImageOrderId] = useState('');
+  const [imageFilter, setImageFilter] = useState('الكل');
+
+  useEffect(() => {
+    let active = true;
+    let channel;
+    const offBus = busOn(metaKey, v => { if (active && Array.isArray(v)) setMetaImages(v); });
+    (async () => {
+      setImgLoading(true);
+      try {
+        const remote = await sbGet(metaKey);
+        if (!active) return;
+        if (Array.isArray(remote)) {
+          setMetaImages(remote);
+          if (!isDirty(metaKey)) LS.set(metaKey, JSON.stringify(remote));
+        }
+      } catch (e) {
+        if (active) setImgError('تعذر تحميل بيانات الصور من السيرفر. يتم عرض آخر نسخة محفوظة على هذا الجهاز.');
+        console.warn('img meta load:', e);
+      }
+      if (active) setImgLoading(false);
+    })();
+    try {
+      const sb = getSB();
+      if (sb) channel = sb.channel('iapp_imgmeta_' + patient.id).on('postgres_changes', {
+        event: '*', schema: 'public', table: 'iapp_store', filter: `key=eq.${metaKey}`
+      }, payload => {
+        const next = payload && payload.new && payload.new.value;
+        if (active && Array.isArray(next) && !isDirty(metaKey)) {
+          setMetaImages(next);
+          LS.set(metaKey, JSON.stringify(next));
+        }
+      }).subscribe();
+    } catch (e) {
+      console.warn('image realtime unavailable', e);
+    }
+    return () => {
+      active = false;
+      offBus();
+      if (channel) { try { getSB().removeChannel(channel); } catch (e) { console.warn('removeChannel', e); } }
+    };
+  }, [metaKey, patient.id]);
+
+  // ---- imaging orders (iapp_imaging_orders) -------------------------------------------
+  const [imagingOrders, setImagingOrders] = useState([]);
+  const [ordersError, setOrdersError] = useState(null);
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const o = await sbGet('iapp_imaging_orders');
+        if (!active) return;
+        setImagingOrders(Array.isArray(o) ? o.filter(x => x && x.patientId === patient.id) : []);
+        setOrdersError(Array.isArray(o) || o === null ? null : 'تعذر قراءة حالة الطلبات');
+      } catch (e) {
+        if (active) setOrdersError('تعذر قراءة حالة الطلبات: ' + errMsg(e));
+      }
+    })();
+    return () => { active = false; };
+  }, [patient.id, refreshTick]);
+
+  // ---- normalised, de-duplicated view of the whole chart ---------------------------------
+  const norm = useMemo(() => normalizePatientFile({
+    patient, coreFile,
+    legacy: { exams: allExams, rx: allRx, visits: allVisits },
+    metaImages, today: localDateStr()
+  }), [patient, coreFile, allExams, allRx, allVisits, metaImages]);
+  const { exams, requests, patientRecords, rxList, visits, images } = norm;
+
+  const timelineEvents = useMemo(() => buildPatientTimeline({ ...norm, coreFile, patient }, C), [norm, coreFile, patient]);
+  const filteredTimeline = useMemo(() => filterPatientTimeline(timelineEvents, timelineFilter, timelineSearch), [timelineEvents, timelineFilter, timelineSearch]);
+  const coreJourneyCount = ['visits', 'examinations', 'diagnoses', 'treatments', 'prescriptions', 'investigation_orders', 'imaging_studies', 'followups']
+    .reduce((s, k) => s + (Array.isArray(coreFile && coreFile[k]) ? coreFile[k].length : 0), 0);
+  const totalSpent = useMemo(() => visits.reduce((s, v) => s + (v.paid ? Number(v.cost || 0) : 0), 0), [visits]);
+
   const TABS = [
     { id: 'info', label: 'Overview', icon: '👤' },
     { id: 'timeline', label: 'Timeline', icon: '🕘' },
@@ -109,372 +213,309 @@ export function usePatientFile({
     { id: 'compare', label: 'Comparison', icon: '📊' }
   ];
 
+  // Timeline -> source record navigation.
+  const openSource = useCallback(ev => {
+    if (!ev || !ev.source) return;
+    setTab(ev.source.tab);
+    setFocusRec({ tab: ev.source.tab, id: ev.source.id, at: Date.now() });
+  }, []);
+  useEffect(() => {
+    if (!focusRec) return undefined;
+    const t = setTimeout(() => {
+      try {
+        const el = document.querySelector(`[data-rec="${CSS.escape(String(focusRec.id))}"]`);
+        if (el) {
+          el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+          const prev = el.style.outline;
+          el.style.outline = `2px solid ${C.accent}`;
+          setTimeout(() => { el.style.outline = prev; }, 2200);
+        }
+      } catch (e) { /* DOM not available (tests) */ }
+    }, 60);
+    return () => clearTimeout(t);
+  }, [focusRec, tab]);
+
+  // ---- patient header record ----------------------------------------------------------------
   const [curPatient, setCurPatient] = useState(patient);
-  // Keep the open file in sync when the patient record changes elsewhere (sync, other screens).
-  useEffect(() => {
-    setCurPatient(prev => (prev === patient || JSON.stringify(prev) === JSON.stringify(patient) ? prev : patient));
-  }, [patient]);
+  useEffect(() => { setCurPatient(patient); }, [patient]);
 
-  // Phase 18: Core Patient 360 state is declared above before derived values.
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      const code = patient && patient.patientCode;
-      const sb = getSB();
-      if (!sb || !code) {
-        if (active) {
-          setCoreLoaded(false);
-          setCoreSource('none');
-        }
-        return;
-      }
-      try {
-        let data = null;
-        let source = 'none';
-        // Phase 53-56: Patient 360 comes from the extracted service (throws when unavailable).
-        data = await getPatient360(sb, code);
-        source = data._source || '360';
-        if (!active) return;
-        const rawFile = data && typeof data === 'object' ? data : null;
-        const file = rawFile ? { ...rawFile, ...(rawFile.patient || {}) } : null;
-        setCoreFile(file);
-        setCoreLoaded(!!file);
-        setCoreSource(source);
-        const orders = Array.isArray(file?.investigation_orders) ? file.investigation_orders : [];
-        const imagingOrders = Array.isArray(file?.imaging_orders) ? file.imaging_orders : [];
-        const imagingByInvestigation = new Map(imagingOrders.filter(x => x?.investigation_order_id != null).map(x => [String(x.investigation_order_id), x]));
-        setCoreRequests(orders.map(o => {
-          const io = imagingByInvestigation.get(String(o.id));
-          return {
-            id: 'core-order-' + o.id,
-            patientId: patient.id,
-            patient: file.full_name || patient.name,
-            patientCode: file.patient_code || patient.patientCode || '',
-            date: String(o.ordered_at || io?.order_date || '').slice(0, 10) || localDateStr(),
-            time: o.ordered_at ? new Date(o.ordered_at).toTimeString().slice(0, 5) : (io?.order_time || ''),
-            doctor: o.doctor_name || o.requested_by || io?.doctor_name || '',
-            testType: o.investigation_type || 'Investigation',
-            requestedTests: [{ id: o.id, name: o.test_name || o.investigation_type || 'Investigation', name_ar: o.test_name || o.investigation_type || 'Investigation', category: 'Core', eye: o.eye || 'OU' }],
-            notes: o.clinical_note || io?.notes || '',
-            status: o.status || io?.status || 'requested',
-            imagingOrderId: io?.id || null,
-            visitId: o.visit_id || io?.visit_id || null,
-            _core: true
-          };
-        }));
-        const studies = Array.isArray(file?.imaging_studies) ? file.imaging_studies : [];
-        const imgs = [];
-        studies.forEach(st => {
-          const files = Array.isArray(st.files) && st.files.length ? st.files : [{
-            id: st.cloudinary_public_id || st.legacy_id || ('core-study-' + st.id),
-            public_id: st.cloudinary_public_id || '',
-            src: st.cloudinary_url || '',
-            name: st.metadata?.name || st.type_name || st.study_type || 'Medical image',
-            date: st.performed_date || String(st.performed_at || '').slice(0, 10),
-            time: st.performed_time || '',
-            type: st.type_name || st.modality || st.study_type || 'Medical image',
-            eye: st.eye || 'OU',
-            notes: st.notes || st.report || '',
-            examId: null
-          }];
-          files.forEach(f => imgs.push({ ...f, id: f.id || f.public_id || ('core-study-' + st.id), public_id: f.public_id || st.cloudinary_public_id || '', src: f.src || st.cloudinary_url || '', _core: true }));
-        });
-        setCoreImages(imgs.filter(x => x.src));
-      } catch (e) {
-        if (active) {
-          setCoreLoaded(false);
-          setCoreFile(null);
-          setCoreRequests([]);
-          setCoreImages([]);
-        }
-        console.warn('Core Patient 360 unavailable; using legacy Patient File:', e?.message || e);
-      }
-    })();
-    return () => { active = false; };
-  }, [patient.id, patient.patientCode, requestSaved]);
-
-  const [viewImg, setViewImg] = useState(null);
-  const CLD_CLOUD = 'daihhusnc';
-  const CLD_PRESET = 'iapp_clinic';
-  const metaKey = 'iapp_imgmeta_' + patient.id;
-  const [images, setImages] = useState([]);
-  const [imgLoading, setImgLoading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(null);
-  const [imgError, setImgError] = useState(null);
-  const [aiAnalysis, setAiAnalysis] = useState({});
-  const [imageType, setImageType] = useState('OCT');
-  const [imageEye, setImageEye] = useState('OU');
-  const [imageFilter, setImageFilter] = useState('الكل');
-  const [requestTests, setRequestTests] = useState({});
-  const [requestNotes, setRequestNotes] = useState('');
-  const [requestEye, setRequestEye] = useState('OU');
-  const [imagingOrders, setImagingOrders] = useState([]);
-  const [imagingStudies, setImagingStudies] = useState([]);
-
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      try {
-        const o = await sbGet('iapp_imaging_orders');
-        if (active) setImagingOrders(Array.isArray(o) ? o.filter(x => x.patientId === patient.id) : []);
-      } catch {}
-      try {
-        const st = await sbGet('iapp_imaging_studies');
-        if (active) setImagingStudies(Array.isArray(st) ? st.filter(x => x.patientId === patient.id) : []);
-      } catch {}
-    })();
-    return () => { active = false; };
-  }, [patient.id, requestSaved]);
-
-  const analyzeImage = async img => {
-    if (!img?.src) return;
-    setAiAnalysis(prev => ({
-      ...prev,
-      [img.id]: {
-        loading: false,
-        result: null,
-        error: 'تحليل AI غير مفعّل في نسخة المتصفح الحالية. يجب ربطه عبر Backend / Supabase Edge Function بشكل آمن.'
-      }
-    }));
-  };
-
+  // ---- image upload / edit -------------------------------------------------------------------
   const persistMeta = async imgs => {
     const meta = imgs.map(i => ({
       id: i.id, public_id: i.public_id, name: i.name, date: i.date, time: i.time || '',
-      src: i.src, notes: i.notes || '', type: i.type || 'صورة طبية', eye: i.eye || 'OU', examId: i.examId || null
+      src: i.src, notes: i.notes || '', type: i.type || 'صورة طبية', eye: i.eye || 'OU',
+      examId: i.examId || null, orderId: i.orderId || null
     }));
-    await queueSave(metaKey, meta);
-    return meta;
+    const synced = await queueSave(metaKey, meta);
+    return { meta, synced: synced !== false };
   };
   const mergeImageMeta = async operation => {
     const remote = await sbGet(metaKey);
-    const base = Array.isArray(remote) ? remote : images;
+    const base = Array.isArray(remote) ? remote : metaImages;
     const next = operation(base);
-    await persistMeta(next);
-    setImages(next);
-    return next;
+    const { meta, synced } = await persistMeta(next);
+    if (activeRef.current) setMetaImages(meta);
+    return { next: meta, synced };
   };
 
-  useEffect(() => {
-    let channel;
-    const offBus = busOn(metaKey, setImages);
-    (async () => {
-      setImgLoading(true);
-      try {
-        const cached = localStorage.getItem(metaKey);
-        if (cached) setImages(JSON.parse(cached));
-      } catch {}
-      try {
-        const remote = await sbGet(metaKey);
-        if (Array.isArray(remote)) {
-          setImages(prev => {
-            const base = remote;
-            const keys = new Set(base.map(x => String(x.id || x.public_id || x.src || '')));
-            return [...base, ...coreImages.filter(x => !keys.has(String(x.id || x.public_id || x.src || '')))];
-          });
-          if (!isDirty(metaKey)) LS.set(metaKey, JSON.stringify(remote));
-        } else if (coreImages.length) {
-          setImages(coreImages);
-        }
-      } catch (e) {
-        console.warn('img meta load:', e);
-      }
-      setImgLoading(false);
-    })();
-    try {
-      const sb = getSB();
-      if (sb) channel = sb.channel('iapp_imgmeta_' + patient.id).on('postgres_changes', {
-        event: '*', schema: 'public', table: 'iapp_store', filter: `key=eq.${metaKey}`
-      }, payload => {
-        const next = payload?.new?.value;
-        if (Array.isArray(next) && !isDirty(metaKey)) {
-          setImages(next);
-          LS.set(metaKey, JSON.stringify(next));
-        }
-      }).subscribe();
-    } catch (e) {
-      console.warn('image realtime unavailable', e);
+  const analyzeImage = async img => {
+    if (!img || !img.src) return;
+    setAiAnalysis(prev => ({
+      ...prev,
+      [img.id]: { loading: false, result: null, error: 'تحليل AI غير مفعّل في نسخة المتصفح الحالية. يجب ربطه عبر Backend / Supabase Edge Function بشكل آمن.' }
+    }));
+  };
+
+  const uploadOneFile = async function (file) {
+    const setProg = v => { if (activeRef.current) setUploadProgress(v); };
+    if (file.size > MAX_IMAGE_BYTES) {
+      if (activeRef.current) setImgError(`الملف ${file.name} أكبر من 10 ميجابايت ولم يُرفع`);
+      return false;
     }
-    return () => {
-      offBus();
-      if (channel) {
-        try { getSB().removeChannel(channel); } catch {}
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [patient.id, coreImages]);
-
-  useEffect(() => {
-    if (!coreImages.length) return;
-    setImages(prev => {
-      const keys = new Set((prev || []).map(x => String(x.id || x.public_id || x.src || '')));
-      const extra = coreImages.filter(x => !keys.has(String(x.id || x.public_id || x.src || '')));
-      return extra.length ? [...(prev || []), ...extra] : prev;
-    });
-  }, [coreImages]);
-
-  const uploadOneFile = function (file) {
-    setUploadProgress({ name: file.name, pct: 10 });
-    const folder = 'iapp/patient_' + patient.id;
+    setProg({ name: file.name, pct: 10 });
     const formData = new FormData();
     formData.append('file', file);
     formData.append('upload_preset', CLD_PRESET);
-    formData.append('folder', folder);
-    return fetch('https://api.cloudinary.com/v1_1/' + CLD_CLOUD + '/image/upload', {
-      method: 'POST', body: formData
-    }).then(res => {
-      setUploadProgress({ name: file.name, pct: 80 });
-      return res.json().then(data => {
-        if (!res.ok) {
-          setImgError('فشل الرفع: ' + ((data && data.error && data.error.message) || res.status));
-          return;
-        }
-        const newImg = {
-          id: data.public_id, public_id: data.public_id, name: file.name, date: localISO(),
-          time: new Date().toTimeString().slice(0, 5), src: data.secure_url, notes: '',
-          type: imageType, eye: imageEye, examId: null
-        };
-        setUploadProgress({ name: file.name, pct: 100 });
-        return mergeImageMeta(base => [newImg, ...base.filter(x => x.id !== newImg.id)]);
-      });
-    }).catch(err => setImgError('خطأ في الرفع: ' + err.message));
+    formData.append('folder', 'iapp/patient_' + patient.id);
+    let data;
+    try {
+      const res = await fetch('https://api.cloudinary.com/v1_1/' + CLD_CLOUD + '/image/upload', { method: 'POST', body: formData });
+      setProg({ name: file.name, pct: 80 });
+      data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error((data && data.error && data.error.message) || res.status);
+    } catch (err) {
+      if (activeRef.current) setImgError(`فشل رفع ${file.name}: ${errMsg(err)}. لم تتم إضافة الصورة للملف.`);
+      return false;
+    }
+    const newImg = {
+      id: data.public_id, public_id: data.public_id, name: file.name, date: localISO(),
+      time: new Date().toTimeString().slice(0, 5), src: data.secure_url, notes: '',
+      type: imageType, eye: imageEye, examId: null, orderId: imageOrderId || null
+    };
+    setProg({ name: file.name, pct: 100 });
+    try {
+      const r = await mergeImageMeta(base => [newImg, ...base.filter(x => x.id !== newImg.id)]);
+      if (!r.synced && activeRef.current) setImgError(`تم رفع ${file.name} وحُفظت بياناته على هذا الجهاز وستُزامن عند توفر الاتصال.`);
+      return true;
+    } catch (err) {
+      // The file exists in Cloudinary but its record was not saved: say so, with the URL for recovery.
+      if (activeRef.current) setImgError(`رُفع ${file.name} لكن تعذر حفظ بياناته في الملف (${errMsg(err)}). الرابط: ${data.secure_url}`);
+      return false;
+    }
   };
 
   const handleImgUpload = function (e) {
-    const files = Array.from(e.target.files).filter(f => f.type.startsWith('image/'));
+    const files = Array.from(e.target.files || []).filter(f => f.type.startsWith('image/'));
     e.target.value = '';
     if (!files.length) return;
     setImgError(null);
-    let chain = Promise.resolve();
-    files.forEach(file => {
-      chain = chain.then(() => uploadOneFile(file));
+    exclusive('upload', async () => {
+      let ok = 0;
+      for (const f of files) { if (await uploadOneFile(f)) ok++; }
+      if (activeRef.current) {
+        setUploadProgress(null);
+        report(ok === files.length ? 'saved' : (ok ? 'partial' : 'failed'),
+          ok === files.length ? `تم رفع ${ok} صورة` : `تم رفع ${ok} من ${files.length} صورة`);
+      }
     });
-    chain.then(() => setUploadProgress(null));
   };
 
   const delImage = async id => {
-    await mergeImageMeta(base => base.filter(i => i.id !== id));
+    const img = images.find(i => i.id === id);
+    if (img && img._sources && img._sources.includes('core')) {
+      setImgError('هذه الصورة مسجلة في السجل المركزي (دراسة تصويرية) ولا يمكن حذفها من هنا.');
+      return;
+    }
+    await exclusive('delimg:' + id, async () => {
+      try { await mergeImageMeta(base => base.filter(i => i.id !== id)); } catch (e) { setImgError('تعذر حذف الصورة: ' + errMsg(e)); }
+    });
   };
+  const editImgNotesLocal = (id, notes) => setMetaImages(prev => {
+    const has = prev.some(i => i.id === id);
+    if (has) return prev.map(i => (i.id === id ? { ...i, notes } : i));
+    const core = images.find(i => i.id === id);
+    return core ? [{ ...core, notes }, ...prev] : prev;
+  });
   const updateImgNotes = async (id, notes) => {
-    await mergeImageMeta(base => base.map(i => (i.id === id ? { ...i, notes } : i)));
+    try {
+      await mergeImageMeta(base => {
+        if (base.some(i => i.id === id)) return base.map(i => (i.id === id ? { ...i, notes } : i));
+        const core = images.find(i => i.id === id);
+        return core ? [{ ...core, notes }, ...base] : base;
+      });
+    } catch (e) { setImgError('تعذر حفظ ملاحظات الصورة: ' + errMsg(e)); }
   };
+
+  // ---- investigation requests ------------------------------------------------------------------------
+  const [requestTests, setRequestTests] = useState({});
+  const [requestNotes, setRequestNotes] = useState('');
+  const [requestEye, setRequestEye] = useState('OU');
+  const [requestSaving, setRequestSaving] = useState(false);
+  const [requestResult, setRequestResult] = useState(null);
+  const draft = useRef(null); // { id, resume } — one id per draft; reused on retry
 
   const allRequestTests = [...DEFAULT_TESTS, ...(customTests || []).map(t => ({ ...t, cat: 'مخصص' }))];
   const toggleRequestTest = id => setRequestTests(v => (v[id]
     ? Object.fromEntries(Object.entries(v).filter(([k]) => k !== id))
     : { ...v, [id]: requestEye }));
-  // Fixed (previously a latent ReferenceError in the legacy runtime):
-  // EYE_CYCLE was only ever defined inside the unrelated, dead Radiology()
-  // function there, never at module scope, so clicking the eye-cycle control
-  // in this tab would throw. It's the same OU->OD->OS->OU cycle already used
-  // by the migrated radiology screen, so it's imported from there instead of
-  // redefining it -- same values, now actually reachable.
   const cycleRequestEye = id => setRequestTests(v => ({ ...v, [id]: EYE_CYCLE[v[id] || requestEye] || 'OU' }));
 
-  const savePatientRadiologyRequest = async () => {
+  const requestDeps = () => ({
+    client: getSB,
+    offline: offlineNow,
+    createVisit: createClinicalVisitCore,
+    call: (name, args) => iappRpc(getSB(), name, args),
+    visitParams: ({ patient: p, notes, doctorName }) => ({
+      p_patient_id: Number(p.id), p_appointment_id: null, p_doctor_name: doctorName || '', p_visit_date: localDateStr(),
+      p_visit_type: 'investigation', p_chief_complaint: '', p_clinical_summary: 'طلب فحوصات', p_notes: notes || '', p_status: 'completed'
+    }),
+    orderParams: ({ patient: p, visitId, tests, notes, doctorName, draftId }) => imagingRequestParams({
+      patientId: p.id, visitId, tests, requestNotes: notes, doctorName, sourceLegacyId: draftId
+    }),
+    saveLegacyRequest: async rec => { if (onSaveRadiologyRequest) await onSaveRadiologyRequest(rec); },
+    upsertOrder: order => sbMutate('iapp_imaging_orders', list => [order, ...list.filter(o => o.id !== order.id)]),
+    patchRequest: async (id, patch) => {
+      await sbMutate('iapp_exams', list => list.map(e => (String(e.id) === String(id) ? { ...e, ...patch } : e)));
+      await sbMutate('iapp_imaging_orders', list => list.map(o => (String(o.sourceExamId) === String(id) ? { ...o, ...patch } : o)));
+    },
+    today: localDateStr, clock: localTimeStr, nowIso: () => new Date().toISOString()
+  });
+
+  const savePatientRadiologyRequest = () => exclusive('request', async () => {
     const ids = Object.keys(requestTests);
-    if (!ids.length) {
-      alert('اختر فحصاً واحداً على الأقل');
-      return;
-    }
+    if (!ids.length) { setRequestResult({ status: 'invalid', message: 'اختر فحصاً واحداً على الأقل' }); return; }
     const tests = ids.map(id => {
       const t = allRequestTests.find(x => x.id === id);
       return t ? { id: t.id, name: t.name, name_ar: t.name_ar, category: t.cat, eye: requestTests[id] || 'OU' } : null;
     }).filter(Boolean);
-    const nowId = Date.now();
-    const rec = {
-      id: nowId, patientId: curPatient.id, patient: curPatient.name, date: localDateStr(), time: localTimeStr(),
-      doctor: (primaryDoctor && primaryDoctor.name) || '', testType: 'طلب فحوصات', requestedTests: tests,
-      notes: requestNotes || '', status: 'requested', imagingOrderId: 'ORD-' + nowId
-    };
-    let coreWorkflow = null;
-    let coreError = null;
-    let coreVisitId = null;
+    if (!draft.current) draft.current = { id: Date.now(), resume: null };
+    setRequestSaving(true);
+    setRequestResult(null);
     try {
-      const sb = getSB();
-      if (sb && !offlineNow()) {
-        const { data: visitId, error: visitError } = await createClinicalVisitCore(sb, {
-          p_patient_id: Number(curPatient.id),
-          p_appointment_id: null,
-          p_doctor_name: primaryDoctor?.name || '',
-          p_visit_date: localDateStr(),
-          p_visit_type: 'investigation',
-          p_chief_complaint: '',
-          p_clinical_summary: 'طلب فحوصات',
-          p_notes: requestNotes || '',
-          p_status: 'completed'
-        }, `investigation:${nowId}`);
-        if (visitError) throw visitError;
-        coreVisitId = visitId || null;
-        const { data, error } = await iappRpc(sb, 'iapp_create_investigation_workflow_order', imagingRequestParams({
-          patientId: curPatient.id, visitId: coreVisitId, tests, requestNotes, doctorName: primaryDoctor?.name, sourceLegacyId: nowId
-        }));
-        if (error) throw error;
-        coreWorkflow = data;
-        rec.coreInvestigationOrderId = data?.investigation_order_id || null;
-        rec.coreImagingOrderId = data?.imaging_order_id || null;
-        rec.coreVisitId = coreVisitId;
-      } else {
-        coreError = 'offline';
+      const result = await submitInvestigationRequest(requestDeps(), {
+        patient: curPatient, tests, notes: requestNotes, doctorName: (primaryDoctor && primaryDoctor.name) || '',
+        draftId: draft.current.id, resume: draft.current.resume
+      });
+      draft.current.resume = result.resume || draft.current.resume;
+      if (result.complete) {
+        draft.current = null;
+        if (activeRef.current) { setRequestTests({}); setRequestNotes(''); }
       }
+      if (activeRef.current) setRequestResult(result);
+      report(result.status === 'saved' ? 'saved' : (result.status === 'local-only' ? 'local-only' : result.status), result.message);
+      refreshAll();
     } catch (e) {
-      coreError = e?.message || String(e);
-      console.warn('[core investigation sync]', e);
+      const message = 'تعذر حفظ الطلب: ' + errMsg(e);
+      if (activeRef.current) setRequestResult({ status: 'failed', message });
+      report('failed', message);
+    } finally {
+      if (activeRef.current) setRequestSaving(false);
     }
-    if (onSaveRadiologyRequest) await onSaveRadiologyRequest(rec);
-    const order = {
-      id: 'ORD-' + nowId, patientId: curPatient.id, patient: curPatient.name, patientCode: curPatient.patientCode || '',
-      doctor: (primaryDoctor && primaryDoctor.name) || '', date: localDateStr(), time: localTimeStr(), tests,
-      notes: requestNotes || '', status: 'requested', sourceExamId: nowId, createdAt: new Date().toISOString(),
-      coreInvestigationOrderId: coreWorkflow?.investigation_order_id || null,
-      coreImagingOrderId: coreWorkflow?.imaging_order_id || null,
-      coreSyncError: coreError || null
-    };
-    const remoteOrders = await sbGet('iapp_imaging_orders');
-    await sbSet('iapp_imaging_orders', [order, ...(Array.isArray(remoteOrders) ? remoteOrders : [])]);
-    setRequestSaved(true);
-    setRequestTests({});
-    setRequestNotes('');
-    setTimeout(() => setRequestSaved(false), 3000);
-  };
+  });
 
+  const resyncRequest = rec => exclusive('resync:' + rec.id, async () => {
+    const result = await resyncInvestigationRequest(requestDeps(), rec, curPatient);
+    report(result.status === 'synced' ? 'saved' : 'failed', result.status === 'synced' ? 'تمت مزامنة الطلب مع السجل المركزي' : (result.message || 'تعذرت المزامنة'));
+    if (result.status === 'synced') refreshAll();
+  });
+
+  // ---- saves with honest status ---------------------------------------------------------------------------
+  const coreMessage = (what, r) => {
+    if (!r || typeof r !== 'object') return ['saved', `تم حفظ ${what}`];
+    if (r.status === 'partial') return ['partial', `حُفظ ${what}، لكن تعذرت مزامنة بعض بياناته مع السجل المركزي: ${r.coreError || ''}`];
+    if (r.coreError === 'offline') return ['local-only', `حُفظ ${what} على هذا الجهاز وسيُزامن عند عودة الاتصال`];
+    if (r.coreError) return ['local-only', `حُفظ ${what} محلياً، ولم تتم مزامنته مع السجل المركزي (${r.coreError})`];
+    return ['saved', `تم حفظ ${what}`];
+  };
+  // `fn` receives { onLocalSaved }: the data layer calls it as soon as the record
+  // is stored locally, so the form closes then (the clinician is not held for the
+  // Core round trip) while the status bar keeps reporting until Core answers.
+  // If the local save itself fails the form stays open with everything typed.
+  const runSave = (key, what, fn) => exclusive(key, async () => {
+    try {
+      const r = await fn({
+        onLocalSaved: () => { closeModalClean(); report('saving', `تم حفظ ${what} على هذا الجهاز — جاري المزامنة مع السجل المركزي…`); }
+      });
+      const [kind, message] = coreMessage(what, r);
+      closeModalClean();
+      report(kind, message);
+      return r;
+    } catch (e) {
+      report('failed', `لم يُحفظ ${what}: ${errMsg(e)}. النافذة ما زالت مفتوحة لتحاول مجدداً.`);
+      return undefined;
+    }
+  });
+
+  const handleSaveExam = e => runSave('exam:' + (e && e.id), 'الفحص', opts => onSaveExam(e, opts));
+  const handleSaveVisit = v => runSave('visit:' + (v && v.id), 'الزيارة', opts => onSaveVisit(v, opts));
   const handlePatientSave = updated => {
     onUpdatePatient(updated);
     setCurPatient(updated);
-    setModal(null);
+    closeModalClean();
+    report('saved', 'تم حفظ بيانات المريض');
   };
 
-  return {
-    TABS, aiAnalysis, allRequestTests, analyzeImage, clinic, coreJourneyCount, coreJourneyEvents,
-    coreSource, curPatient, cycleRequestEye, delImage, delTarget, doctorNames, exams,
-    handleImgUpload, handlePatientSave, imageEye, imageFilter, imageType, images, imagingOrders,
-    imgError, imgLoading, modal, onClose, onSaveExam, onSaveVisit, patient, patientRecords,
-    prices, primaryDoctor, requestEye, requestNotes, requestSaved, requestTests, requests,
-    rxList, savePatientRadiologyRequest, setAiAnalysis, setDelTarget, setImageEye,
-    setImageFilter, setImageType, setImgError, setModal, setRequestEye, setRequestNotes, setTab,
-    setTimelineFilter, setTimelineSearch, setViewImg, tab, timelineFilter, timelineSearch,
-    toggleRequestTest, totalSpent, updateImgNotes, uploadProgress, viewImg, visits,
-    onDeleteRx: rx => {
-      if (window.confirm('نقل هذه الوصفة إلى سلة المحذوفات؟')) {
-        trashPut('iapp_prescriptions', rx, 'روشتة');
-        logAudit('حذف روشتة', (rx.date || '') + ' · ' + ((curPatient && curPatient.name) || ''));
-        const updated = (allRx || []).filter(r => r.id !== rx.id);
-        if (onSaveRx) onSaveRx(updated);
-      }
-    },
-    onAddRxSave: rx => {
-      const updated = [...(allRx || []), { ...rx, id: Date.now(), patientId: curPatient.id, patient: curPatient.name }];
-      if (onSaveRx) onSaveRx(updated);
-      setModal(null);
-    },
-    onEditRxSave: rx => {
-      const updated = (allRx || []).map(r => (r.id === rx.id ? { ...rx, patientId: curPatient.id, patient: curPatient.name } : r));
-      if (onSaveRx) onSaveRx(updated);
-      setModal(null);
-    },
-    onConfirmDelete: () => {
-      delTarget.type === 'visit' ? onDelVisit(delTarget.id) : onDelExam(delTarget.id);
-      setDelTarget(null);
+  // Deleting a record that exists only in Core would be a silent no-op on the
+  // legacy store, so it is refused with an explanation instead.
+  const requestDelete = target => {
+    if (!target) { setDelTargetRaw(null); return; }
+    const list = target.type === 'visit' ? visits : patientRecords;
+    const rec = list.find(r => String(r.id) === String(target.id));
+    if (isCoreOnly(rec)) {
+      report('failed', 'هذا السجل مسجل في السجل المركزي فقط ولا يمكن حذفه من هذه الشاشة.');
+      return;
     }
+    setDelTargetRaw(target);
+  };
+  const onConfirmDelete = () => {
+    const t = delTarget;
+    setDelTargetRaw(null);
+    if (!t) return undefined;
+    return exclusive('del:' + t.type + ':' + t.id, async () => {
+      try {
+        await (t.type === 'visit' ? onDelVisit(t.id) : onDelExam(t.id));
+        report('saved', 'تم نقل السجل إلى سلة المحذوفات');
+      } catch (e) {
+        report('failed', 'تعذر الحذف: ' + errMsg(e));
+      }
+    });
+  };
+
+  const onDeleteRx = rx => {
+    if (isCoreOnly(rx)) { report('failed', 'هذه الوصفة مسجلة في السجل المركزي فقط ولا يمكن حذفها من هنا.'); return; }
+    if (!window.confirm('نقل هذه الوصفة إلى سلة المحذوفات؟')) return;
+    exclusive('delrx:' + rx.id, async () => {
+      try {
+        await trashPut('iapp_prescriptions', rx, 'روشتة');
+        logAudit('حذف روشتة', (rx.date || '') + ' · ' + ((curPatient && curPatient.name) || ''));
+        if (onSaveRx) await onSaveRx((allRx || []).filter(r => r.id !== rx.id));
+        report('saved', 'تم نقل الوصفة إلى سلة المحذوفات');
+      } catch (e) { report('failed', 'تعذر حذف الوصفة: ' + errMsg(e)); }
+    });
+  };
+  const onAddRxSave = rx => runSave('rx:new', 'الوصفة', opts => onSaveRx(
+    [...(allRx || []), { ...rx, id: Date.now(), patientId: curPatient.id, patient: curPatient.name }], opts
+  ));
+  const onEditRxSave = rx => runSave('rx:' + rx.id, 'الوصفة', opts => onSaveRx(
+    (allRx || []).map(r => (r.id === rx.id ? { ...rx, patientId: curPatient.id, patient: curPatient.name } : r)), opts
+  ));
+
+  const sync = useSyncStatus();
+
+  return {
+    TABS, aiAnalysis, allRequestTests, analyzeImage, clinic, coreJourneyCount, coreSource, coreStatus,
+    curPatient, cycleRequestEye, delImage, delTarget, doctorNames, exams,
+    handleImgUpload, handlePatientSave, imageEye, imageFilter, imageOrderId, imageType, images, imagingOrders,
+    imgError, imgLoading, modal, onClose, onSaveExam: handleSaveExam, onSaveVisit: handleSaveVisit, patient, patientRecords,
+    prices, primaryDoctor, requestEye, requestNotes, requestResult, requestSaving, requestTests,
+    requestSaved: !!requestResult && requestResult.status === 'saved',
+    requests, rxList, savePatientRadiologyRequest, resyncRequest, setAiAnalysis, setDelTarget: requestDelete,
+    setImageEye, setImageFilter, setImageOrderId, setImageType, setImgError, setModal, setRequestEye, setRequestNotes, setTab,
+    setTimelineFilter, setTimelineSearch, setViewImg, tab, timelineFilter, timelineSearch,
+    toggleRequestTest, totalSpent, updateImgNotes, editImgNotesLocal, uploadProgress, viewImg, visits,
+    // new in the Patient 360 hardening pass
+    timelineEvents, filteredTimeline, openSource, focusRec, saveStatus, dismissStatus, markModalDirty,
+    refreshAll, ordersError, sync,
+    onDeleteRx, onAddRxSave, onEditRxSave, onConfirmDelete
   };
 }
