@@ -1,5 +1,9 @@
 import React, { useState } from 'react';
 import { Btn } from '../common.jsx';
+import { C } from '../../modules/theme/index.js';
+import { Field, inp } from '../../modules/ui/atoms.jsx';
+import { localISO } from '../../modules/constants/index.js';
+import MedicinesStep from './MedicinesStep.jsx';
 import { DEFAULT_DOCTOR_NAMES } from './visit-form-model.js';
 import {
   RX_EYES, RX_LAST_STEP, SPH_OPTIONS, CYL_OPTIONS, AXIS_OPTIONS, ADD_OPTIONS, IPD_OPTIONS,
@@ -10,15 +14,14 @@ import {
   axisBannerEye, refractionSides
 } from './rx-form-model.js';
 
-const L = () => globalThis.IAppLegacy;
-
 // Three-step prescription add/edit form (patient → refraction → medicines).
 // Port of the legacy runtime's RxForm (public/legacy/app-runtime.js), which
-// stays in place for the legacy screens. Theme C, Field, inp, localISO and the
-// medicines step (MedicinesStep: drug list + Rx templates) are read from the
-// bridge. `doctorNames` is accepted but unused, as in legacy.
+// stays in place for the legacy screens. Theme C, Field, inp and localISO are
+// imported directly (Phase 8, batches 1/2/3), and MedicinesStep (the drug
+// list + Rx templates step) directly from its own moved module (batch 15) --
+// no more reads from the IAppLegacy bridge. `doctorNames` is accepted but
+// unused, as in legacy.
 export default function RxForm({ initial, patients, onSave, onClose, doctorNames = DEFAULT_DOCTOR_NAMES }) {
-  const { C, Field, inp, localISO, MedicinesStep } = L();
   const autoPatient = autoPatientOf(patients);
   const [f, setF] = useState(() => initialRxState(initial, autoPatient, localISO()));
   const [step, setStep] = useState(() => initialRxStep(autoPatient, initial));

@@ -66,6 +66,7 @@ import * as sharedConstants from './modules/constants/index.js';
 import { SC, inp, Field, SecHead, Tag, XRAY_ICON } from './modules/ui/atoms.jsx';
 import { getSB, iappRpc } from './modules/data-access/index.js';
 import { Btn, Modal, Confirm, Toast, ThemeToggle } from './components/common.jsx';
+import MedicinesStep from './components/forms/MedicinesStep.jsx';
 
 // Migration bridge: keep the proven production runtime intact while the
 // build system and service layer move to Vite. The legacy runtime reaches the
@@ -218,6 +219,11 @@ globalThis.IAppModules.db = { getSB, iappRpc };
 // there is exactly one function/object for each, shared by every screen
 // (legacy or React) and every form/modal that renders them via either bridge.
 globalThis.IAppModules.common = { Btn, Modal, Confirm, Toast, ThemeToggle };
+// Phase 8, batch 15 — same unification as batch 6, for MedicinesStep (the
+// drug-picker/Rx-templates step of RxForm's wizard): one implementation,
+// used directly by the new RxForm.jsx and reached by the legacy runtime's
+// own RxForm through this bridge instead of a second local definition.
+globalThis.IAppModules.forms = { MedicinesStep };
 
 const legacyScript = document.createElement('script');
 legacyScript.src = import.meta.env.BASE_URL + 'legacy/app-runtime.js?v=' + __BUILD_ID__;

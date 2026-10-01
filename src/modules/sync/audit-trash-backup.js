@@ -32,6 +32,15 @@ export function setActor(fn) {
   _actor = fn;
 }
 
+// Phase 8, batch 15: a read-only accessor for other moved modules that need
+// to stamp "who did this" (e.g. the Rx-template helpers in
+// src/modules/prescriptions/rx-templates.js, which call actorName() in the
+// legacy original) without each needing their own setActor() registration --
+// they can just read the same actor already registered here.
+export function getActorName() {
+  return _actor().name;
+}
+
 export async function logAudit(action, details) {
   try {
     const actor = _actor();
