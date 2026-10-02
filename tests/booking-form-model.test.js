@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   SLOTS_VIEW, SLOT_CAPACITY, WEEK_DAY_NAMES, BOOKING_DAYS_AHEAD, BOOKING_DATES_SHOWN, BOOK_VISIT_TYPES, GUEST_STEPS,
   PATIENT_STEPS, GUEST_NAME_ALERT, GUEST_PHONE_ALERT, initialBookingStep, bookingSteps, currentStepIndex,
-  getAvailableDates, getSlots, slotsClinicCode, addTakenRows, isSlotFull, canPickSlot, withClinicPicked,
+  getAvailableDates, getSlots, getSlotsForDate, BOOKING_MIN_LEAD_MIN, slotsClinicCode, addTakenRows, isSlotFull, canPickSlot, withClinicPicked,
   withDatePicked, withTimePicked, withDateTimeCleared, withTimeCleared, shouldReturnToTimeStep, guestInfoError,
   bookingSummaryRows, bookButtonLabel
 } from '../src/components/forms/booking-form-model.js';
@@ -62,39 +62,65 @@ test('steps: guest starts at info, registered patient at clinic', () => {
   }
 });
 
-test('getAvailableDates equals legacy for every clinic over two months of start days', () => {
-  for (let day = 0; day < 60; day++) {
-    for (const hour of [0, 12, 23]) {
-      const now = new Date(2026, 8, 1 + day, hour, 30);
-      for (const c of PATIENT_CLINICS) {
-        assert.deepEqual(getAvailableDates(c, now, localISO), legacyDates(c, now), c.id + ' ' + now);
-      }
-    }
-  }
-});
-
-test('getAvailableDates: tomorrow onward, 30 days, clinic weekdays only', () => {
-  const now = new Date(2026, 8, 28, 10); // Monday
+test('getAvailableDates: today onward, 30 days, clinic weekdays only', () => {
+  const now = new Date(2026, 8, 28, 10); // Monday 10:00
   const damnhour = getAvailableDates(PATIENT_CLINICS[0], now, localISO);
-  assert.equal(damnhour[0].date, '2026-09-30'); // Tue is not a Damanhour day; Wed is
+  assert.equal(damnhour[0].date, '2026-09-28'); // Monday is a Damanhour day, slots 20:00+ still ahead
   assert.ok(damnhour.every(d => PATIENT_CLINICS[0].days.includes(d.dayOfWeek)));
-  assert.ok(damnhour.every(d => d.date > '2026-09-28' && d.date <= '2026-10-28'));
-  assert.deepEqual(damnhour[0], { date: '2026-09-30', dayName: 'الأربعاء', dayOfWeek: 3 });
+  assert.ok(damnhour.every(d => d.date >= '2026-09-28' && d.date <= '2026-10-28'));
+  assert.deepEqual(damnhour[0], { date: '2026-09-28', dayName: 'الاثنين', dayOfWeek: 1 });
   const center = getAvailableDates(PATIENT_CLINICS[2], now, localISO);
   assert.ok(center.every(d => [0, 1, 2, 4].includes(d.dayOfWeek)));
-  assert.equal(center[0].date, '2026-09-29'); // Tuesday
+  assert.equal(center[0].date, '2026-09-28'); // Monday 13:00-15:30 still ahead at 10:00
   assert.deepEqual(getAvailableDates({}, now, localISO), []);
   assert.deepEqual(Object.keys(damnhour[0]), ['date', 'dayName', 'dayOfWeek']);
 });
 
-test('getSlots equals legacy', () => {
-  for (const c of [...PATIENT_CLINICS, {}]) {
-    for (const dow of [0, 1, 2, 3, 4, 5, 6, undefined]) assert.deepEqual(getSlots(c, dow), legacySlots(c, dow));
+test('same-day booking: today is offered only while a slot is still ahead', () => {
+  const damnhour = PATIENT_CLINICS[0]; // 20:00-22:00
+  const at = (h, m) => new Date(2026, 8, 28, h, m); // Monday
+  assert.equal(getAvailableDates(damnhour, at(21, 0), localISO)[0].date, '2026-09-28');
+  // after the last slot (22:00) today disappears and the next clinic day is first
+  assert.equal(getAvailableDates(damnhour, at(22, 1), localISO)[0].date, '2026-09-30');
+  // a non-clinic weekday never offers today
+  const tuesday = new Date(2026, 8, 29, 8, 0);
+  assert.equal(getAvailableDates(damnhour, tuesday, localISO)[0].date, '2026-09-30');
+});
+
+test('getSlotsForDate: today keeps only slots at least BOOKING_MIN_LEAD_MIN ahead; other days keep all', () => {
+  const damnhour = PATIENT_CLINICS[0];
+  const now = new Date(2026, 8, 28, 20, 25);
+  const today = getSlotsForDate(damnhour, 1, '2026-09-28', now, localISO);
+  assert.equal(BOOKING_MIN_LEAD_MIN, 10);
+  assert.equal(today[0], '20:40'); // 20:30 is too close (needs >= 20:35), 20:40 is the first valid
+  assert.equal(today[today.length - 1], '22:00');
+  assert.equal(getSlotsForDate(damnhour, 1, '2026-09-29', now, localISO).length, 13);
+  assert.deepEqual(getSlotsForDate(damnhour, 1, '2026-09-28', new Date(2026, 8, 28, 22, 5), localISO), []);
+});
+
+test('slots are 10 minutes apart inside each clinic window', () => {
+  const damnhour = getSlots(PATIENT_CLINICS[0], 3);
+  assert.deepEqual(damnhour.slice(0, 4), ['20:00', '20:10', '20:20', '20:30']);
+  assert.equal(damnhour.length, 13); // 20:00 .. 22:00
+  assert.equal(damnhour[damnhour.length - 1], '22:00');
+  assert.equal(getSlots(PATIENT_CLINICS[1], 1).length, 13); // 16:00 .. 18:00
+  assert.equal(getSlots(PATIENT_CLINICS[2], 0).length, 16); // 13:00 .. 15:30
+  assert.equal(getSlots(PATIENT_CLINICS[2], 2).length, 34); // 15:00 .. 20:30
+  assert.equal(getSlots(PATIENT_CLINICS[2], 4).length, 34); // 09:00 .. 14:30
+  for (const c of PATIENT_CLINICS) {
+    const all = c.sessions ? c.sessions[0].slots : Object.values(c.schedule).flatMap(x => x.slots);
+    for (let i = 1; i < all.length; i++) {
+      const [h1, m1] = all[i - 1].split(':').map(Number), [h2, m2] = all[i].split(':').map(Number);
+      const d = h2 * 60 + m2 - (h1 * 60 + m1);
+      assert.ok(d === 10 || d < 0, c.id + ' ' + all[i - 1] + '->' + all[i]); // negative = next weekday's list starts
+    }
   }
-  assert.deepEqual(getSlots(PATIENT_CLINICS[0], 3), ['20:00', '20:30', '21:00', '21:30', '22:00']);
+});
+
+test('getSlots: sessions clinic same every day, schedule clinic per weekday, empty otherwise', () => {
+  assert.deepEqual(getSlots({}, 1), []);
   assert.deepEqual(getSlots(PATIENT_CLINICS[2], 3), []);
-  assert.equal(getSlots(PATIENT_CLINICS[2], 4).length, 12);
-  // A sessions clinic returns its own array (not a copy), like legacy.
+  assert.equal(getSlots(PATIENT_CLINICS[0], 0), PATIENT_CLINICS[0].sessions[0].slots);
   assert.equal(getSlots(PATIENT_CLINICS[1], 1), PATIENT_CLINICS[1].sessions[0].slots);
 });
 

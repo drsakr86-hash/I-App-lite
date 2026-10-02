@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   SLOTS_VIEW, BOOKING_DATES_SHOWN, BOOK_VISIT_TYPES, initialBookingStep, bookingSteps, currentStepIndex,
-  getAvailableDates, getSlots, slotsClinicCode, addTakenRows, isSlotFull, canPickSlot, withClinicPicked,
+  getAvailableDates, getSlotsForDate, slotsClinicCode, addTakenRows, isSlotFull, canPickSlot, withClinicPicked,
   withDatePicked, withTimePicked, withDateTimeCleared, withTimeCleared, shouldReturnToTimeStep, guestInfoError,
   bookingSummaryRows, bookButtonLabel
 } from './booking-form-model.js';
@@ -328,7 +328,7 @@ export default function BookingForm({ patient, bookForm, setBookForm, booking, o
               {slotsLoading && (
                 <div style={{ gridColumn: '1 / -1', color: C.muted, fontSize: 11, textAlign: 'center' }}>⏳ جاري تحميل المواعيد المتاحة...</div>
               )}
-              {getSlots(selClinic, selDate?.dayOfWeek).map(t => {
+              {getSlotsForDate(selClinic, selDate?.dayOfWeek, selDate?.date, new Date(), localISO).map(t => {
                 const full = isSlotFull(taken, t);
                 return (
                   <div

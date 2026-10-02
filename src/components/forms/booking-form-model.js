@@ -1,7 +1,8 @@
 // Pure logic for the patient app's BookingForm (src/components/forms/
-// BookingForm.jsx). Every value and expression mirrors the legacy runtime's
-// BookingForm and its helpers getAvailableDates / getSlots
-// (public/legacy/app-runtime.js); legacy quirks are kept on purpose.
+// BookingForm.jsx). Mirrors the legacy BookingForm except for two deliberate,
+// clinic-requested changes: bookings are allowed for TODAY (only slots that
+// still lie ahead) and slots are 10 minutes apart (SLOT_MINUTES in
+// constants/clinics.js).
 //
 // The clinic list (PATIENT_CLINICS) and CLINIC_CODE stay single instances on
 // the IAppLegacy bridge (PatientApp reads the same ones); they are passed in.
@@ -14,6 +15,9 @@ export const SLOT_CAPACITY = 1;
 
 export const WEEK_DAY_NAMES = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 export const BOOKING_DAYS_AHEAD = 30;
+// Same-day booking: a slot is offered today only if it starts at least this many
+// minutes from now.
+export const BOOKING_MIN_LEAD_MIN = 10;
 // Only the first 14 available dates are offered.
 export const BOOKING_DATES_SHOWN = 14;
 
@@ -35,12 +39,16 @@ export const currentStepIndex = (isGuest, step) => (isGuest ? step - 1 : step - 
 // else a `schedule` entry for that weekday. `localISO` is the runtime's.
 export const getAvailableDates = (c, now, localISO) => {
   const dates = [];
-  for (let i = 1; i <= BOOKING_DAYS_AHEAD; i++) {
+  for (let i = 0; i <= BOOKING_DAYS_AHEAD; i++) {
     const d = new Date(now);
     d.setDate(now.getDate() + i);
     const dow = d.getDay();
     const ok = c.days ? c.days.includes(dow) : c.schedule && c.schedule[dow] !== undefined;
-    if (ok) dates.push({ date: localISO(d), dayName: WEEK_DAY_NAMES[dow], dayOfWeek: dow });
+    if (!ok) continue;
+    const iso = localISO(d);
+    // Today is offered only while at least one slot is still ahead.
+    if (i === 0 && !getSlotsForDate(c, dow, iso, now, localISO).length) continue;
+    dates.push({ date: iso, dayName: WEEK_DAY_NAMES[dow], dayOfWeek: dow });
   }
   return dates;
 };
@@ -51,6 +59,18 @@ export const getSlots = (c, dow) => {
   if (c.sessions) return c.sessions[0].slots;
   if (c.schedule) return c.schedule[dow]?.slots || [];
   return [];
+};
+
+// Slots of a specific date: for today only those starting at least
+// BOOKING_MIN_LEAD_MIN minutes from `now`; other dates get every slot.
+export const getSlotsForDate = (c, dow, dateISO, now, localISO) => {
+  const all = getSlots(c, dow);
+  if (dateISO !== localISO(now)) return all;
+  const limit = now.getHours() * 60 + now.getMinutes() + BOOKING_MIN_LEAD_MIN;
+  return all.filter(t => {
+    const [h, m] = t.split(':').map(Number);
+    return h * 60 + m >= limit;
+  });
 };
 
 // Clinic value stored in the slots view (short code, else the name as-is).

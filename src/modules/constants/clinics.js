@@ -18,6 +18,19 @@ export const CLINIC_FILTERS = [{ v: '', l: 'كل العيادات' }, ...CLINICS
 // Plain clinic name list (no labels) — used where only the raw names matter.
 export const CLINICS_LIST = ['دمنهور', 'الرحمانية', 'مركز دمنهور للعيون'];
 
+// Length of one patient-booking slot, in minutes. Slots are generated from each
+// clinic's opening window (first start .. last start, both included).
+export const SLOT_MINUTES = 10;
+
+export function slotRange(start, end, step = SLOT_MINUTES) {
+  const toMin = t => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+  const out = [];
+  for (let m = toMin(start); m <= toMin(end); m += step) {
+    out.push(String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'));
+  }
+  return out;
+}
+
 // Clinics as the patient-facing booking screen presents them (address, phone,
 // opening days/sessions for slot generation).
 export const PATIENT_CLINICS = [
@@ -29,7 +42,7 @@ export const PATIENT_CLINICS = [
     icon: '🏥',
     days: [0, 1, 3, 4, 6],
     dayNames: ['الأحد', 'الاثنين', 'الأربعاء', 'الخميس', 'السبت'],
-    sessions: [{ slots: ['20:00', '20:30', '21:00', '21:30', '22:00'] }]
+    sessions: [{ slots: slotRange('20:00', '22:00') }]
   },
   {
     id: 'rahmania',
@@ -39,7 +52,7 @@ export const PATIENT_CLINICS = [
     icon: '🏨',
     days: [6, 1, 3],
     dayNames: ['السبت', 'الاثنين', 'الأربعاء'],
-    sessions: [{ slots: ['16:00', '16:30', '17:00', '17:30', '18:00'] }]
+    sessions: [{ slots: slotRange('16:00', '18:00') }]
   },
   {
     id: 'center',
@@ -48,10 +61,10 @@ export const PATIENT_CLINICS = [
     phone: '0453333313',
     icon: '👁',
     schedule: {
-      0: { slots: ['13:00', '13:30', '14:00', '14:30', '15:00', '15:30'] },
-      1: { slots: ['13:00', '13:30', '14:00', '14:30', '15:00', '15:30'] },
-      2: { slots: ['15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30'] },
-      4: { slots: ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30'] }
+      0: { slots: slotRange('13:00', '15:30') },
+      1: { slots: slotRange('13:00', '15:30') },
+      2: { slots: slotRange('15:00', '20:30') },
+      4: { slots: slotRange('09:00', '14:30') }
     },
     dayNames: ['الأحد', 'الاثنين', 'الثلاثاء', 'الخميس']
   }
