@@ -41,8 +41,11 @@ export async function runExamCoreSync({ exam, patientCode = '', call, findVisitI
   }
   steps.push({ name: 'examination', ok: true });
 
-  let visitId = base.data || null;
-  if (!visitId && findVisitId) {
+  // iapp_sync_examination_core returns the EXAMINATION row id, not the visit id
+  // (verified against the live function definition). Using it as p_visit_id
+  // caused FK violations, so the visit is always resolved by its legacy id.
+  let visitId = null;
+  if (findVisitId) {
     try { visitId = (await findVisitId(`exam:${exam.id}`)) || null; } catch { visitId = null; }
   }
 

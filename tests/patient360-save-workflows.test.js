@@ -6,12 +6,13 @@ import { submitInvestigationRequest, resyncInvestigationRequest } from '../src/m
 const memStore = () => { const m = new Map(); return { getItem: k => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)) }; };
 
 // ---------- exam core sync ----------
+const FIND = async id => (id === 'exam:5' ? 'visit-1' : null);
 const EXAM = { id: 5, patientId: 7, doctor: 'د. أ', diagnosis: 'DME', treatmentPlan: 'Anti-VEGF', followUp: '2026-12-01' };
-const mkCall = (fail = {}) => { const calls = []; const call = async (name, args) => { calls.push({ name, args }); return fail[name] ? { data: null, error: { message: fail[name] } } : { data: name === 'iapp_sync_examination_core' ? 'visit-1' : 1, error: null }; }; return { call, calls }; };
+const mkCall = (fail = {}) => { const calls = []; const call = async (name, args) => { calls.push({ name, args }); return fail[name] ? { data: null, error: { message: fail[name] } } : { data: name === 'iapp_sync_examination_core' ? 'exam-row-9' : 1, error: null }; }; return { call, calls }; };
 
 test('first save creates diagnosis, treatment and follow-up once and records markers', async () => {
   const { call, calls } = mkCall();
-  const r = await runExamCoreSync({ exam: EXAM, patientCode: 'T-1', call });
+  const r = await runExamCoreSync({ exam: EXAM, patientCode: 'T-1', call, findVisitId: FIND });
   assert.equal(r.status, 'synced');
   assert.deepEqual(calls.map(c => c.name), ['iapp_sync_examination_core', 'iapp_create_diagnosis_core', 'iapp_create_treatment_core', 'iapp_create_followup_core']);
   assert.equal(calls[1].args.p_visit_id, 'visit-1');
@@ -20,7 +21,7 @@ test('first save creates diagnosis, treatment and follow-up once and records mar
 
 test('re-saving an unchanged diagnosis/treatment/follow-up does NOT create them again', async () => {
   const { call, calls } = mkCall();
-  const r = await runExamCoreSync({ exam: { ...EXAM, notes: 'only a note changed', _coreSync: { diagnosis: 'DME', treatment: 'Anti-VEGF', followup: '2026-12-01' } }, call });
+  const r = await runExamCoreSync({ exam: { ...EXAM, notes: 'only a note changed', _coreSync: { diagnosis: 'DME', treatment: 'Anti-VEGF', followup: '2026-12-01' } }, call, findVisitId: FIND });
   assert.deepEqual(calls.map(c => c.name), ['iapp_sync_examination_core']);
   assert.equal(r.status, 'synced');
   assert.equal(r.markersChanged, false);
@@ -28,13 +29,13 @@ test('re-saving an unchanged diagnosis/treatment/follow-up does NOT create them 
 
 test('only the changed field is re-created', async () => {
   const { call, calls } = mkCall();
-  await runExamCoreSync({ exam: { ...EXAM, diagnosis: 'DME + cataract', _coreSync: { diagnosis: 'DME', treatment: 'Anti-VEGF', followup: '2026-12-01' } }, call });
+  await runExamCoreSync({ exam: { ...EXAM, diagnosis: 'DME + cataract', _coreSync: { diagnosis: 'DME', treatment: 'Anti-VEGF', followup: '2026-12-01' } }, call, findVisitId: FIND });
   assert.deepEqual(calls.map(c => c.name), ['iapp_sync_examination_core', 'iapp_create_diagnosis_core']);
 });
 
 test('a failing step is reported as partial, other steps still run, failed marker is not recorded', async () => {
   const { call, calls } = mkCall({ iapp_create_treatment_core: 'boom' });
-  const r = await runExamCoreSync({ exam: EXAM, call });
+  const r = await runExamCoreSync({ exam: EXAM, call, findVisitId: FIND });
   assert.equal(r.status, 'partial');
   assert.equal(calls.length, 4);
   assert.equal(r.markers.treatment, undefined);
@@ -48,6 +49,13 @@ test('base examination sync failure is "failed" and nothing else is attempted; n
   assert.equal(r.status, 'failed');
   assert.equal(r.coreSynced, false);
   assert.equal(calls.length, 1);
+});
+
+test('the examination row id returned by the RPC is never used as a visit id', async () => {
+  const { call, calls } = mkCall();
+  await runExamCoreSync({ exam: EXAM, call, findVisitId: FIND });
+  assert.equal(calls[1].args.p_visit_id, 'visit-1');
+  assert.notEqual(calls[1].args.p_visit_id, 'exam-row-9');
 });
 
 test('diagnosis step without a Core visit id is reported, never sent with a null visit', async () => {

@@ -132,6 +132,7 @@ export default function App() {
   useEffect(() => {
     if (!alertsShown && session) {
       setAlertsShown(true);
+      // Show the follow-up centre at most once per day (closing it with x is no longer undone by the next app start).
       let seenToday = false;
       try {
         const d = new Date().toDateString();
