@@ -4,6 +4,7 @@ import { C } from '../modules/theme/index.js';
 import { clinicLabel, localISO } from '../modules/constants/index.js';
 import { useSyncStatus } from '../modules/sync/engine.js';
 import { sbGet } from '../modules/sync/wiring.js';
+import PendingRequests from './appointments/PendingRequests.jsx';
 
 function StatCard({ C, s }) {
   return (
@@ -64,6 +65,8 @@ export default function Dashboard({ patients, appointments, visits, primary, onD
           </div>
         </div>
       </div>
+
+      <PendingRequests />
 
       <div style={{ background: `linear-gradient(135deg,${C.surface2},${C.card})`, border: `1px solid ${C.accent}33`, borderRadius: 16, padding: '14px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>

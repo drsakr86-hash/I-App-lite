@@ -6,6 +6,7 @@ import { C } from '../modules/theme/index.js';
 import { clinicLabel } from '../modules/constants/index.js';
 import { sbGet } from '../modules/sync/wiring.js';
 import { trashPut, logAudit } from '../modules/sync/index.js';
+import PendingRequests from './appointments/PendingRequests.jsx';
 
 const iconBox = (C, bg, extra = {}) => ({
   width: 32, height: 32, borderRadius: 10, background: bg,
@@ -41,6 +42,7 @@ export default function Appointments({ appointments, setAppointments, doctorName
 
   return (
     <div style={{ padding: '16px 16px 90px' }}>
+      <PendingRequests />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <span style={{ color: C.text, fontWeight: 700, fontSize: 16 }}>
           المواعيد ({visible.length})

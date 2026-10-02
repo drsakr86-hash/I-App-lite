@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- Admin: pending patient booking requests now appear on the dashboard and the appointments screen with accept/reject (previously only the secretary screen read `iapp_booking_requests`). Status writes are checked, accepting twice never duplicates an appointment, and a request already handled elsewhere is reported.
+
 ## Patient 360 hardening — 2026-10-02 (baseline: source of 2026-10-01, commit 37356d1)
 
 Tests 554 → 605 passing, build ok, render smoke test ok (logs in `docs/logs/`).
