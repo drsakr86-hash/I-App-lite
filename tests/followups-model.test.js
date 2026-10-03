@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { INJ_KEY, INJ_DRUGS, dueInjections, overdueFollowUps } from '../src/modules/followups/index.js';
+import { INJ_KEY, INJ_DRUGS, dueInjections, overdueFollowUps, followUpKey, addDaysISO, hiddenState } from '../src/modules/followups/index.js';
 
 test('INJ_KEY/INJ_DRUGS: unchanged constants', () => {
   assert.equal(INJ_KEY, 'iapp_injections');
@@ -87,4 +87,22 @@ test('overdueFollowUps: sorted most-late first', () => {
   ];
   const late = overdueFollowUps(visits, []);
   assert.equal(late[0].patientId, 2); // more days late
+});
+
+test('hidden follow-ups: dismissed stays hidden, snoozed hides until its date, a NEW due date shows again', () => {
+  const visits = [{ id: 1, patientId: 7, date: '2000-01-01', nextVisit: '2000-02-01' }];
+  const key = followUpKey(7, '2000-02-01');
+  assert.equal(overdueFollowUps(visits, [], []).length, 1);
+  assert.equal(overdueFollowUps(visits, [], [{ key, type: 'dismissed' }]).length, 0);
+  assert.equal(overdueFollowUps(visits, [], [{ key, type: 'snoozed', until: '2999-01-01' }]).length, 0);
+  assert.equal(overdueFollowUps(visits, [], [{ key, type: 'snoozed', until: '2000-03-01' }]).length, 1); // expired
+  const next = [{ id: 2, patientId: 7, date: '2000-01-01', nextVisit: '2000-05-01' }];
+  assert.equal(overdueFollowUps(next, [], [{ key, type: 'dismissed' }]).length, 1); // different due date
+});
+
+test('hiddenState / addDaysISO', () => {
+  assert.equal(hiddenState(null, '2026-10-04'), null);
+  assert.equal(hiddenState({ type: 'snoozed', until: '2026-10-04' }, '2026-10-04'), null);
+  assert.equal(hiddenState({ type: 'snoozed', until: '2026-10-05' }, '2026-10-04'), 'snoozed');
+  assert.equal(addDaysISO('2026-10-28', 7), '2026-11-04');
 });

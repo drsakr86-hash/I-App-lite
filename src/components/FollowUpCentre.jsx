@@ -9,20 +9,51 @@ import { C } from '../modules/theme/index.js';
 import { sbGet } from '../modules/sync/index.js';
 import { localISO } from '../modules/constants/misc.js';
 import { waOpen, waFollowUpText } from '../modules/notifications/index.js';
-import { INJ_KEY, dueInjections, overdueFollowUps } from '../modules/followups/index.js';
+import { INJ_KEY, dueInjections, overdueFollowUps, followUpKey, hiddenMap, hiddenState, SNOOZE_DAYS } from '../modules/followups/index.js';
+import { loadHidden, hideFollowUp, unhideFollowUp } from '../modules/followups/hide.js';
 
 export default function FollowUpCentre({ visits, patients, onClose, onPatientClick }) {
   const [injections, setInjections] = useState([]);
+  const [hidden, setHidden] = useState([]);
+  const [busy, setBusy] = useState('');
+  const [err, setErr] = useState('');
   const [tab, setTab] = useState('late');
   useEffect(() => {
     (async () => {
       const r = await sbGet(INJ_KEY);
       if (Array.isArray(r)) setInjections(r);
+      setHidden(await loadHidden());
     })();
   }, []);
-  const late = overdueFollowUps(visits, patients);
+  const late = overdueFollowUps(visits, patients, hidden);
   const due = dueInjections(injections, 7);
-  const rows = tab === 'late' ? late : due;
+  const today = localISO();
+  const hmap = hiddenMap(hidden);
+  const hiddenRows = overdueFollowUps(visits, patients, []).filter(v => hiddenState(hmap[followUpKey(v.patientId, v.nextVisit)], today));
+  const rows = tab === 'late' ? late : tab === 'hidden' ? hiddenRows : due;
+
+  // Never retried automatically: on failure the card stays and a message is shown.
+  const hide = async (type, v) => {
+    if (type === 'dismissed' && !window.confirm('عدم تذكيرك بحالة ' + v.patientName + ' مرة أخرى؟ (تقدر ترجعها من تبويب «مخفية»)')) return;
+    const k = followUpKey(v.patientId, v.nextVisit);
+    setBusy(k); setErr('');
+    const rec = await hideFollowUp(type, v);
+    setBusy('');
+    if (rec) setHidden(h => [...h.filter(x => x.key !== rec.key), rec]);
+    else setErr('تعذر الحفظ، حاول مرة أخرى.');
+  };
+  const unhide = async v => {
+    const k = followUpKey(v.patientId, v.nextVisit);
+    setBusy(k); setErr('');
+    const ok = await unhideFollowUp(v);
+    setBusy('');
+    if (ok) setHidden(h => h.filter(x => x.key !== k));
+    else setErr('تعذر الحفظ، حاول مرة أخرى.');
+  };
+  const hideBtn = (tone, extra = {}) => ({
+    background: tone + '18', border: '1px solid ' + tone + '44', borderRadius: 9, padding: '7px 10px',
+    color: tone, fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', ...extra
+  });
 
   const tabBtn = (id, label, n) => (
     <div
@@ -78,7 +109,9 @@ export default function FollowUpCentre({ visits, patients, onClose, onPatientCli
         <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
           {tabBtn('late', 'متأخرة', late.length)}
           {tabBtn('inj', 'حقن مستحقة', due.length)}
+          {hiddenRows.length > 0 && tabBtn('hidden', 'مخفية', hiddenRows.length)}
         </div>
+        {err && <div style={{ color: C.danger, fontSize: 12, textAlign: 'center', marginBottom: 8 }}>{err}</div>}
         {rows.length === 0 && (
           <div style={{ color: C.muted, fontSize: 13, textAlign: 'center', padding: '26px 0' }}>لا يوجد شيء هنا 👌</div>
         )}
@@ -144,8 +177,28 @@ export default function FollowUpCentre({ visits, patients, onClose, onPatientCli
                 </a>
               )}
             </div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+              <button disabled={busy === followUpKey(v.patientId, v.nextVisit)} onClick={() => hide('snoozed', v)} style={hideBtn(C.gold, { flex: 1 })}>
+                ✔ تم التذكير (إخفاء {SNOOZE_DAYS} أيام)
+              </button>
+              <button disabled={busy === followUpKey(v.patientId, v.nextVisit)} onClick={() => hide('dismissed', v)} style={hideBtn(C.danger, { flex: 1 })}>
+                🚫 لا أتوقع حضوره
+              </button>
+            </div>
           </div>
         ))}
+        {tab === 'hidden' && hiddenRows.map(v => {
+          const r = hmap[followUpKey(v.patientId, v.nextVisit)] || {};
+          return (
+            <div key={v.id} style={{ background: C.card, border: '1px solid ' + C.border, borderRadius: 12, padding: '11px 13px', marginBottom: 8, opacity: 0.85 }}>
+              <div style={{ color: C.text, fontWeight: 700, fontSize: 13 }}>{v.patientName}</div>
+              <div style={{ color: C.muted, fontSize: 11, marginTop: 3 }}>
+                كان مفروض: {v.nextVisit} · {r.type === 'dismissed' ? 'لن يتم تذكيرك به' : 'مخفي حتى ' + r.until}
+              </div>
+              <button disabled={busy === followUpKey(v.patientId, v.nextVisit)} onClick={() => unhide(v)} style={hideBtn(C.accent, { marginTop: 8 })}>↩ إرجاع للمتابعات</button>
+            </div>
+          );
+        })}
         {tab === 'inj' && due.map(x => {
           const p = (patients || []).find(p => p.id === x.patientId) || {};
           const days = Math.round((new Date(x.nextDate) - new Date(localISO())) / 86400000);

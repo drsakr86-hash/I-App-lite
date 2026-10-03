@@ -26,8 +26,38 @@ export function dueInjections(list, days) {
   return Object.values(latest).filter(x => x.nextDate && new Date(x.nextDate) <= limit).sort((a, b) => String(a.nextDate).localeCompare(String(b.nextDate)));
 }
 
-export function overdueFollowUps(visits, patients) {
+// ---- hiding follow-ups the doctor no longer expects --------------------------
+// A record hides ONE overdue follow-up: the patient's visit due on `nextVisit`.
+//  - type 'dismissed': never remind again for that due date ("لا أتوقع حضوره")
+//  - type 'snoozed'  : hide until `until` (YYYY-MM-DD) ("تم التذكير")
+// A later visit with a NEW nextVisit date is a different follow-up and shows normally.
+export const SNOOZE_DAYS = 7;
+export const FOLLOWUP_HIDE_KEY = 'iapp_followup_hidden';
+
+export const followUpKey = (patientId, nextVisit) => String(patientId) + '|' + String(nextVisit);
+
+export function addDaysISO(iso, days) {
+  const d = new Date(iso + 'T00:00:00');
+  d.setDate(d.getDate() + days);
+  return localISO(d);
+}
+
+export function hiddenState(rec, today) {
+  if (!rec) return null;
+  if (rec.type === 'dismissed') return 'dismissed';
+  if (rec.type === 'snoozed' && String(rec.until || '') > today) return 'snoozed';
+  return null; // expired snooze: shows again
+}
+
+export function hiddenMap(records) {
+  const m = {};
+  (Array.isArray(records) ? records : []).forEach(r => { if (r && r.key) m[r.key] = r; });
+  return m;
+}
+
+export function overdueFollowUps(visits, patients, hidden) {
   const today = localISO();
+  const hmap = hiddenMap(hidden);
   const lastVisit = {};
   (visits || []).forEach(v => {
     const k = String(v.patientId);
@@ -40,6 +70,7 @@ export function overdueFollowUps(visits, patients) {
     if (String(lastVisit[k] || '') > String(v.nextVisit)) return false;
     if (seen[k]) return false;
     seen[k] = true;
+    if (hiddenState(hmap[followUpKey(v.patientId, v.nextVisit)], today)) return false;
     return true;
   }).map(v => {
     const p = (patients || []).find(p => p.id === v.patientId) || {};
