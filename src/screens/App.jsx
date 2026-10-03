@@ -225,7 +225,8 @@ export default function App() {
       }
     }),
     waiting: React.createElement(WaitingRoom, {
-      apts: appointments, today: localISO(), onUpdateApt: updateSharedAppointment, onCollect: () => {}, doctorNames
+      apts: appointments, today: localISO(), onUpdateApt: updateSharedAppointment, onCollect: () => {}, doctorNames,
+      isAdmin: !!(session && session.role === 'admin')
     }),
     prescriptions: React.createElement(Prescriptions, {
       prescriptions, setRx, patients, doctorNames, primaryDoctor: primary, clinic
