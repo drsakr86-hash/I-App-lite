@@ -404,6 +404,7 @@ export default function SecretaryApp() {
             onUpdateApt={updateApt}
             onCollect={setCollectApt}
             doctorNames={todayDoctorNames(apts, today)}
+            isAdmin={!!(session && session.role === "admin")}
           />
         </div>
       )}

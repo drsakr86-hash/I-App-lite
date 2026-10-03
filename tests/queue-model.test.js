@@ -62,3 +62,16 @@ test('transitions do not mutate and set timestamps', () => {
   assert.equal(transitions.restoreNoShow({ waitStatus: 'no-show', noShowAt: 1 }).noShowAt, undefined);
   assert.equal(transitions.cancelArrival(a).waitStatus, undefined);
 });
+
+test('cancelStatus (admin) returns waiting / called / in-room to not-arrived and clears their timestamps', () => {
+  for (const ws of ['waiting', 'called', 'in']) {
+    const a = { id: 1, patient: 'x', waitStatus: ws, arrivedAt: 1, calledAt: 2, inAt: 3 };
+    const r = transitions.cancelStatus(a);
+    assert.equal(r.waitStatus, undefined);
+    assert.equal(r.arrivedAt, undefined);
+    assert.equal(r.calledAt, undefined);
+    assert.equal(r.inAt, undefined);
+    assert.equal(r.patient, 'x');
+    assert.equal(a.waitStatus, ws); // input not mutated
+  }
+});

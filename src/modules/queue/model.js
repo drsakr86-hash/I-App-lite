@@ -60,5 +60,8 @@ export const transitions = {
   postpone: a => ({ ...a, waitStatus: "postponed" }),
   noShow: (a, now) => ({ ...a, waitStatus: "no-show", noShowAt: now }),
   cancelArrival: a => ({ ...a, waitStatus: undefined }),
+  // Admin: undo the whole queue state (waiting / called / in room) back to "not arrived"
+  // and drop the timestamps that belonged to it, so wait/exam estimates are not skewed.
+  cancelStatus: a => ({ ...a, waitStatus: undefined, arrivedAt: undefined, calledAt: undefined, inAt: undefined }),
   restoreNoShow: a => ({ ...a, waitStatus: "waiting", noShowAt: undefined })
 };

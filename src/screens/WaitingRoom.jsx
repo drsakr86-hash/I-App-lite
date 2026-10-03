@@ -66,7 +66,7 @@ function Row({ C, a, sub, children, border, single, dim }) {
   );
 }
 
-export default function WaitingRoom({ apts, today, onUpdateApt, onCollect, doctorNames = [] }) {
+export default function WaitingRoom({ apts, today, onUpdateApt, onCollect, doctorNames = [], isAdmin = false }) {
   useEffect(() => { callChannel(); }, []);
 
   const priorityKey = 'iapp_priority_doctor_' + today;
@@ -93,6 +93,10 @@ export default function WaitingRoom({ apts, today, onUpdateApt, onCollect, docto
     const upd = transitions.call(a, Date.now());
     onUpdateApt(upd);
     broadcastCall(upd);
+  };
+  const cancelStatus = a => {
+    if (!window.confirm('إلغاء حالة ' + a.patient + ' وإرجاعه إلى «لم يصل»؟')) return;
+    return go(a, 'cancelStatus');
   };
   const closeStale = async () => {
     if (!window.confirm(`إغلاق ${stale.length} حالة منسية من أيام سابقة؟`)) return;
@@ -162,6 +166,11 @@ export default function WaitingRoom({ apts, today, onUpdateApt, onCollect, docto
               style={{ ...btn(C, 'gold'), borderRadius: 9, padding: '8px 10px', fontWeight: 800, marginLeft: 6 }}>🔁 إعادة النداء</button>
             <button onClick={() => go(a, 'startExam')} style={gradBtn}>بدء الكشف</button>
           </div>
+          {isAdmin && (
+            <div style={{ marginTop: 8 }}>
+              <button onClick={() => cancelStatus(a)} style={btn(C, 'danger')}>✕ إلغاء الحالة</button>
+            </div>
+          )}
         </div>
       ))}
 
@@ -177,6 +186,7 @@ export default function WaitingRoom({ apts, today, onUpdateApt, onCollect, docto
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
             <button onClick={() => go(a, 'finish')} style={btn(C, 'success')}>✓ انتهى الكشف</button>
             <button onClick={() => go(a, 'backToWaiting')} style={btn(C, 'gold')}>↩ رجوع للانتظار</button>
+            {isAdmin && <button onClick={() => cancelStatus(a)} style={btn(C, 'danger')}>✕ إلغاء الحالة</button>}
             <PayBadge a={a} onCollect={onCollect} C={C} />
           </div>
         </div>
@@ -205,7 +215,7 @@ export default function WaitingRoom({ apts, today, onUpdateApt, onCollect, docto
                   )}
                   <button title="تأجيل" onClick={() => go(a, 'postpone')} style={mini(C, 'purple')}>⏸</button>
                   <button title="لم يحضر" onClick={() => go(a, 'noShow')} style={mini(C, 'danger')}>لم يحضر</button>
-                  <button title="إلغاء الوصول" onClick={() => go(a, 'cancelArrival')} style={mini(C, 'danger')}>✕</button>
+                  <button title={isAdmin ? 'إلغاء الحالة' : 'إلغاء الوصول'} onClick={() => (isAdmin ? cancelStatus(a) : go(a, 'cancelArrival'))} style={mini(C, 'danger')}>✕</button>
                 </div>
               </div>
             );
