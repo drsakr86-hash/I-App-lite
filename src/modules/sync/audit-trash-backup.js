@@ -94,7 +94,7 @@ async function buildSnapshot() {
       try {
         const l = localStorage.getItem(k);
         if (l) data[k] = JSON.parse(l);
-      } catch {}
+      } catch { /* storage unavailable (private mode / quota): non-fatal */ }
     }
   }
   return data;

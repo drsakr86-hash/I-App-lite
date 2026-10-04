@@ -105,17 +105,17 @@ function isActive(a){return a&&!a.cancelled&&a.status!=='cancelled'&&a.waitStatu
 // ── Clinic selection ─────────────────────────────────────────────
 function resolveClinic(){
   var q=params.get('clinic');
-  if(q){var c=CLINICS.find(function(x){return x.slug===q||x.v===q||x.l===q;});if(c){try{localStorage.setItem('queue_clinic',c.v);}catch(e){}return c;}}
-  var saved=null;try{saved=localStorage.getItem('queue_clinic');}catch(e){}
+  if(q){var c=CLINICS.find(function(x){return x.slug===q||x.v===q||x.l===q;});if(c){try{localStorage.setItem('queue_clinic',c.v);}catch(e) { /* storage unavailable (private mode / quota): non-fatal */ }return c;}}
+  var saved=null;try{saved=localStorage.getItem('queue_clinic');}catch(e) { /* storage unavailable (private mode / quota): non-fatal */ }
   return CLINICS.find(function(x){return x.v===saved;})||null;
 }
 var clinic=resolveClinic();
 function showPicker(){
   $('app').style.display='none';$('pickerCard').style.display='block';
   var p=$('picker');p.textContent='';
-  CLINICS.forEach(function(c){var b=el('button',null,'🏥 '+c.l);b.onclick=function(){try{localStorage.setItem('queue_clinic',c.v);}catch(e){}clinic=c;start();};p.appendChild(b);});
+  CLINICS.forEach(function(c){var b=el('button',null,'🏥 '+c.l);b.onclick=function(){try{localStorage.setItem('queue_clinic',c.v);}catch(e) { /* storage unavailable (private mode / quota): non-fatal */ }clinic=c;start();};p.appendChild(b);});
 }
-$('changeClinic').onclick=function(){try{localStorage.removeItem('queue_clinic');}catch(e){}if(params.get('clinic')){params.delete('clinic');history.replaceState(null,'',location.pathname+(params.toString()?'?'+params:''));}clinic=null;showPicker();};
+$('changeClinic').onclick=function(){try{localStorage.removeItem('queue_clinic');}catch(e) { /* storage unavailable (private mode / quota): non-fatal */ }if(params.get('clinic')){params.delete('clinic');history.replaceState(null,'',location.pathname+(params.toString()?'?'+params:''));}clinic=null;showPicker();};
 
 // ── Sound: chime + queued speech (a second call never cuts the first) ──
 var soundOn=false,speechQueue=[],speaking=false,audioCtx=null;
@@ -129,7 +129,7 @@ function chime(){
       g.gain.setValueAtTime(0.0001,s);g.gain.exponentialRampToValueAtTime(0.5,s+0.03);g.gain.exponentialRampToValueAtTime(0.0001,s+0.6);
       o.start(s);o.stop(s+0.65);
     });
-  }catch(e){}
+  }catch(e) { /* display page is best-effort: a failed optional call must not stop the queue board */ }
 }
 function arabicVoice(){
   if(!synth)return null;
@@ -173,9 +173,9 @@ function nextSpeech(){
 // Tell every other screen to call (or re-call) this patient right now.
 function broadcastCall(a){
   if(!callCh)return;
-  try{callCh.send({type:'broadcast',event:'call',payload:{id:a.id,calledAt:a.calledAt||'',repeat:a.repeat||'',patient:a.patient||'',clinic:a.clinic||'',doctor:a.doctor||''}});}catch(e){}
+  try{callCh.send({type:'broadcast',event:'call',payload:{id:a.id,calledAt:a.calledAt||'',repeat:a.repeat||'',patient:a.patient||'',clinic:a.clinic||'',doctor:a.doctor||''}});}catch(e) { /* display page is best-effort: a failed optional call must not stop the queue board */ }
 }
-if(synth){try{synth.getVoices();synth.onvoiceschanged=function(){synth.getVoices();};}catch(e){}}
+if(synth){try{synth.getVoices();synth.onvoiceschanged=function(){synth.getVoices();};}catch(e) { /* display page is best-effort: a failed optional call must not stop the queue board */ }}
 function setSound(on){soundOn=on;$('soundBtn').classList.toggle('on',on);$('soundBtn').textContent=on?'🔊 الصوت مفعل':'🔇 تفعيل الصوت';}
 $('soundBtn').onclick=function(){setSound(!soundOn);if(soundOn){chime();requestWakeLock();}};
 $('testBtn').onclick=function(){setSound(true);requestWakeLock();var t=current||{id:'test',patient:'محمد علي السيد',_q:1};announce(Object.assign({},t,{repeat:'test'+Date.now()}));};
@@ -183,7 +183,7 @@ $('repeatBtn').onclick=function(){if(!current){alert('لا يوجد مريض م�
 
 // ── Keep the screen awake ────────────────────────────────────────
 var wakeLock=null;
-function requestWakeLock(){try{if('wakeLock' in navigator&&!wakeLock)navigator.wakeLock.request('screen').then(function(l){wakeLock=l;l.addEventListener('release',function(){wakeLock=null;});}).catch(function(){});}catch(e){}}
+function requestWakeLock(){try{if('wakeLock' in navigator&&!wakeLock)navigator.wakeLock.request('screen').then(function(l){wakeLock=l;l.addEventListener('release',function(){wakeLock=null;});}).catch(function() { /* display page is best-effort: a failed optional call must not stop the queue board */ });}catch(e) { /* display page is best-effort: a failed optional call must not stop the queue board */ }}
 document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'){requestWakeLock();load();}});
 
 // ── Data & render ────────────────────────────────────────────────
@@ -263,12 +263,12 @@ function subscribe(){
     callCh.on('broadcast',{event:'call'},onBroadcastCall).subscribe(function(st){
       if(st==='SUBSCRIBED')$('status').textContent=$('status').textContent.replace(' · النداء الفوري غير متاح','');
     });
-  }catch(e){}
+  }catch(e) { /* display page is best-effort: a failed optional call must not stop the queue board */ }
   try{
     sb.channel('queue_display_'+Date.now())
       .on('postgres_changes',{event:'*',schema:'public',table:'iapp_store',filter:'key=eq.iapp_appointments'},function(p){if(p&&p.new&&p.new.value!==undefined)setData(p.new.value);})
       .subscribe();
-  }catch(e){}
+  }catch(e) { /* display page is best-effort: a failed optional call must not stop the queue board */ }
 }
 
 function start(){

@@ -5,7 +5,8 @@ import { Field, XRAY_ICON, inp } from '../../modules/ui/atoms.jsx';
 // Patient file — "images" tab. Presentational port of the legacy PatientFile JSX;
 // all state and handlers come from the legacy function through ctx.
 export default function ImagesTab({ ctx }) {
-  const { aiAnalysis, analyzeImage, delImage, handleImgUpload, imageEye, imageFilter, imageOrderId, imageType, images, imagingOrders, editImgNotesLocal, setImageOrderId, imgError, imgLoading, setAiAnalysis, setImageEye, setImageFilter, setImageType, setImgError, setViewImg, updateImgNotes, uploadProgress } = ctx;
+  const { aiAnalysis, analyzeImage, delImage, handleImgUpload, imageEye, imageFilter, imageOrderId, imageType, images, imagingOrders, editImgNotesLocal, setImageOrderId, imgError, imgLoading, setAiAnalysis, setImageEye, setImageFilter, setImageType, setImgError, setViewImg, updateImgNotes, uploadProgress, investigationLinks } = ctx;
+  const chainOfImage = img => (investigationLinks ? investigationLinks.chains.find(c => c.images.some(i => i.id === img.id)) : null);
   return (
     <div>
       <div
@@ -201,7 +202,12 @@ export default function ImagesTab({ ctx }) {
               >
                 {img.name}
               </div>
-              {img.orderId && (<div style={{ color: C.muted, fontSize: 10, marginBottom: 6 }}>{"🔗 مرتبطة بالطلب "}{img.orderId}</div>)}
+              {(() => {
+                const ch = chainOfImage(img);
+                if (ch) return (<div style={{ color: C.muted, fontSize: 10, marginBottom: 6 }}>{"🔗 الطلب: "}{ch.tests.join("، ")}{ch.orderedDate ? " · " + ch.orderedDate : ""}{ch.visit ? " · زيارة " + ch.visit.date : ""}</div>);
+                if (img.orderId) return (<div style={{ color: C.muted, fontSize: 10, marginBottom: 6 }}>{"🔗 مرتبطة بالطلب "}{img.orderId}</div>);
+                return (<div style={{ color: C.gold, fontSize: 10, marginBottom: 6 }}>غير مرتبطة بطلب فحص</div>);
+              })()}
               <textarea
                 value={img.notes || ""}
                 onChange={e => editImgNotesLocal(img.id, e.target.value)}

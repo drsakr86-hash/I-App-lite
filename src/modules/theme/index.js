@@ -17,36 +17,36 @@ import { useState, useEffect } from 'react';
 
 export const THEMES = {
   dark: {
-    bg: '#0A0F1E',
-    bg2: '#0a1220',
-    surface: '#111827',
-    surface2: '#0D1929',
-    card: '#141E30',
-    border: '#1E2D45',
-    accent: '#00C2FF',
-    teal: '#00E5CC',
-    gold: '#FFB830',
-    text: '#E8F4FF',
-    muted: '#6B8CAE',
-    danger: '#FF4D6D',
-    success: '#00E5B0',
-    purple: '#A78BFA'
+    bg: '#0B1220',
+    bg2: '#0E1627',
+    surface: '#111B2E',
+    surface2: '#0F1829',
+    card: '#142038',
+    border: '#243550',
+    accent: '#2BA8B8',
+    teal: '#22B8A8',
+    gold: '#E8A33D',
+    text: '#EAF1FA',
+    muted: '#8196B3',
+    danger: '#E5575F',
+    success: '#2FB67C',
+    purple: '#8F83E8'
   },
   light: {
-    bg: '#F2F6FB',
+    bg: '#F4F7FB',
     bg2: '#FFFFFF',
     surface: '#FFFFFF',
-    surface2: '#EAF1F9',
+    surface2: '#EDF2F8',
     card: '#FFFFFF',
-    border: '#D3DEEB',
-    accent: '#0077B6',
-    teal: '#008F86',
-    gold: '#B86E00',
-    text: '#0F1B2D',
-    muted: '#566B84',
-    danger: '#D6304F',
-    success: '#0A8F65',
-    purple: '#6D4FD1'
+    border: '#D5DFEB',
+    accent: '#0B7A88',
+    teal: '#0E8F82',
+    gold: '#A8650A',
+    text: '#0E1A2B',
+    muted: '#51657F',
+    danger: '#C93A44',
+    success: '#13845A',
+    purple: '#5E49C4'
   }
 };
 
@@ -58,7 +58,7 @@ export const C = { ...THEMES.dark };
 let _theme = 'dark';
 try {
   if (localStorage.getItem('iapp_theme') === 'light') _theme = 'light';
-} catch {}
+} catch { /* storage unavailable (private mode / quota): non-fatal */ }
 
 const themeSubs = new Set();
 
@@ -71,14 +71,15 @@ export function applyTheme(t) {
   Object.assign(C, THEMES[t]);
   try {
     localStorage.setItem('iapp_theme', t);
-  } catch {}
+  } catch { /* storage unavailable (private mode / quota): non-fatal */ }
   try {
     document.documentElement.setAttribute('data-theme', t);
+    for (const [k, v] of Object.entries(C)) if (['bg','surface','card','border','accent','teal','gold','text','muted','danger','success'].includes(k)) document.documentElement.style.setProperty('--c-' + k, v);
     document.documentElement.style.background = C.bg;
     document.body.style.background = C.bg;
     const m = document.querySelector('meta[name="theme-color"]');
     if (m) m.setAttribute('content', C.bg);
-  } catch {}
+  } catch { /* no DOM (tests / non-browser): non-fatal */ }
 }
 
 export function setTheme(t) {

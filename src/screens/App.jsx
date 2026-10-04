@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, lazy, Suspense } from "react";
 import { getDailyReportHTML, printDoc } from "../modules/print/index.js";
 import { C } from "../modules/theme/index.js";
 import { useDB } from "../modules/data/index.js";
@@ -13,15 +13,16 @@ import BottomNav from "../components/BottomNav.jsx";
 import FollowUpCentre from "../components/FollowUpCentre.jsx";
 import GlobalSearch from "../components/GlobalSearch.jsx";
 import { Toast } from "../components/common.jsx";
+import LazyFallback from "../components/LazyFallback.jsx";
 import Dashboard from "./Dashboard.jsx";
 import PatientsContainer from "./PatientsContainer.jsx";
 import Appointments from "./Appointments.jsx";
 import WaitingRoom from "./WaitingRoom.jsx";
 import Prescriptions from "./Prescriptions.jsx";
-import Radiology from "./Radiology.jsx";
-import ImagingCenter from "./ImagingCenter.jsx";
-import Accounting from "./Accounting.jsx";
-import Settings from "./Settings.jsx";
+const Radiology = lazy(() => import("./Radiology.jsx"));
+const ImagingCenter = lazy(() => import("./ImagingCenter.jsx"));
+const Accounting = lazy(() => import("./Accounting.jsx"));
+const Settings = lazy(() => import("./Settings.jsx"));
 
 // Doctor-app shell. Exact port of the legacy runtime's App()
 // (public/legacy/app-runtime.js) -- same state, same effects, same screens
@@ -36,7 +37,7 @@ export default function App() {
     try {
       const p = localStorage.getItem("iapp_session");
       if (p) return JSON.parse(p);
-    } catch {}
+    } catch { /* storage unavailable (private mode / quota): non-fatal */ }
     try {
       return JSON.parse(sessionStorage.getItem("iapp_session"));
     } catch {
@@ -138,7 +139,7 @@ export default function App() {
         const d = new Date().toDateString();
         seenToday = localStorage.getItem("iapp_alerts_day") === d;
         if (!seenToday) localStorage.setItem("iapp_alerts_day", d);
-      } catch {}
+      } catch { /* storage unavailable (private mode / quota): non-fatal */ }
       if (!seenToday) setTimeout(() => setShowAlerts(true), 800);
     }
   }, [session]);
@@ -152,26 +153,26 @@ export default function App() {
     if (remember) {
       try {
         localStorage.setItem("iapp_session", JSON.stringify(s));
-      } catch {}
+      } catch { /* storage unavailable (private mode / quota): non-fatal */ }
     } else {
       try {
         sessionStorage.setItem("iapp_session", JSON.stringify(s));
-      } catch {}
+      } catch { /* storage unavailable (private mode / quota): non-fatal */ }
     }
     setSession(s);
   };
   const handleLogout = () => {
     try {
       localStorage.removeItem("iapp_session");
-    } catch {}
+    } catch { /* storage unavailable (private mode / quota): non-fatal */ }
     try {
       sessionStorage.removeItem("iapp_session");
-    } catch {}
+    } catch { /* storage unavailable (private mode / quota): non-fatal */ }
     setSession(null);
     setTab("dashboard");
     try {
       if (window.__iappUnifiedLogout) window.__iappUnifiedLogout();
-    } catch {}
+    } catch { /* storage unavailable (private mode / quota): non-fatal */ }
   };
   if (!session) return <LoginScreen onLogin={handleLogin} />;
   const effectiveTab = tab === "accounting" && session.role !== "admin" ? "dashboard" : tab;
@@ -250,7 +251,7 @@ export default function App() {
       <div style={{ width: "100%", maxWidth: 480, minHeight: "100vh", background: C.bg, direction: "rtl", fontFamily: "'Segoe UI','Tahoma',Arial,sans-serif", position: "relative", overflowX: "hidden" }}>
         <TopBar primary={primary} onSearch={() => setShowSearch(true)} syncing={syncing} session={session} onLogout={handleLogout} />
         <div style={{ overflowY: "auto", maxHeight: "calc(100vh - 128px)", animation: "slideUp 0.25s ease" }}>
-          {screens[effectiveTab]}
+          <Suspense fallback={<LazyFallback />}>{screens[effectiveTab]}</Suspense>
         </div>
         <BottomNav active={effectiveTab} setActive={setTab} role={session.role} />
         {showAlerts && (

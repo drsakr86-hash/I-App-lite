@@ -36,7 +36,7 @@ export async function ensureSession(client, {
     const stored = JSON.parse(storage.getItem(storageKey));
     const s = stored && (stored.currentSession || stored);
     refreshToken = s && s.refresh_token;
-  } catch (_) {}
+  } catch (_) { /* storage unavailable (private mode / quota): non-fatal */ }
   if (!refreshToken) return { ok: false, reason: 'no-session' };
 
   let res;

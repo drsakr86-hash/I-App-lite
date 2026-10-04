@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   REQUEST_DOCTOR, STATS_VISIT_TYPES, mutateErrorMessage,
   addAptMutation, editAptMutation, acceptAptMutation, mergeApt, markRemindedIn, withoutAptId,
@@ -16,6 +16,7 @@ import { localISO, clinicLabel, BOOKING_TABLE, CLINICS_LIST } from "../modules/c
 import { useSyncStatus } from "../modules/sync/engine.js";
 import { sbGet, sbMutate } from "../modules/sync/wiring.js";
 import { getSB } from "../modules/data-access/index.js";
+import { logError } from "../services/logger.js";
 import { trashPut, logAudit } from "../modules/sync/index.js";
 import { newId } from "../modules/constants/misc.js";
 import { waOpen, waReminderText } from "../modules/notifications/index.js";
@@ -50,7 +51,7 @@ export default function SecretaryApp() {
     try {
       const p = localStorage.getItem("iapp_session");
       if (p) return JSON.parse(p);
-    } catch {}
+    } catch { /* storage unavailable (private mode / quota): non-fatal */ }
     try {
       return JSON.parse(sessionStorage.getItem("iapp_session"));
     } catch {
@@ -75,6 +76,7 @@ export default function SecretaryApp() {
   const [syncing, setSyncing] = useState(false);
   const today = localISO();
   const secSt = useSyncStatus();
+  const handledRequests = useRef(new Set());
   const loadRequests = async () => {
     try {
       const sb = getSB();
@@ -85,8 +87,16 @@ export default function SecretaryApp() {
       } = await sb.from(BOOKING_TABLE).select("*").eq("status", "pending").order("created_at", {
         ascending: true
       });
-      if (!error && Array.isArray(data)) setRequests(data);
-    } catch (e) {}
+      if (error) {
+        logError('booking.loadRequests', error);
+        return;
+      }
+      // Requests whose status update failed after the appointment was created stay hidden
+      // for this session, so a failed update cannot lead to a second appointment.
+      if (Array.isArray(data)) setRequests(data.filter(x => !handledRequests.current.has(x.id)));
+    } catch (e) {
+      logError('booking.loadRequests', e);
+    }
   };
   const loadData = async () => {
     const [a, p, pr] = await Promise.all([sbGet("iapp_appointments"), sbGet("iapp_patients"), sbGet("iapp_prices")]);
@@ -111,11 +121,20 @@ export default function SecretaryApp() {
     const apt = buildAcceptedAppointment(r, newId(), REQUEST_DOCTOR);
     const ok = await mutateApts(list => acceptAptMutation(list, apt), list => list.some(a => a.id === apt.id), "تم تأكيد الطلب");
     if (ok) {
+      let statusError = null;
       try {
-        await getSB().from(BOOKING_TABLE).update({
+        const res = await getSB().from(BOOKING_TABLE).update({
           status: "accepted"
         }).eq("id", r.id);
-      } catch (e) {}
+        statusError = res && res.error ? res.error : null;
+      } catch (e) {
+        statusError = e;
+      }
+      if (statusError) {
+        logError('booking.accept.status', statusError, { id: r.id });
+        handledRequests.current.add(r.id);
+        setToast("⚠ تم تأكيد الموعد لكن تعذر تحديث حالة طلب الحجز — لا تؤكده مرة أخرى");
+      }
       setRequests(list => list.filter(x => x.id !== r.id));
       logAudit("قبول طلب حجز", requestAuditDetail(r));
     }
@@ -125,12 +144,16 @@ export default function SecretaryApp() {
     if (!window.confirm("رفض طلب " + r.patient_name + "؟")) return;
     setReqBusy(r.id);
     try {
-      await getSB().from(BOOKING_TABLE).update({
+      const res = await getSB().from(BOOKING_TABLE).update({
         status: "rejected"
       }).eq("id", r.id);
+      if (res && res.error) throw res.error;
       setRequests(list => list.filter(x => x.id !== r.id));
       logAudit("رفض طلب حجز", requestAuditDetail(r));
-    } catch (e) {}
+    } catch (e) {
+      logError('booking.reject', e, { id: r.id });
+      setToast("⚠ تعذر رفض الطلب — حاول مرة أخرى");
+    }
     setReqBusy(null);
   };
   // Realtime channel AND 5 s polling — both deliberate (the channel can drop
@@ -157,7 +180,7 @@ export default function SecretaryApp() {
       if (channel) {
         try {
           getSB().removeChannel(channel);
-        } catch {}
+        } catch { /* channel already closed: non-fatal */ }
       }
     };
   }, [session]);
@@ -212,25 +235,25 @@ export default function SecretaryApp() {
     if (remember) {
       try {
         localStorage.setItem("iapp_session", JSON.stringify(s));
-      } catch {}
+      } catch { /* storage unavailable (private mode / quota): non-fatal */ }
     } else {
       try {
         sessionStorage.setItem("iapp_session", JSON.stringify(s));
-      } catch {}
+      } catch { /* storage unavailable (private mode / quota): non-fatal */ }
     }
     setSession(s);
   };
   const handleLogout = () => {
     try {
       localStorage.removeItem("iapp_session");
-    } catch {}
+    } catch { /* storage unavailable (private mode / quota): non-fatal */ }
     try {
       sessionStorage.removeItem("iapp_session");
-    } catch {}
+    } catch { /* storage unavailable (private mode / quota): non-fatal */ }
     setSession(null);
     try {
       if (window.__iappUnifiedLogout) window.__iappUnifiedLogout();
-    } catch {}
+    } catch { /* storage unavailable (private mode / quota): non-fatal */ }
   };
   if (!session) return <LoginScreen onLogin={handleLogin} />;
 

@@ -80,7 +80,7 @@ export async function aptMutate(mutator, verify) {
   if (!ok) return { ok: false, error: 'offline', data: base };
   try {
     localStorage.setItem(APT_KEY, JSON.stringify(next));
-  } catch {}
+  } catch { /* storage unavailable (private mode / quota): non-fatal */ }
   if (verify) {
     const check = await aptList();
     if (Array.isArray(check) && verify(check)) return { ok: true, data: check };

@@ -160,6 +160,9 @@ export function mapCoreRequests(file, patient, today = '') {
       requestedTests: [{ id: o.id, name, name_ar: name, category: 'Core', eye: str(o.eye) || 'OU' }],
       notes: str(o.clinical_note || (io && io.notes)),
       status: str(o.status || (io && io.status)) || 'requested',
+      priority: str(o.priority || (io && io.priority)),
+      resultSummary: str(o.result_summary),
+      completedAt: str(o.completed_at || (io && io.completed_at)),
       coreInvestigationOrderId: present(o.id) ? String(o.id) : null,
       coreImagingOrderId: io && present(io.id) ? String(io.id) : null,
       // Only read when the backend actually returns it; never inferred.
@@ -189,6 +192,11 @@ export function mapCoreImages(file, patient) {
       notes: st.notes || st.report || '',
       examId: null
     }];
+    // `iapp_imaging_studies_core.order_id` holds the INVESTIGATION order id (verified against the
+    // live iapp_create_imaging_study definition). Older code read a non-existent
+    // `investigation_order_id` column, so the study -> request link was always lost.
+    const studyOrderId = present(st.order_id) ? String(st.order_id) : (present(st.investigation_order_id) ? String(st.investigation_order_id) : null);
+    const meta = st.metadata && typeof st.metadata === 'object' ? st.metadata : {};
     files.forEach(f => {
       const src = f.src || st.cloudinary_url || '';
       if (!src) return;
@@ -198,7 +206,13 @@ export function mapCoreImages(file, patient) {
         public_id: f.public_id || st.cloudinary_public_id || '',
         src,
         coreStudyId: present(st.id) ? String(st.id) : null,
-        coreOrderId: present(st.investigation_order_id) ? String(st.investigation_order_id) : null,
+        coreOrderId: studyOrderId,
+        coreVisitId: present(st.visit_id) ? String(st.visit_id) : null,
+        studyStatus: str(st.status),
+        report: str(st.report),
+        studyDoctor: str(st.doctor_name),
+        // The imaging screen stores the local order id in metadata.order_id when it uploads.
+        ...(present(meta.order_id) && !present(f.orderId) ? { orderId: String(meta.order_id) } : {}),
         _core: true,
         _sources: ['core']
       });

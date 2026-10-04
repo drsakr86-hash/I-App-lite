@@ -53,7 +53,7 @@ export async function trashRestore(entry) {
   if (!put.ok) return false;
   try {
     localStorage.setItem(entry.storeKey, JSON.stringify(put.data));
-  } catch {}
+  } catch { /* storage unavailable (private mode / quota): non-fatal */ }
   await sbMutate(TRASH_KEY, list => list.filter(t => t.id !== entry.id));
   await logAudit('استعادة من سلة المحذوفات', entry.label || entry.storeKey);
   return true;
@@ -89,7 +89,7 @@ export async function restoreSnapshot(data, label) {
     const ok = await sbSet(k, v);
     try {
       localStorage.setItem(k, JSON.stringify(v));
-    } catch {}
+    } catch { /* storage unavailable (private mode / quota): non-fatal */ }
     if (ok) done++;
   }
   await logAudit('استعادة نسخة احتياطية', (label || '') + ' · ' + done + ' مجموعة بيانات');

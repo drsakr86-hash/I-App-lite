@@ -46,7 +46,7 @@ export async function sbSession() {
         if (s && s.user && s.refresh_token) return s;
       }
     }
-  } catch (e) {}
+  } catch (e) { /* storage unavailable (private mode / quota): non-fatal */ }
   return null;
 }
 
@@ -66,8 +66,8 @@ export async function ensureKiosk() {
 
 export function clearAllSessions() {
   ['iapp_unified_session', 'iapp_session'].forEach(k => {
-    try { localStorage.removeItem(k); } catch {}
-    try { sessionStorage.removeItem(k); } catch {}
+    try { localStorage.removeItem(k); } catch { /* storage unavailable (private mode / quota): non-fatal */ }
+    try { sessionStorage.removeItem(k); } catch { /* storage unavailable (private mode / quota): non-fatal */ }
   });
 }
 
@@ -97,7 +97,7 @@ export function loadValidSession() {
       try {
         store.setItem('iapp_unified_session', JSON.stringify(fresh));
         store.setItem('iapp_session', JSON.stringify(buildCompactSession(fresh)));
-      } catch {}
+      } catch { /* storage unavailable (private mode / quota): non-fatal */ }
     }
     return fresh;
   }

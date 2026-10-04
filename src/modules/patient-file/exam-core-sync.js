@@ -12,18 +12,48 @@
 // the result lists every step so the UI can report an accurate partial success.
 // Nothing here retries automatically -- the RPCs are not known to be idempotent.
 
+import { stripDerived, normalizeOphth } from './ophth.js';
+
 const trim = v => String(v == null ? '' : v).trim();
+const DEFAULT_FOLLOWUP_REASON = 'متابعة';
+const LATERAL = [['od', 'OD'], ['os', 'OS'], ['ou', 'OU']];
+
+// The server's create RPCs are idempotent on their natural keys (verified against the live
+// definitions: diagnosis = visit+text+laterality, treatment = visit+text+eye, follow-up =
+// patient+visit+date+reason). The markers below remain as the first line of defence so an
+// unchanged value does not even cost a round trip.
+function followKeyOf(exam) {
+  const followup = trim(exam && exam.followUp).slice(0, 10);
+  const reason = trim(normalizeOphth(exam && exam.ophth).plan.followUpReason);
+  return { followup, reason, key: followup ? (reason ? followup + '|' + reason : followup) : '' };
+}
 
 export function planExamSteps(exam) {
   const prev = (exam && exam._coreSync) || {};
-  const diagnosis = trim(exam && exam.diagnosis);
-  const treatment = trim(exam && exam.treatmentPlan);
-  const followup = trim(exam && exam.followUp).slice(0, 10);
+  // The regenerated "تفصيل منظّم" block is mirrored into the exam summary only; the
+  // diagnosis/treatment rows sent to Core carry the clinician's own text.
+  const diagnosis = trim(stripDerived(exam && exam.diagnosis));
+  const treatment = trim(stripDerived(exam && exam.treatmentPlan));
+  const f = followKeyOf(exam);
   return {
     diagnosis: diagnosis && diagnosis !== prev.diagnosis ? diagnosis : null,
     treatment: treatment && treatment !== prev.treatment ? treatment : null,
-    followup: followup && followup !== prev.followup ? followup : null
+    followup: f.followup && f.key !== prev.followup ? f.followup : null
   };
+}
+
+// Eye-specific diagnoses (structured exam.ophth.dx) and the follow-up reason. Kept apart from
+// planExamSteps so that function's contract (three keys) is unchanged for old callers.
+export function planStructuredSteps(exam) {
+  const prev = (exam && exam._coreSync) || {};
+  const o = normalizeOphth(exam && exam.ophth);
+  const lateral = {};
+  for (const [k, label] of LATERAL) {
+    const text = trim(o.dx[k]);
+    lateral['dx_' + k] = text && text !== prev['dx_' + k] ? { text, laterality: label } : null;
+  }
+  const f = followKeyOf(exam);
+  return { lateral, followupKey: f.key, followupReason: f.reason || DEFAULT_FOLLOWUP_REASON };
 }
 
 const errText = e => (e && (e.message || e.hint || e.details)) || String(e || 'error');
@@ -33,6 +63,7 @@ export async function runExamCoreSync({ exam, patientCode = '', call, findVisitI
   const steps = [];
   const markers = { ...((exam && exam._coreSync) || {}) };
   const plan = planExamSteps(exam);
+  const structured = planStructuredSteps(exam);
 
   const base = await call('iapp_sync_examination_core', { p_exam: exam, p_patient_code: patientCode });
   if (base.error) {
@@ -67,10 +98,18 @@ export async function runExamCoreSync({ exam, patientCode = '', call, findVisitI
   await run('treatment', 'iapp_create_treatment_core', {
     p_visit_id: visitId, p_treatment: plan.treatment, p_eye: null, p_instructions: null, p_notes: null
   }, 'treatment', plan.treatment, true);
+  // Eye-specific diagnoses use the existing p_laterality parameter (OD / OS / OU).
+  for (const [k] of LATERAL) {
+    const l = structured.lateral['dx_' + k];
+    if (!l) continue;
+    await run('diagnosis-' + k, 'iapp_create_diagnosis_core', {
+      p_visit_id: visitId, p_diagnosis: l.text, p_laterality: l.laterality, p_is_primary: false, p_status: 'active', p_notes: null
+    }, 'dx_' + k, l.text, true);
+  }
   await run('followup', 'iapp_create_followup_core', {
     p_patient_id: Number(exam.patientId), p_followup_date: plan.followup, p_visit_id: visitId,
-    p_reason: 'متابعة', p_notes: null, p_status: 'planned', p_doctor_name: exam.doctor || ''
-  }, 'followup', plan.followup, false);
+    p_reason: structured.followupReason, p_notes: null, p_status: 'planned', p_doctor_name: exam.doctor || ''
+  }, 'followup', plan.followup ? structured.followupKey : null, false);
 
   const failed = steps.filter(s => !s.ok);
   return {

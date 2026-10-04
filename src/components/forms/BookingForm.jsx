@@ -9,6 +9,7 @@ import { C } from '../../modules/theme/index.js';
 import { inp } from '../../modules/ui/atoms.jsx';
 import { localISO, PATIENT_CLINICS, CLINIC_CODE } from '../../modules/constants/index.js';
 import { getSB } from '../../modules/data-access/index.js';
+import { logError } from '../../services/logger.js';
 
 // Patient booking wizard (patient app): guest info (guests only) → clinic →
 // date → time → confirm. Exact port of the legacy runtime's BookingForm
@@ -37,7 +38,10 @@ export default function BookingForm({ patient, bookForm, setBookForm, booking, o
           const { data } = await sb.from(SLOTS_VIEW).select('time,taken').eq('clinic', code).eq('date', selDate.date);
           addTakenRows(m, data);
         }
-      } catch (e) {}
+      } catch (e) {
+        // Slot availability is advisory: the server still rejects a double booking.
+        logError('booking.loadTakenSlots', e);
+      }
       if (!alive) return;
       setTaken(m);
       setSlotsLoading(false);

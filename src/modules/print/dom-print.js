@@ -89,7 +89,7 @@ export function printViaIframe(html) {
     setTimeout(() => {
       try {
         iframe.remove();
-      } catch (e) {}
+      } catch (e) { /* iframe already detached: non-fatal */ }
     }, 60000);
   };
   const doc = iframe.contentWindow.document;

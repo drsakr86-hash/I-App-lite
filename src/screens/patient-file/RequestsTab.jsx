@@ -4,11 +4,39 @@ import { C } from '../../modules/theme/index.js';
 import { Tag, inp } from '../../modules/ui/atoms.jsx';
 import { IMAGING_ORDER_STATUSES } from '../../modules/constants/index.js';
 import { getRadiologyHTML, printDoc } from '../../modules/print/index.js';
+import { GAP_LABEL, BASIS_LABEL } from '../../modules/patient-file/investigation-links.js';
+
+const GROUP_LABEL = { pending: ['ds-badge--warn', 'قيد الانتظار'], done: ['ds-badge--ok', 'تم'], cancelled: ['ds-badge--mute', 'أُلغي'], other: ['ds-badge--info', 'قيد التنفيذ'] };
+
+// Why / when / which visit / who ordered / where the images and the report are.
+// Anything that cannot be established from stable identifiers is listed as a gap, never guessed.
+function ChainDetails({ chain }) {
+  if (!chain) return null;
+  const g = GROUP_LABEL[chain.statusGroup] || GROUP_LABEL.other;
+  const row = (k, v) => (
+    <div style={{ display: 'flex', gap: 6, fontSize: 11 }}><span style={{ color: C.muted, minWidth: 74 }}>{k}</span><span style={{ color: C.text, overflowWrap: 'anywhere' }}>{v || <span style={{ color: C.muted }}>غير مسجل</span>}</span></div>
+  );
+  return (
+    <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: 3 }}>
+      <div><span className={'ds-badge ' + g[0]}>{g[1]}</span>{chain.pendingDays != null && chain.pendingDays > 0 && <span className="ds-sub"> · منذ {chain.pendingDays} يوم</span>}</div>
+      {row('السبب', chain.why)}
+      {row('الطالب', chain.orderedBy)}
+      {row('الزيارة', chain.visit ? [chain.visit.date, chain.visit.type].filter(Boolean).join(' · ') : (chain.visitRef ? 'مرتبط بزيارة (' + chain.visitRef + ')' : ''))}
+      {row('تاريخ التنفيذ', chain.performedDate)}
+      {row('الصور', chain.images.length ? chain.images.length + ' صورة — تبويب الصور' : '')}
+      {row('التقرير', chain.report ? chain.report.text : '')}
+      {chain.result && row('النتيجة', chain.result)}
+      {chain.images.length > 0 && <div className="ds-sub">ربط الصور: {[...new Set(chain.images.flatMap(i => i._linkBasis || []))].map(b => BASIS_LABEL[b] || b).join('، ')}</div>}
+      {chain.gaps.length > 0 && <div className="ds-sub" style={{ color: C.gold }}>{chain.gaps.map(x => GAP_LABEL[x] || x).join(' · ')}</div>}
+    </div>
+  );
+}
 
 // Patient file — "requests" tab. Presentational port of the legacy PatientFile JSX;
 // all state and handlers come from the legacy function through ctx.
 export default function RequestsTab({ ctx }) {
-  const { allRequestTests, clinic, curPatient, cycleRequestEye, imagingOrders, primaryDoctor, requestEye, requestNotes, requestResult, requestSaving, requestTests, requests, resyncRequest, savePatientRadiologyRequest, setRequestEye, setRequestNotes, toggleRequestTest } = ctx;
+  const { allRequestTests, clinic, curPatient, cycleRequestEye, imagingOrders, primaryDoctor, requestEye, requestNotes, requestResult, requestSaving, requestTests, requests, resyncRequest, savePatientRadiologyRequest, setRequestEye, setRequestNotes, toggleRequestTest, investigationLinks } = ctx;
+  const chainOf = id => (investigationLinks ? investigationLinks.chains.find(c => String(c.requestId) === String(id)) : null);
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
@@ -199,7 +227,7 @@ export default function RequestsTab({ ctx }) {
                   </span>
                 ))}
               </div>
-              {r.notes && (<div style={{ color: C.muted, fontSize: 10, marginTop: 5 }}>{"📝 "}{r.notes}</div>)}
+              <ChainDetails chain={chainOf(r.id)} />
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
                 {r.coreSyncError ? (
                   <span style={{ color: C.gold, fontSize: 10 }}>

@@ -38,6 +38,23 @@ export default function PatientFile({ ctx }) {
     clinic, doctorNames, prices, primaryDoctor, onClose, onSaveExam, onSaveVisit, handlePatientSave,
     onAddRxSave, onEditRxSave, onConfirmDelete
   } = ctx;
+  const tabIds = TABS.map(t => t.id);
+  const onTabKey = e => {
+    const i = tabIds.indexOf(tab);
+    let n = -1;
+    // RTL: the visual "next" tab is to the left, so ArrowLeft advances and ArrowRight goes back.
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') n = (i + 1) % tabIds.length;
+    else if (e.key === 'ArrowRight' || e.key === 'ArrowUp') n = (i - 1 + tabIds.length) % tabIds.length;
+    else if (e.key === 'Home') n = 0;
+    else if (e.key === 'End') n = tabIds.length - 1;
+    if (n < 0) return;
+    e.preventDefault();
+    setTab(tabIds[n]);
+    const el = document.getElementById('pf-tab-' + tabIds[n]);
+    if (el) el.focus();
+  };
+  const recent = (ctx.timelineEvents || []).slice(0, 5);
+  const summary = ctx.summary;
   return (
     <div
       style={{
@@ -47,162 +64,104 @@ export default function PatientFile({ ctx }) {
         zIndex: 300,
         overflowY: "auto",
         direction: "rtl",
-        fontFamily: "'Segoe UI','Tahoma',Arial,sans-serif",
-        maxWidth: 480,
-        margin: "0 auto"
+        fontFamily: "'Segoe UI','Tahoma',Arial,sans-serif"
       }}
     >
       <TopBar backLabel={curPatient.name} onBack={onClose}/>
-      <div
-        style={{
-          background: `linear-gradient(135deg,${C.accent}22,${C.teal}11)`,
-          border: `1px solid ${C.accent}33`,
-          margin: "12px 16px",
-          borderRadius: 16,
-          padding: "14px 16px",
-          display: "flex",
-          alignItems: "center",
-          gap: 14
-        }}
-      >
-        <div
-          style={{
-            width: 56,
-            height: 56,
-            borderRadius: "50%",
-            background: `linear-gradient(135deg,${C.accent},${C.teal})`,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: C.bg,
-            fontWeight: 800,
-            fontSize: 22
-          }}
-        >
-          {(curPatient.name || "?")[0]}
-        </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ color: C.text, fontWeight: 700, fontSize: 16 }}>{curPatient.name}</div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
-            <span
-              style={{
-                background: C.accent + "33",
-                color: C.accent,
-                borderRadius: 8,
-                padding: "2px 10px",
-                fontSize: 12,
-                fontWeight: 800,
-                letterSpacing: 1
-              }}
-            >
-              {curPatient.patientCode || "—"}
-            </span>
+      <div className="pf-shell">
+        <header className="ds-card" style={{ margin: "12px 0", display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+          <div
+            aria-hidden="true"
+            style={{
+              width: 48, height: 48, borderRadius: "50%", background: C.accent, display: "flex",
+              alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 700, fontSize: 20, flex: "0 0 auto"
+            }}
+          >
+            {(curPatient.name || "?")[0]}
           </div>
-          <div style={{ color: C.muted, fontSize: 12 }}>
-            {ageLabel(curPatient.age)}
-            {" · "}
-            {curPatient.gender}
-            {" · "}
-            {curPatient.phone}
+          <div style={{ flex: 1, minWidth: 180 }}>
+            <h1 style={{ color: C.text, fontWeight: 700, fontSize: 17, margin: 0 }}>{curPatient.name}</h1>
+            <div style={{ color: C.muted, fontSize: 12, marginTop: 2 }}>
+              <span className="ds-badge ds-badge--info" style={{ marginInlineEnd: 8 }}>{curPatient.patientCode || "غير مسجل"}</span>
+              {ageLabel(curPatient.age)}{" · "}{curPatient.gender || "غير مسجل"}{curPatient.phone ? " · " + curPatient.phone : ""}
+            </div>
           </div>
-          <div style={{ display: "flex", gap: 6, marginTop: 4, alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
             <Tag label={curPatient.status} color={SC[curPatient.status] || C.muted}/>
+            <button type="button" className="ds-btn" onClick={() => setModal("editPatient")}>✏ تعديل الملف</button>
             <button
               type="button"
-              onClick={() => setModal("editPatient")}
-              style={{
-                color: C.accent,
-                fontSize: 11,
-                cursor: "pointer",
-                background: C.accent + "22",
-                border: "none",
-                borderRadius: 8,
-                padding: "2px 8px"
-              }}
-            >
-              ✏ تعديل الملف
-            </button>
-            <button
-              type="button"
+              className="ds-btn"
               onClick={() => printDoc(getPatientFileHTML(curPatient, visits, patientRecords, rxList, primaryDoctor, clinic))}
-              style={{
-                color: C.purple,
-                fontSize: 11,
-                cursor: "pointer",
-                background: C.purple + "22",
-                border: "none",
-                borderRadius: 8,
-                padding: "2px 8px"
-              }}
             >
               🖨️ طباعة
             </button>
           </div>
-        </div>
-      </div>
-      <StatusBar ctx={ctx} />
-      <div
-        role="tablist"
-        aria-label="أقسام ملف المريض"
-        style={{
-          display: "flex",
-          margin: "0 16px 14px",
-          background: C.card,
-          borderRadius: 12,
-          padding: 4,
-          overflowX: "auto"
-        }}
-      >
-        {TABS.map(t => (
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tab === t.id}
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            style={{
-              border: "none",
-              font: "inherit",
-              flex: "0 0 auto",
-              textAlign: "center",
-              padding: "8px 10px",
-              background: tab === t.id ? `linear-gradient(135deg,${C.accent},${C.teal})` : "transparent",
-              borderRadius: 9,
-              cursor: "pointer",
-              color: tab === t.id ? C.bg : C.muted,
-              fontSize: 10,
-              fontWeight: 700,
-              minWidth: 54
-            }}
-          >
-            <div style={{ fontSize: 13, display: "flex", justifyContent: "center", alignItems: "center", height: 18 }}>
-              {t.icon === "oct" ? (
-                <img
-                  src={XRAY_ICON}
-                  style={{
-                    width: 18,
-                    height: 18,
-                    display: "block",
-                    filter: tab === t.id ? "brightness(0) invert(1)" : "brightness(0.8)"
-                  }}
-                />
-              ) : t.icon}
+        </header>
+        <StatusBar ctx={ctx} />
+        <div className="pf-grid" style={{ marginTop: 10 }}>
+          <nav className="pf-nav" aria-label="أقسام ملف المريض">
+            <div className="ds-tabs" role="tablist" aria-label="أقسام ملف المريض" aria-orientation="horizontal" onKeyDown={onTabKey}>
+              {TABS.map(t => (
+                <button
+                  type="button"
+                  role="tab"
+                  id={"pf-tab-" + t.id}
+                  aria-selected={tab === t.id}
+                  aria-controls="pf-panel"
+                  tabIndex={tab === t.id ? 0 : -1}
+                  className="ds-tab"
+                  key={t.id}
+                  onClick={() => setTab(t.id)}
+                >
+                  <span aria-hidden="true" style={{ marginInlineEnd: 6 }}>
+                    {t.icon === "oct" ? (
+                      <img src={XRAY_ICON} alt="" style={{ width: 16, height: 16, verticalAlign: "middle", filter: tab === t.id ? "brightness(0) invert(1)" : "brightness(0.8)" }} />
+                    ) : t.icon}
+                  </span>
+                  {t.label}
+                </button>
+              ))}
             </div>
-            {t.label}
-          </button>
-        ))}
-      </div>
-      <div style={{ padding: "0 16px 100px" }} role="tabpanel">
-        {tab === "info" && <InfoSummary ctx={ctx} />}
-        {tab === "timeline" && <TimelineTab ctx={ctx} />}
-        {tab === "info" && <InfoDetails ctx={ctx} />}
-        {tab === "visits" && <VisitsTab ctx={ctx} />}
-        {tab === "compare" && <CompareTab ctx={ctx} />}
-        {tab === "exams" && <ExamsTab ctx={ctx} />}
-        {tab === "requests" && <RequestsTab ctx={ctx} />}
-        {tab === "treatment" && <TreatmentTab ctx={ctx} />}
-        {tab === "rx" && <RxTab ctx={ctx} />}
-        {tab === "images" && <ImagesTab ctx={ctx} />}
+          </nav>
+          <main className="pf-main" id="pf-panel" role="tabpanel" aria-labelledby={"pf-tab-" + tab} tabIndex={-1} style={{ minWidth: 0 }}>
+            {tab === "info" && <InfoSummary ctx={ctx} />}
+            {tab === "timeline" && <TimelineTab ctx={ctx} />}
+            {tab === "info" && <InfoDetails ctx={ctx} />}
+            {tab === "visits" && <VisitsTab ctx={ctx} />}
+            {tab === "compare" && <CompareTab ctx={ctx} />}
+            {tab === "exams" && <ExamsTab ctx={ctx} />}
+            {tab === "requests" && <RequestsTab ctx={ctx} />}
+            {tab === "treatment" && <TreatmentTab ctx={ctx} />}
+            {tab === "rx" && <RxTab ctx={ctx} />}
+            {tab === "images" && <ImagesTab ctx={ctx} />}
+          </main>
+          <aside className="pf-side" aria-label="ملخص جانبي">
+            {tab !== "info" && summary && (
+              <div className="ds-card" style={{ marginBottom: 12 }}>
+                <h2 className="ds-h">الحالة الآن</h2>
+                <div className="ds-sub">التشخيص</div>
+                <div style={{ color: C.text, fontSize: 13, marginBottom: 6 }} dir="auto">{summary.diagnosis.primary ? summary.diagnosis.primary.text : "غير مسجل"}</div>
+                <div className="ds-sub">الموعد القادم</div>
+                <div style={{ color: C.text, fontSize: 13 }}>{summary.followUp ? summary.followUp.date + (summary.followUp.overdue ? " (متأخر)" : "") : "غير مسجل"}</div>
+                {summary.alerts.length > 0 && <div className="ds-alert ds-alert--warn" style={{ marginTop: 8 }}>{summary.alerts.length} تنبيه — راجع الملخص</div>}
+              </div>
+            )}
+            <div className="ds-card">
+              <h2 className="ds-h">آخر الأحداث</h2>
+              {recent.length === 0 ? <div className="ds-sub">لا توجد أحداث مسجلة</div> : (
+                <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 8 }}>
+                  {recent.map(e => (
+                    <li key={e.key} style={{ fontSize: 12, color: C.text }}>
+                      <span aria-hidden="true">{e.icon} </span>{e.title}
+                      <div className="ds-sub">{e.date || "بدون تاريخ"}</div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </aside>
+        </div>
       </div>
       {viewImg && <ImageViewer ctx={ctx} />}
       {modal === "editPatient" && (

@@ -28,6 +28,11 @@ import { getPatient360 } from '../patients/index.js';
 import { EYE_CYCLE } from '../radiology/model.js';
 import { normalizePatientFile, buildPatientTimeline, filterPatientTimeline, coreFileMatchesPatient } from './normalize.js';
 import { submitInvestigationRequest, resyncInvestigationRequest } from './request-workflow.js';
+import { interpretSaveResult, interpretWriteOk, connectionState } from './save-state.js';
+import { buildClinicalSummary } from './clinical-summary.js';
+import { buildLongitudinal } from './longitudinal.js';
+import { buildInvestigationLinks } from './investigation-links.js';
+import { logError } from '../../services/logger.js';
 
 const CLD_CLOUD = 'daihhusnc';
 const CLD_PRESET = 'iapp_clinic';
@@ -187,6 +192,24 @@ export function usePatientFile({
     return () => { active = false; };
   }, [patient.id, refreshTick]);
 
+  // ---- injections + appointments (read-only inputs for summary / comparison) ---------------
+  const [injections, setInjections] = useState([]);
+  const [appointments, setAppointments] = useState([]);
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const [inj, apt] = await Promise.all([sbGet('iapp_injections'), sbGet('iapp_appointments')]);
+        if (!active) return;
+        setInjections(Array.isArray(inj) ? inj.filter(x => x && x.patientId === patient.id) : []);
+        setAppointments(Array.isArray(apt) ? apt.filter(x => x && x.patientId === patient.id) : []);
+      } catch (e) {
+        logError('patientFile.loadInjections', e, { patientId: patient.id });
+      }
+    })();
+    return () => { active = false; };
+  }, [patient.id, refreshTick]);
+
   // ---- normalised, de-duplicated view of the whole chart ---------------------------------
   const norm = useMemo(() => normalizePatientFile({
     patient, coreFile,
@@ -195,6 +218,13 @@ export function usePatientFile({
   }), [patient, coreFile, allExams, allRx, allVisits, metaImages]);
   const { exams, requests, patientRecords, rxList, visits, images } = norm;
 
+  const today = localDateStr();
+  const summary = useMemo(() => buildClinicalSummary({
+    patient, exams, visits, requests, rxList, images, imagingOrders, coreFile, injections, appointments, today
+  }), [patient, exams, visits, requests, rxList, images, imagingOrders, coreFile, injections, appointments, today]);
+  const longitudinal = useMemo(() => buildLongitudinal({ exams, injections, patientId: patient.id }), [exams, injections, patient.id]);
+  const investigationLinks = useMemo(() => buildInvestigationLinks({ requests, images, imagingOrders, visits, today }), [requests, images, imagingOrders, visits, today]);
+
   const timelineEvents = useMemo(() => buildPatientTimeline({ ...norm, coreFile, patient }, C), [norm, coreFile, patient]);
   const filteredTimeline = useMemo(() => filterPatientTimeline(timelineEvents, timelineFilter, timelineSearch), [timelineEvents, timelineFilter, timelineSearch]);
   const coreJourneyCount = ['visits', 'examinations', 'diagnoses', 'treatments', 'prescriptions', 'investigation_orders', 'imaging_studies', 'followups']
@@ -202,15 +232,15 @@ export function usePatientFile({
   const totalSpent = useMemo(() => visits.reduce((s, v) => s + (v.paid ? Number(v.cost || 0) : 0), 0), [visits]);
 
   const TABS = [
-    { id: 'info', label: 'Overview', icon: '👤' },
-    { id: 'timeline', label: 'Timeline', icon: '🕘' },
-    { id: 'visits', label: 'Visits', icon: '🗓' },
-    { id: 'exams', label: 'Examination', icon: '🔍' },
-    { id: 'requests', label: 'Investigation Orders', icon: '🩻' },
-    { id: 'treatment', label: 'Treatment', icon: '💊' },
-    { id: 'rx', label: 'Prescriptions', icon: '🔬' },
-    { id: 'images', label: 'Medical Images', icon: 'oct' },
-    { id: 'compare', label: 'Comparison', icon: '📊' }
+    { id: 'info', label: 'نظرة عامة', icon: '👤' },
+    { id: 'timeline', label: 'السجل الزمني', icon: '🕘' },
+    { id: 'visits', label: 'الزيارات', icon: '🗓' },
+    { id: 'exams', label: 'الفحوصات', icon: '🔍' },
+    { id: 'requests', label: 'طلبات الفحوصات', icon: '🩻' },
+    { id: 'treatment', label: 'العلاج', icon: '💊' },
+    { id: 'rx', label: 'الوصفات', icon: '🔬' },
+    { id: 'images', label: 'الصور الطبية', icon: 'oct' },
+    { id: 'compare', label: 'المقارنة', icon: '📊' }
   ];
 
   // Timeline -> source record navigation.
@@ -420,13 +450,7 @@ export function usePatientFile({
   });
 
   // ---- saves with honest status ---------------------------------------------------------------------------
-  const coreMessage = (what, r) => {
-    if (!r || typeof r !== 'object') return ['saved', `تم حفظ ${what}`];
-    if (r.status === 'partial') return ['partial', `حُفظ ${what}، لكن تعذرت مزامنة بعض بياناته مع السجل المركزي: ${r.coreError || ''}`];
-    if (r.coreError === 'offline') return ['local-only', `حُفظ ${what} على هذا الجهاز وسيُزامن عند عودة الاتصال`];
-    if (r.coreError) return ['local-only', `حُفظ ${what} محلياً، ولم تتم مزامنته مع السجل المركزي (${r.coreError})`];
-    return ['saved', `تم حفظ ${what}`];
-  };
+  const coreMessage = (what, r) => { const o = interpretSaveResult(what, r); return [o.kind, o.message]; };
   // `fn` receives { onLocalSaved }: the data layer calls it as soon as the record
   // is stored locally, so the form closes then (the clinician is not held for the
   // Core round trip) while the status bar keeps reporting until Core answers.
@@ -441,6 +465,7 @@ export function usePatientFile({
       report(kind, message);
       return r;
     } catch (e) {
+      logError('patientFile.save.' + key.split(':')[0], e, { op: key.split(':')[0] });
       report('failed', `لم يُحفظ ${what}: ${errMsg(e)}. النافذة ما زالت مفتوحة لتحاول مجدداً.`);
       return undefined;
     }
@@ -448,12 +473,19 @@ export function usePatientFile({
 
   const handleSaveExam = e => runSave('exam:' + (e && e.id), 'الفحص', opts => onSaveExam(e, opts));
   const handleSaveVisit = v => runSave('visit:' + (v && v.id), 'الزيارة', opts => onSaveVisit(v, opts));
-  const handlePatientSave = updated => {
-    onUpdatePatient(updated);
+  const handlePatientSave = updated => exclusive('patient:' + (updated && updated.id), async () => {
     setCurPatient(updated);
     closeModalClean();
-    report('saved', 'تم حفظ بيانات المريض');
-  };
+    report('saving', 'جاري حفظ بيانات المريض…');
+    try {
+      const ok = await onUpdatePatient(updated);
+      const o = interpretWriteOk('بيانات المريض', ok);
+      report(o.kind, o.message);
+    } catch (e) {
+      logError('patientFile.save.patient', e, { patientId: updated && updated.id });
+      report('failed', 'لم تُحفظ بيانات المريض: ' + errMsg(e));
+    }
+  });
 
   // Deleting a record that exists only in Core would be a silent no-op on the
   // legacy store, so it is refused with an explanation instead.
@@ -501,8 +533,10 @@ export function usePatientFile({
   ));
 
   const sync = useSyncStatus();
+  const connection = connectionState({ saveStatus, sync });
 
   return {
+    summary, longitudinal, investigationLinks, injections, connection,
     TABS, aiAnalysis, allRequestTests, analyzeImage, clinic, coreJourneyCount, coreSource, coreStatus,
     curPatient, cycleRequestEye, delImage, delTarget, doctorNames, exams,
     handleImgUpload, handlePatientSave, imageEye, imageFilter, imageOrderId, imageType, images, imagingOrders,

@@ -33,14 +33,14 @@ export function saveDrug(name) {
       custom.push(name);
       localStorage.setItem(CUSTOM_DRUGS_KEY, JSON.stringify(custom));
     }
-  } catch {}
+  } catch { /* storage unavailable (private mode / quota): non-fatal */ }
 }
 
 export function deleteDrug(name) {
   try {
     const custom = JSON.parse(localStorage.getItem(CUSTOM_DRUGS_KEY) || '[]');
     localStorage.setItem(CUSTOM_DRUGS_KEY, JSON.stringify(custom.filter(d => d !== name)));
-  } catch {}
+  } catch { /* storage unavailable (private mode / quota): non-fatal */ }
 }
 
 export const DOSE_OPTIONS = [

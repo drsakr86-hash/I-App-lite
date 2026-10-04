@@ -8,7 +8,7 @@ import TestRenderer, { act } from 'react-test-renderer';
 const store = new Map();
 globalThis.localStorage = { getItem: k => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, String(v)), removeItem: k => store.delete(k), get length() { return store.size; }, key: i => [...store.keys()][i] ?? null };
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-const b = () => { const x = { select: () => x, eq: () => x, order: () => x, upsert: () => x, delete: () => x, abortSignal: () => x, retry: () => x, maybeSingle: () => x, then: (r, j) => Promise.resolve({ data: null, error: null }).then(r, j) }; return x; };
+const b = () => { const x = { select: () => x, eq: () => x, gte: () => x, lte: () => x, order: () => x, upsert: () => x, delete: () => x, abortSignal: () => x, retry: () => x, maybeSingle: () => x, then: (r, j) => Promise.resolve({ data: null, error: null }).then(r, j) }; return x; };
 const file = {
   found: true, patient_code: 'T-1',
   visits: [{ id: 'cv1', visit_date: '2026-01-02', visit_type: 'clinic' }, { id: 'cv2' }],
@@ -62,6 +62,26 @@ if (!tl.includes('Cataract') || !tl.includes('IOP')) { failures++; console.error
 for (const m of ['addExam', 'addVisit', 'addRx', 'editPatient']) {
   try { await act(async () => { ctxRef.setModal(m); }); if (text().length < 200) throw new Error('empty'); await act(async () => { ctxRef.setModal(null); }); console.log('ok   modal', m); } catch (e) { failures++; console.error('FAIL modal', m, e.message); }
 }
+
+// ---- Patient 360 / responsive / accessibility checks (added in the clinical refinement pass) ----
+function check(name, cond) { if (cond) console.log('ok   ' + name); else { failures++; console.error('FAIL ' + name); } }
+await act(async () => { ctxRef.setTab('info'); });
+const info = text();
+check('summary heading rendered', info.includes('الملخص السريري'));
+check('missing values print "غير مسجل" (no VA/IOP/OCT recorded locally)', info.includes('غير مسجل'));
+check('no value is fabricated: no mmHg unit without an IOP', !info.includes('mmHg'));
+check('responsive layout classes present', info.includes('pf-grid') && info.includes('pf-nav') && info.includes('pf-side'));
+check('no fixed 480px width on the patient file root', !/"maxWidth":480/.test(info));
+check('tablist / tab / tabpanel semantics', info.includes('"role":"tablist"') && info.includes('"role":"tab"') && info.includes('"role":"tabpanel"'));
+check('selected tab is exposed with aria-selected', info.includes('"aria-selected":true'));
+check('connection indicator rendered', info.includes('data-conn'));
+await act(async () => { ctxRef.setTab('compare'); });
+check('compare tab: insufficient data state, no invented chart', !text().includes('role":"img"'));
+await act(async () => { ctxRef.setModal('addExam'); });
+const dlg = text();
+check('modal is a dialog with aria-modal and a labelled title', dlg.includes('"role":"dialog"') && dlg.includes('"aria-modal":"true"') && dlg.includes('aria-labelledby'));
+check('modal close is a real button', dlg.includes('"aria-label":"إغلاق"'));
+await act(async () => { ctxRef.setModal(null); });
 renderer.unmount();
 if (failures) { console.error(failures, 'smoke failure(s)'); process.exit(1); }
 console.log('smoke: all passed');

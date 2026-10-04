@@ -20,7 +20,7 @@ export function loadRxTemplates() {
   try {
     const l = localStorage.getItem(RX_TPL_KEY);
     if (l) return JSON.parse(l) || [];
-  } catch {}
+  } catch { /* storage unavailable (private mode / quota): non-fatal */ }
   return [];
 }
 
@@ -29,7 +29,7 @@ export async function refreshRxTemplates() {
   if (Array.isArray(r)) {
     try {
       localStorage.setItem(RX_TPL_KEY, JSON.stringify(r));
-    } catch {}
+    } catch { /* storage unavailable (private mode / quota): non-fatal */ }
     return r;
   }
   return loadRxTemplates();
@@ -47,7 +47,7 @@ export async function addRxTemplate(t) {
   if (res.ok) {
     try {
       localStorage.setItem(RX_TPL_KEY, JSON.stringify(res.data));
-    } catch {}
+    } catch { /* storage unavailable (private mode / quota): non-fatal */ }
     logAudit('حفظ قالب روشتة', rec.name);
   }
   return res.ok ? res.data : null;
@@ -58,7 +58,7 @@ export async function deleteRxTemplate(id) {
   if (res.ok) {
     try {
       localStorage.setItem(RX_TPL_KEY, JSON.stringify(res.data));
-    } catch {}
+    } catch { /* storage unavailable (private mode / quota): non-fatal */ }
   }
   return res.ok ? res.data : null;
 }

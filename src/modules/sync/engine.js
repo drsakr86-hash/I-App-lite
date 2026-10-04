@@ -41,7 +41,7 @@ export const LS = {
   del(k) {
     try {
       localStorage.removeItem(k);
-    } catch {}
+    } catch { /* storage unavailable (private mode / quota): non-fatal */ }
   }
 };
 
@@ -157,7 +157,7 @@ export function dirtyKeys() {
       const k = localStorage.key(i);
       if (k && k.startsWith(DIRTY_PREFIX)) out.push(k.slice(DIRTY_PREFIX.length));
     }
-  } catch {}
+  } catch { /* storage unavailable (private mode / quota): non-fatal */ }
   return out;
 }
 

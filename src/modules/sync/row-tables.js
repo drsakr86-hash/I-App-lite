@@ -158,7 +158,7 @@ export async function rowMutate(key, mutator, verify) {
   if (!ok) return { ok: false, error: 'offline', data: base };
   try {
     localStorage.setItem(key, JSON.stringify(next));
-  } catch {}
+  } catch { /* storage unavailable (private mode / quota): non-fatal */ }
   if (verify) {
     const check = await rowList(key);
     if (Array.isArray(check) && verify(check)) return { ok: true, data: check };

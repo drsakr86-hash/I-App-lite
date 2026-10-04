@@ -15,6 +15,7 @@ import { finishQueueEntries } from '../appointments/queue.js';
 import { nextPatientCode } from './list.js';
 import { createClinicalVisitCore } from '../visits/core.js';
 import { prescriptionParamsFromLegacy } from '../prescriptions/prescription.mapper.js';
+import { logError } from '../../services/logger.js';
 
 const rxCoreParams = (rx, visitId, today) => prescriptionParamsFromLegacy(rx, { visitId, today });
 
@@ -111,8 +112,10 @@ export function usePatientsOrchestration({
       const examPatient = f.patient || patients.find(p => p.id === f.patientId)?.name || '';
       sbMutate('iapp_appointments', list => finishQueueEntries(list, {
         patientId: f.patientId, patient: examPatient, date: examDate
-      })).catch(() => {});
-    } catch {}
+      })).catch(e => logError('exam.finishQueueEntry', e, { examId: f.id }));
+    } catch (e) {
+      logError('exam.finishQueueEntry', e, { examId: f.id });
+    }
     // Core write-through (see exam-core-sync.js): independent steps, create-RPCs
     // only run for values that changed since the last successful sync.
     let sync = { status: 'offline', coreSynced: false, visitId: null, steps: [], error: 'offline', markers: null, markersChanged: false };

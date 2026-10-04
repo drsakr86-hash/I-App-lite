@@ -150,7 +150,7 @@ export async function sbGet(key) {
     if (l !== null) {
       try {
         return JSON.parse(l);
-      } catch {}
+      } catch { /* storage unavailable (private mode / quota): non-fatal */ }
     }
   }
   const v = await _rawIO.readRemote(key);
@@ -176,7 +176,7 @@ export function sbMutateLocal(key, mutator) {
       const p = JSON.parse(l);
       if (Array.isArray(p)) cur = p;
     }
-  } catch {}
+  } catch { /* storage unavailable (private mode / quota): non-fatal */ }
   const next = mutator(cur);
   if (next && !Array.isArray(next) && next.abort) return { ok: false, error: next.abort, data: cur };
   if (!queueLocal(key, next)) return { ok: false, error: 'offline', data: cur };
@@ -209,13 +209,13 @@ async function sbMutateOnline(key, mutator, verify) {
     if (!(await sbSet(key, next))) return { ok: false, error: 'offline' };
     try {
       localStorage.setItem(key, JSON.stringify(next));
-    } catch {}
+    } catch { /* storage unavailable (private mode / quota): non-fatal */ }
     if (!verify) return { ok: true, data: next };
     const check = await sbGet(key);
     if (Array.isArray(check) && verify(check)) {
       try {
         localStorage.setItem(key, JSON.stringify(check));
-      } catch {}
+      } catch { /* storage unavailable (private mode / quota): non-fatal */ }
       return { ok: true, data: check };
     }
     await new Promise(r => setTimeout(r, 200 + Math.random() * 500));

@@ -81,7 +81,7 @@ export default function WaitingRoom({ apts, today, onUpdateApt, onCollect, docto
 
   const setPriority = d => {
     setPriorityDoctor(d);
-    try { d ? localStorage.setItem(priorityKey, d) : localStorage.removeItem(priorityKey); } catch {}
+    try { d ? localStorage.setItem(priorityKey, d) : localStorage.removeItem(priorityKey); } catch { /* storage unavailable (private mode / quota): non-fatal */ }
   };
 
   const v = buildQueueView(apts, { today, priorityDoctor, doctorNames });

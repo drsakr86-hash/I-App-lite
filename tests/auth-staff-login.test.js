@@ -3,9 +3,10 @@ import assert from 'node:assert/strict';
 import {
   ADMIN_EMAILS, DEFAULT_ROLES, KIOSK_EMAIL, DEFAULT_USERS,
   lockRemaining, registerLoginFail, clearLoginFails, fmtWait,
-  getUsers, saveUsers, resolveProfile, sbSignOut, authenticateStaff
+  getUsers, saveUsers, resolveProfile, sbSignOut, authenticateStaff, verifyServerAdmin
 } from '../src/modules/auth/staff-login.js';
 import { SyncStore } from '../src/modules/sync/engine.js';
+import { setRawIO, sbGetRaw, sbSetRaw } from '../src/modules/sync/wiring.js';
 
 // The staff-login subsystem (Phase 8, combined batch 19) -- exact copies of
 // the legacy originals (see the module for the full rationale). resolveProfile
@@ -124,12 +125,76 @@ test('resolveProfile: a DEFAULT_ROLES preset email with no existing account is a
   assert.ok(getUsers().some(u => u.email === 'user1@sakr.clinic' && u.role === 'secretary'));
 });
 
-test('resolveProfile: the very first login ever (no accounts at all) is auto-provisioned as admin, even for an arbitrary email', async () => {
+// Phase "clinical refinement" (P0-3): the first-login bootstrap used to run even when the
+// staff list could not be read. It now needs (a) a confirmed-empty server read AND
+// (b) the server's own iapp_is_admin() answer.
+let rpcAdmin = null;
+function withRemoteUsers(value, fn) {
+  return async () => {
+    setRawIO({ readRemote: async k => (k === 'iapp_users' ? value : undefined), writeRemote: async () => true });
+    installClient();
+    try { await fn(); } finally { setRawIO({ readRemote: sbGetRaw, writeRemote: sbSetRaw }); rpcAdmin = null; }
+  };
+}
+
+test('resolveProfile: first login with a confirmed-empty server list AND server-confirmed admin becomes admin', withRemoteUsers(null, async () => {
+  rpcAdmin = true;
   assert.deepEqual(getUsers(), []);
   const res = await resolveProfile('brand-new-doctor@clinic.com');
   assert.equal(res.error, undefined);
   assert.equal(res.user.role, 'admin');
-});
+}));
+
+test('resolveProfile: first login is NOT promoted to admin when the server list could not be read', withRemoteUsers(undefined, async () => {
+  rpcAdmin = true;
+  const res = await resolveProfile('brand-new-doctor@clinic.com');
+  assert.ok(res.error);
+  assert.deepEqual(getUsers(), []);
+}));
+
+test('resolveProfile: first login is NOT promoted to admin when the server says the account is not an admin', withRemoteUsers(null, async () => {
+  rpcAdmin = false;
+  const res = await resolveProfile('secretary-who-logs-in-first@clinic.com');
+  assert.match(res.error, /تعذر التحقق من صلاحية المدير/);
+  assert.deepEqual(getUsers(), []);
+}));
+
+test('resolveProfile: first login is NOT promoted when the admin check is unknown (offline/error)', withRemoteUsers(null, async () => {
+  rpcAdmin = null;
+  const res = await resolveProfile('brand-new-doctor@clinic.com');
+  assert.ok(res.error);
+}));
+
+test('resolveProfile: a local "admin" record is downgraded when the server definitively says not admin', withRemoteUsers(undefined, async () => {
+  rpcAdmin = false;
+  saveUsers([{ id: 1, email: 'sec@sakr.clinic', username: 'sec@sakr.clinic', name: 'S', role: 'admin' }], { localOnly: true });
+  const res = await resolveProfile('sec@sakr.clinic');
+  assert.equal(res.user.role, 'secretary');
+  assert.equal(res.user.roleDowngraded, true);
+  assert.equal(getUsers().find(u => u.email === 'sec@sakr.clinic').role, 'secretary');
+}));
+
+test('resolveProfile: a local "admin" record is kept when the server answer is unknown (offline tolerance)', withRemoteUsers(undefined, async () => {
+  rpcAdmin = null;
+  saveUsers([{ id: 1, email: 'boss@sakr.clinic', username: 'boss@sakr.clinic', name: 'B', role: 'admin' }], { localOnly: true });
+  const res = await resolveProfile('boss@sakr.clinic');
+  assert.equal(res.user.role, 'admin');
+  assert.equal(res.user.roleDowngraded, undefined);
+}));
+
+test('resolveProfile: doctor/secretary records are never touched by the server admin check', withRemoteUsers(undefined, async () => {
+  rpcAdmin = false;
+  saveUsers([{ id: 1, email: 'doc@sakr.clinic', username: 'doc@sakr.clinic', name: 'D', role: 'doctor' }], { localOnly: true });
+  const res = await resolveProfile('doc@sakr.clinic');
+  assert.equal(res.user.role, 'doctor');
+}));
+
+test('verifyServerAdmin: true / false / null mapping', withRemoteUsers(undefined, async () => {
+  rpcAdmin = true; assert.equal(await verifyServerAdmin(), true);
+  rpcAdmin = false; assert.equal(await verifyServerAdmin(), false);
+  rpcAdmin = 'error'; assert.equal(await verifyServerAdmin(), null);
+  rpcAdmin = null; assert.equal(await verifyServerAdmin(), null);
+}));
 
 test('resolveProfile: an unrecognized email is rejected once real accounts already exist', async () => {
   saveUsers([{ id: 1, email: 'existing@x.com', role: 'admin' }], { localOnly: true });
@@ -235,6 +300,11 @@ test('authenticateStaff: when resolveProfile itself fails after a successful sig
 
 function installClient() {
   globalThis.__IAppSupabaseClient = {
+    rpc: async name => {
+      if (name !== 'iapp_is_admin') return { data: null, error: { message: 'unexpected rpc' } };
+      if (rpcAdmin === 'error') return { data: null, error: { message: 'boom' } };
+      return { data: rpcAdmin, error: null };
+    },
     from: (...args) => fromImpl(...args),
     auth: {
       signInWithPassword: (...args) => authImpl.signInWithPassword(...args),

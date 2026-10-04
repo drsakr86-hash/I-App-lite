@@ -24,6 +24,8 @@ import { emailKey, newId, GUARD_KEY } from '../constants/misc.js';
 import { SyncStore, dirtyKeys, offlineNow } from '../sync/engine.js';
 import { flushAll, sbGet, sbSet } from '../sync/wiring.js';
 import { publicUser } from './session.js';
+import { logError } from '../../services/logger.js';
+import { purgeCachedPhi, requestImageCacheClear } from '../sync/phi-purge.js';
 
 export const ADMIN_EMAILS = ['admin@sakr.clinic'];
 
@@ -62,7 +64,7 @@ export function registerLoginFail(k) {
   all[key] = g;
   try {
     localStorage.setItem(GUARD_KEY, JSON.stringify(all));
-  } catch {}
+  } catch { /* storage unavailable (private mode / quota): non-fatal */ }
   return lockRemaining(k);
 }
 export function clearLoginFails(k) {
@@ -70,7 +72,7 @@ export function clearLoginFails(k) {
   delete all[_gkey(k)];
   try {
     localStorage.setItem(GUARD_KEY, JSON.stringify(all));
-  } catch {}
+  } catch { /* storage unavailable (private mode / quota): non-fatal */ }
 }
 export const fmtWait = s => (s >= 60 ? Math.ceil(s / 60) + ' دقيقة' : s + ' ثانية');
 
@@ -85,7 +87,7 @@ export function getUsers() {
       const list = JSON.parse(u);
       if (Array.isArray(list) && list.length) return list;
     }
-  } catch {}
+  } catch { /* storage unavailable (private mode / quota): non-fatal */ }
   return [];
 }
 
@@ -94,7 +96,7 @@ let _usersSynced = false;
 export function saveUsers(list, opts) {
   try {
     localStorage.setItem('iapp_users', JSON.stringify(list));
-  } catch {}
+  } catch { /* storage unavailable (private mode / quota): non-fatal */ }
   if (!(opts && opts.localOnly)) pushUsers(list);
 }
 
@@ -111,7 +113,7 @@ export async function pullUsers() {
   if (Array.isArray(remote) && remote.some(isRealUser)) {
     try {
       localStorage.setItem('iapp_users', JSON.stringify(remote));
-    } catch {}
+    } catch { /* storage unavailable (private mode / quota): non-fatal */ }
     _usersSynced = true;
     return true;
   }
@@ -119,15 +121,58 @@ export async function pullUsers() {
   let local = null;
   try {
     local = JSON.parse(localStorage.getItem('iapp_users') || 'null');
-  } catch {}
+  } catch { /* storage unavailable (private mode / quota): non-fatal */ }
   if (Array.isArray(local) && local.some(u => u && u.email)) await pushUsers(local);
   return true;
 }
 
 // ---- login / auto-provisioning ------------------------------------------------
 
+// Server-side truth about the signed-in account. `iapp_is_admin()` is an existing
+// SECURITY DEFINER function (verified against the live project) that checks the
+// JWT email against `iapp_staff.role = 'admin'`. The browser-held `iapp_users`
+// record is writable by any staff session, so it can never be the authority for
+// "admin". Returns true / false, or null when the answer is unknown (offline,
+// timeout, RPC error, no client) -- unknown is NOT treated as "no".
+export async function verifyServerAdmin({ timeoutMs = 5000 } = {}) {
+  const sb = getSB();
+  if (!sb || typeof sb.rpc !== 'function' || offlineNow()) return null;
+  try {
+    const r = await Promise.race([sb.rpc('iapp_is_admin'), new Promise(res => setTimeout(() => res(null), timeoutMs))]);
+    if (!r || r.error) {
+      if (r && r.error) logError('auth.verifyServerAdmin', r.error);
+      return null;
+    }
+    return r.data === true ? true : r.data === false ? false : null;
+  } catch (e) {
+    logError('auth.verifyServerAdmin', e);
+    return null;
+  }
+}
+
+const DOWNGRADE_ROLE = 'secretary';
+
+// An account that the browser record calls "admin" but the server says is not an
+// admin keeps working as the least-privileged role the server knows about. The
+// downgrade is applied to the local copy only (never pushed to the shared list).
+async function enforceServerRole(user) {
+  if (!user || user.role !== 'admin') return user;
+  const isAdmin = await verifyServerAdmin();
+  if (isAdmin !== false) return user;
+  logError('auth.roleDowngrade', 'server denied admin', { op: 'resolveProfile' });
+  try {
+    const list = getUsers();
+    const key = emailKey(user.email);
+    saveUsers(list.map(x => (emailKey(x.email) === key ? { ...x, role: DOWNGRADE_ROLE } : x)), { localOnly: true });
+  } catch (e) {
+    logError('auth.roleDowngrade.persist', e);
+  }
+  return { ...user, role: DOWNGRADE_ROLE, roleDowngraded: true };
+}
+
 export async function resolveProfile(email) {
-  await Promise.race([pullUsers().catch(() => false), new Promise(r => setTimeout(() => r(false), 5000))]);
+  // `pulled === true` only when the shared staff list was actually read from the server.
+  const pulled = await Promise.race([pullUsers().catch(() => false), new Promise(r => setTimeout(() => r(false), 5000))]);
   const key = emailKey(email);
   if (key === emailKey(KIOSK_EMAIL)) return {
     error: '❌ حساب الشاشة لا يُستخدم للدخول إلى البرنامج'
@@ -135,20 +180,19 @@ export async function resolveProfile(email) {
   const users = getUsers().filter(u => u && (u.email || u.username));
   let u = users.find(x => emailKey(x.email) === key) || users.find(x => emailKey(x.username) === key);
   if (u) return {
-    user: {
+    user: await enforceServerRole({
       ...publicUser(u),
       email: u.email || email
-    }
+    })
   };
   const preset = DEFAULT_ROLES[key];
-  const noAccounts = !users.some(x => x.email);
-  if (preset) {
-    const rec = {
-      id: newId(),
-      email: key,
-      username: key,
-      name: preset.name || key.split('@')[0],
-      role: preset.role
+  // First-ever login bootstrap is allowed only when the server list was read and is
+  // genuinely empty. A failed/timed-out read must never make the next login an admin.
+  const noAccounts = pulled === true && !users.some(x => x.email);
+  const provision = async (rec) => {
+    // Creating an admin locally also requires the server to confirm it.
+    if (rec.role === 'admin' && (await verifyServerAdmin()) !== true) return {
+      error: '❌ تعذر التحقق من صلاحية المدير من الخادم — تأكد من الاتصال وأن الحساب مسجل كمدير'
     };
     saveUsers([...getUsers().filter(x => emailKey(x.email) !== key), rec]);
     return {
@@ -157,23 +201,21 @@ export async function resolveProfile(email) {
         email: key
       }
     };
-  }
-  if (ADMIN_EMAILS.map(emailKey).includes(key) || noAccounts) {
-    const rec = {
-      id: newId(),
-      email: key,
-      username: key,
-      name: key.split('@')[0],
-      role: 'admin'
-    };
-    saveUsers([...getUsers().filter(x => emailKey(x.email) !== key), rec]);
-    return {
-      user: {
-        ...publicUser(rec),
-        email: key
-      }
-    };
-  }
+  };
+  if (preset) return provision({
+    id: newId(),
+    email: key,
+    username: key,
+    name: preset.name || key.split('@')[0],
+    role: preset.role
+  });
+  if (ADMIN_EMAILS.map(emailKey).includes(key) || noAccounts) return provision({
+    id: newId(),
+    email: key,
+    username: key,
+    name: key.split('@')[0],
+    role: 'admin'
+  });
   return {
     error: '❌ هذا الحساب غير مضاف إلى صلاحيات البرنامج — اطلب من المدير إضافة بريدك من الإعدادات'
   };
@@ -184,18 +226,31 @@ export async function sbSignOut() {
   if (offlineNow()) {
     try {
       localStorage.removeItem('iapp_sb_auth');
-    } catch (e) {}
+    } catch (e) {
+      logError('auth.signOut.clearToken', e);
+    }
     try {
-      if (sb) sb.auth.signOut({ scope: 'local' }).catch(() => {});
-    } catch (e) {}
+      if (sb) sb.auth.signOut({ scope: 'local' }).catch(e => logError('auth.signOut.local', e));
+    } catch (e) {
+      logError('auth.signOut.local', e);
+    }
+    purgeCachedPhi();
+    requestImageCacheClear();
     return;
   }
   try {
     if (sb) await Promise.race([sb.auth.signOut(), new Promise(r => setTimeout(r, 4000))]);
-  } catch (e) {}
+  } catch (e) {
+    logError('auth.signOut', e);
+  }
   try {
     localStorage.removeItem('iapp_sb_auth');
-  } catch (e) {}
+  } catch (e) {
+    logError('auth.signOut.clearToken', e);
+  }
+  // Cached PHI goes too, except keys that still hold unsynced changes (see phi-purge.js).
+  purgeCachedPhi();
+  requestImageCacheClear();
 }
 
 export async function authenticateStaff(email, password) {

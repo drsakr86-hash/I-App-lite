@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import Patients from './Patients.jsx';
-import PatientFileContainer from './PatientFileContainer.jsx';
+import LazyFallback from '../components/LazyFallback.jsx';
+
+const PatientFileContainer = lazy(() => import('./PatientFileContainer.jsx'));
 import { usePatientsOrchestration } from '../modules/patients/patients-orchestration.js';
 
 // Wires the live Patients list + patient-file data layer
@@ -28,6 +30,7 @@ export default function PatientsContainer({
       return null;
     }
     return (
+      <Suspense fallback={<LazyFallback />}>
       <PatientFileContainer
         key={p.id}
         patient={p}
@@ -48,6 +51,7 @@ export default function PatientsContainer({
         clinic={clinic}
         customTests={customTests}
       />
+      </Suspense>
     );
   }
 

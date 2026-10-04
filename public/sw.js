@@ -1,5 +1,5 @@
 // I App — Service Worker
-const VERSION = "iapp-v11-20261001"; // Final batch: legacy runtime deleted — clean cache slate
+const VERSION = "iapp-v13-20261004"; // clinical refinement: image cache can be cleared on sign-out
 const SHELL = "iapp-shell-" + VERSION;
 const IMGS = "iapp-img-" + VERSION;
 const FONTS = "iapp-font-" + VERSION;
@@ -17,12 +17,25 @@ self.addEventListener("install", event => {
         try {
           const html = await (await fetch("./index.html", { cache: "no-store" })).text();
           for (const m of html.matchAll(/(?:src|href)="(\.\/assets\/[^"]+)"/g)) urls.push(m[1]);
-        } catch (_) {}
+        } catch (_) { /* precache of the shell is best-effort */ }
+        try {
+          // code-split chunks (React.lazy screens) are not referenced by index.html
+          const list = await (await fetch("./precache.json", { cache: "no-store" })).json();
+          if (Array.isArray(list)) for (const u of list) if (typeof u === "string" && u.startsWith("./assets/") && !urls.includes(u)) urls.push(u);
+        } catch (_) { /* no manifest (dev server / older build): lazy chunks are cached on first use */ }
         await Promise.all(urls.map(u => cache.add(u).catch(() => {})));
       })
       .catch(() => {})
       .then(() => self.skipWaiting())
   );
+});
+
+// Sign-out: the page asks the worker to drop cached medical images so they are not
+// left readable on a shared device.
+self.addEventListener("message", event => {
+  if (event.data && event.data.type === "iapp-clear-image-cache") {
+    event.waitUntil(caches.delete(IMGS));
+  }
 });
 
 self.addEventListener("activate", event => {

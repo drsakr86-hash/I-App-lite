@@ -9,33 +9,42 @@ import {
 import { C } from '../../modules/theme/index.js';
 import { Field, SecHead, inp } from '../../modules/ui/atoms.jsx';
 import { localISO } from '../../modules/constants/misc.js';
+import { OphthFindings, OphthPlan } from './OphthDetails.jsx';
+import { examForEditing, applyOphthToExam } from '../../modules/patient-file/ophth.js';
 
 // Three-step examination add/edit form. Exact port of the legacy runtime's
 // ExamForm (public/legacy/app-runtime.js).
 export default function ExamForm({ initial, patientId, onSave, onClose, doctorNames = DEFAULT_DOCTOR_NAMES }) {
-  const [f, setF] = useState(() => initialExamState(initial, localISO()));
+  const [f, setF] = useState(() => initialExamState(initial ? examForEditing(initial) : initial, localISO()));
   const [step, setStep] = useState(0);
   const s = k => e => setF(v => ({ ...v, [k]: e.target.value }));
+  const setOphth = o => setF(v => ({ ...v, ophth: o }));
   const iopHigh = anyIopHigh(f.iopR, f.iopL);
   return (
     <div>
-      <div style={{ display: 'flex', marginBottom: 18, background: C.card, borderRadius: 12, padding: 4 }}>
+      <div role="tablist" aria-label="خطوات الفحص" style={{ display: 'flex', marginBottom: 18, background: C.card, borderRadius: 12, padding: 4 }}>
         {EXAM_STEPS.map((st, i) => (
-          <div
+          <button
+            type="button"
+            role="tab"
+            aria-selected={step === i}
             key={i}
             onClick={() => setStep(i)}
             style={{
               flex: 1,
+              minHeight: 44,
+              border: 'none',
+              font: 'inherit',
               textAlign: 'center',
               padding: '8px 2px',
-              background: step === i ? `linear-gradient(135deg,${C.accent},${C.teal})` : 'transparent',
+              background: step === i ? C.accent : 'transparent',
               borderRadius: 9,
               cursor: 'pointer',
-              color: step === i ? C.bg : C.muted,
-              fontSize: 10,
+              color: step === i ? '#fff' : C.muted,
+              fontSize: 12,
               fontWeight: 700
             }}
-          >{st}</div>
+          >{st}</button>
         ))}
       </div>
       {step === 0 && (
@@ -86,7 +95,7 @@ export default function ExamForm({ initial, patientId, onSave, onClose, doctorNa
       )}
       {step === 1 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <SecHead icon="👁" label="حدة الإبصار (Visual Acuity)" />
+          <SecHead icon="👁" label="أفضل حدة إبصار مصححة BCVA / VA" />
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <Field label="اليمنى">
               <select style={{ ...inp(), textAlign: 'center' }} value={f.visualAcuityR} onChange={s('visualAcuityR')}>
@@ -202,6 +211,7 @@ export default function ExamForm({ initial, patientId, onSave, onClose, doctorNa
               </Field>
             ))}
           </div>
+          <OphthFindings value={f.ophth} onChange={setOphth} />
         </div>
       )}
       {step === 2 && (
@@ -227,6 +237,7 @@ export default function ExamForm({ initial, patientId, onSave, onClose, doctorNa
           <Field label="موعد المتابعة">
             <input style={inp()} type="date" value={f.followUp} onChange={s('followUp')} />
           </Field>
+          <OphthPlan value={f.ophth} onChange={setOphth} />
           <Field label="ملاحظات">
             <textarea
               style={{ ...inp(), resize: 'none' }}
@@ -245,7 +256,7 @@ export default function ExamForm({ initial, patientId, onSave, onClose, doctorNa
         ) : (
           <>
             <Btn outline full onClick={onClose}>إلغاء</Btn>
-            <Btn full onClick={() => onSave(buildExamPayload(f, patientId, Date.now()))}>✓ حفظ الفحص</Btn>
+            <Btn full onClick={() => onSave(applyOphthToExam(buildExamPayload(f, patientId, Date.now())))}>✓ حفظ الفحص</Btn>
           </>
         )}
       </div>

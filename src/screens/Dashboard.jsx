@@ -5,6 +5,7 @@ import { clinicLabel, localISO } from '../modules/constants/index.js';
 import { useSyncStatus } from '../modules/sync/engine.js';
 import { sbGet } from '../modules/sync/wiring.js';
 import PendingRequests from './appointments/PendingRequests.jsx';
+import { logError } from '../services/logger.js';
 
 function StatCard({ C, s }) {
   return (
@@ -34,7 +35,9 @@ export default function Dashboard({ patients, appointments, visits, primary, onD
       try {
         const r = await sbGet('iapp_ratings');
         if (r) setRatings(r);
-      } catch {}
+      } catch (e) {
+        logError('dashboard.loadRatings', e);
+      }
     })();
   }, []);
 

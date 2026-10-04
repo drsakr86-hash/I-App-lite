@@ -19,8 +19,19 @@ const hhmm = ts => {
 // Save / sync / load state of the open patient file. role="status" so screen
 // readers announce changes; failures use role="alert".
 export default function StatusBar({ ctx }) {
-  const { saveStatus, dismissStatus, coreStatus, refreshAll, sync } = ctx;
+  const { saveStatus, dismissStatus, coreStatus, refreshAll, sync, connection } = ctx;
   const items = [];
+  if (connection) {
+    const tone = { success: C.success, info: C.accent, warning: C.gold, danger: C.danger, neutral: C.muted }[connection.tone] || C.muted;
+    items.push(
+      <div key="conn" data-conn={connection.id} role={connection.id === 'failed' ? 'alert' : 'status'} aria-live="polite"
+        style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', color: tone, fontSize: 12, fontWeight: 700 }}>
+        <span aria-hidden="true">{connection.icon}</span>
+        <span>{connection.label}</span>
+        {connection.detail && <span style={{ fontWeight: 500, color: C.muted }}>{connection.detail}</span>}
+      </div>
+    );
+  }
   if (saveStatus) {
     const k = KIND[saveStatus.kind] || KIND.failed;
     const color = k.color();
@@ -55,5 +66,5 @@ export default function StatusBar({ ctx }) {
       {last && <span>آخر مزامنة ناجحة: {last}</span>}
     </div>
   );
-  return <div style={{ margin: '0 16px 10px', display: 'flex', flexDirection: 'column', gap: 6 }}>{items}</div>;
+  return <div style={{ margin: '0 0 10px', display: 'flex', flexDirection: 'column', gap: 6 }}>{items}</div>;
 }

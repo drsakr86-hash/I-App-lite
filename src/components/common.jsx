@@ -21,38 +21,61 @@ export function Btn({ children, onClick, danger, full, small, outline, color }) 
   );
 }
 
-// Bottom sheet. Closes on backdrop click and on "×" (no Escape-key handling,
-// same as legacy); clicks inside the sheet do not reach the backdrop.
+// Accessible dialog (bottom sheet on phones, centered on tablet/desktop -- see .ds-modal in
+// tokens.css). role="dialog" + aria-modal + aria-labelledby; ESC closes; focus moves into the
+// dialog, is kept inside while it is open (Tab cycles) and returns to the opener on close.
+// Clicks inside the sheet do not reach the backdrop.
+const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]):not([type="hidden"]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+let modalSeq = 0;
 export function Modal({ title, onClose, children }) {
+  const ref = React.useRef(null);
+  const closeRef = React.useRef(onClose);
+  closeRef.current = onClose;
+  const [titleId] = React.useState(() => 'modal-title-' + (++modalSeq));
+  useEffect(() => {
+    if (typeof document === 'undefined') return undefined; // no DOM (server render / node tests)
+    const opener = document.activeElement;
+    const node = ref.current;
+    if (node) {
+      const first = node.querySelector(FOCUSABLE);
+      try { (first || node).focus(); } catch { /* element not focusable: non-fatal */ }
+    }
+    const onKey = e => {
+      if (e.key === 'Escape') { e.stopPropagation(); closeRef.current && closeRef.current(); return; }
+      if (e.key !== 'Tab' || !ref.current) return;
+      const items = Array.from(ref.current.querySelectorAll(FOCUSABLE));
+      if (!items.length) { e.preventDefault(); return; }
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    };
+    document.addEventListener('keydown', onKey, true);
+    return () => {
+      document.removeEventListener('keydown', onKey, true);
+      try { if (opener && opener.focus && document.contains(opener)) opener.focus(); } catch { /* opener gone: non-fatal */ }
+    };
+  }, []);
   return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'rgba(0,0,0,0.8)',
-        zIndex: 400,
-        display: 'flex',
-        alignItems: 'flex-end',
-        justifyContent: 'center'
-      }}
-      onClick={onClose}
-    >
+    <div className="ds-modal-backdrop" onClick={onClose}>
       <div
+        ref={ref}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        className="ds-modal"
         onClick={e => e.stopPropagation()}
-        style={{
-          background: C.surface,
-          borderRadius: '20px 20px 0 0',
-          padding: '20px 16px 44px',
-          width: '100%',
-          maxWidth: 480,
-          maxHeight: '92vh',
-          overflowY: 'auto',
-          border: `1px solid ${C.border}`
-        }}
+        style={{ direction: 'rtl', paddingBottom: 32 }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
-          <span style={{ color: C.text, fontWeight: 700, fontSize: 15 }}>{title}</span>
-          <span onClick={onClose} style={{ color: C.muted, fontSize: 28, cursor: 'pointer', lineHeight: 1 }}>×</span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <span id={titleId} style={{ color: C.text, fontWeight: 700, fontSize: 15 }}>{title}</span>
+          <button
+            type="button"
+            aria-label="إغلاق"
+            onClick={onClose}
+            style={{ color: C.muted, fontSize: 26, cursor: 'pointer', lineHeight: 1, background: 'transparent', border: 'none', minWidth: 44, minHeight: 44 }}
+          >×</button>
         </div>
         {children}
       </div>
@@ -97,7 +120,7 @@ export function Toast({ msg, onDone }) {
         fontSize: 13,
         zIndex: 999,
         whiteSpace: 'nowrap',
-        boxShadow: `0 4px 20px ${warn ? C.gold : C.success}66`,
+        boxShadow: '0 2px 10px rgba(0,0,0,0.25)',
         animation: 'toastIn 0.3s ease'
       }}
     >{toastText(msg, warn)}</div>

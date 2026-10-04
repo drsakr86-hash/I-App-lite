@@ -25,7 +25,7 @@ export function useDB(key, seed) {
     try {
       const local = LS.get(key);
       if (local) return JSON.parse(local);
-    } catch {}
+    } catch { /* storage unavailable (private mode / quota): non-fatal */ }
     return seed;
   });
   const [ready, setReady] = useState(false);
@@ -46,7 +46,7 @@ export function useDB(key, seed) {
         try {
           const l = LS.get(key);
           if (l) toUpload = JSON.parse(l);
-        } catch {}
+        } catch { /* storage unavailable (private mode / quota): non-fatal */ }
         await sbSetRaw(key, toUpload);
         console.log(`[${key}] first sync ✓`);
       } else if (!isDirty(key)) {
@@ -79,7 +79,7 @@ export function useDB(key, seed) {
         if (channel) {
           try {
             sb.removeChannel(channel);
-          } catch {}
+          } catch { /* channel already closed: non-fatal */ }
         }
       };
     }
@@ -101,7 +101,7 @@ export function useDB(key, seed) {
         if (channel) {
           try {
             sb.removeChannel(channel);
-          } catch {}
+          } catch { /* channel already closed: non-fatal */ }
         }
       };
     }
@@ -126,7 +126,7 @@ export function useDB(key, seed) {
       if (channel) {
         try {
           sb.removeChannel(channel);
-        } catch {}
+        } catch { /* channel already closed: non-fatal */ }
       }
     };
   }, [key]);

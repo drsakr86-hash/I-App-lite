@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { C } from '../modules/theme/index.js';
 import { emailKey } from '../modules/constants/misc.js';
@@ -14,9 +14,10 @@ import { maybeDailyBackup } from '../modules/datatools/index.js';
 import { setCurrentUser } from '../modules/auth/current-user.js';
 import UnifiedLogin from '../screens/UnifiedLogin.jsx';
 import ForcePasswordChange from '../screens/ForcePasswordChange.jsx';
-import PatientApp from '../screens/PatientApp.jsx';
-import SecretaryApp from '../screens/SecretaryApp.jsx';
+const PatientApp = lazy(() => import('../screens/PatientApp.jsx'));
+const SecretaryApp = lazy(() => import('../screens/SecretaryApp.jsx'));
 import App from '../screens/App.jsx';
+import LazyFallback from '../components/LazyFallback.jsx';
 
 // The app's single router/session gate. Exact port of the legacy runtime's
 // UnifiedRouter (public/legacy/app-runtime.js): same session-restore flow,
@@ -39,7 +40,7 @@ export default function UnifiedRouter() {
             try {
               localStorage.setItem('iapp_unified_session', JSON.stringify(s));
               localStorage.setItem('iapp_session', JSON.stringify({ id: s.id, username: s.username, name: s.name, role: s.role }));
-            } catch {}
+            } catch { /* storage unavailable (private mode / quota): non-fatal */ }
             setCurrentUser(s);
             setSession(s);
             setReady(true);
@@ -68,7 +69,7 @@ export default function UnifiedRouter() {
   useEffect(() => {
     window.__iappUnifiedLogout = logout;
     return () => {
-      try { delete window.__iappUnifiedLogout; } catch {}
+      try { delete window.__iappUnifiedLogout; } catch { /* global already removed: non-fatal */ }
     };
   }, [logout]);
 
@@ -113,13 +114,13 @@ export default function UnifiedRouter() {
       s = buildStaffSessionRecord(payload.user, exp);
       try {
         store.setItem('iapp_session', JSON.stringify(buildCompactSession(publicUser(payload.user))));
-      } catch {}
+      } catch { /* storage unavailable (private mode / quota): non-fatal */ }
     } else {
       s = buildPatientSessionRecord(payload.patient, exp);
     }
     try {
       store.setItem('iapp_unified_session', JSON.stringify(s));
-    } catch {}
+    } catch { /* storage unavailable (private mode / quota): non-fatal */ }
     setSession(s);
   };
 
@@ -148,11 +149,11 @@ export default function UnifiedRouter() {
 
   setCurrentUser(session.kind === 'staff' ? session : null);
 
-  if (routeView === 'patient') return <PatientApp patient={session.patient} onLogout={logout} />;
+  if (routeView === 'patient') return <Suspense fallback={<LazyFallback />}><PatientApp patient={session.patient} onLogout={logout} /></Suspense>;
   if (routeView === 'blocked') return null;
   if (routeView === 'force-password-change') {
     return <ForcePasswordChange user={session} onLogout={logout} onDone={() => setSession(loadValidSession())} />;
   }
-  if (routeView === 'secretary') return <SecretaryApp key={'sec-' + session.id + '-' + session.role} />;
+  if (routeView === 'secretary') return <Suspense fallback={<LazyFallback />}><SecretaryApp key={'sec-' + session.id + '-' + session.role} /></Suspense>;
   return <App key={'doc-' + session.id + '-' + session.role} />;
 }

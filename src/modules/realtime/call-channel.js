@@ -10,6 +10,7 @@
 // before the move.
 
 import { getSB } from '../data-access/index.js';
+import { logError } from '../../services/logger.js';
 
 let _callCh = null;
 let _callReady = null;
@@ -51,5 +52,7 @@ export async function broadcastCall(a, repeat) {
         doctor: a.doctor || ''
       }
     });
-  } catch (e) {}
+  } catch (e) {
+    logError('queue.broadcastCall', e, { id: a && a.id });
+  }
 }

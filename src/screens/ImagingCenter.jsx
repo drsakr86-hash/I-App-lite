@@ -17,6 +17,7 @@ import {
 } from "../modules/constants/index.js";
 import { imagingStudyParams as imagingStudyRpcParams } from "../modules/imaging/index.js";
 import { singleImagingOrderParams as imagingSingleOrderParams } from "../modules/investigations/index.js";
+import { logError } from "../services/logger.js";
 
 export default function ImagingCenter({ patients, primary, clinic }) {
   const [selectedPatient, setSelectedPatient] = useState(null);
@@ -85,12 +86,14 @@ export default function ImagingCenter({ patients, primary, clinic }) {
       }, p => {
         if (Array.isArray(p?.new?.value)) setStudies(p.new.value);
       }).subscribe();
-    } catch {}
+    } catch (e) {
+      logError('imaging.realtimeSubscribe', e);
+    }
     return () => {
       if (ch) {
         try {
           sb.removeChannel(ch);
-        } catch {}
+        } catch { /* channel already closed: non-fatal */ }
       }
     };
   }, [loadStudies]);
@@ -185,7 +188,9 @@ export default function ImagingCenter({ patients, primary, clinic }) {
             setPendingCoreOrder(nextPendingCoreOrder);
             try {
               localStorage.setItem("iapp_pending_core_imaging_order", JSON.stringify(nextPendingCoreOrder));
-            } catch (_) {}
+            } catch (e) {
+              logError('imaging.persistPendingOrder', e);
+            }
             const { data: studyId, error: studyError } = await iappRpc(sb, "iapp_create_imaging_study", imagingStudyRpcParams({ orderId: data?.investigation_order_id, typeName: imagingTypeName(finalType), modality: finalType, eye: finalEye, uploaded, report, notes, metadata: { patient_id: selectedPatient.id, legacy_imaging_id: id } }));
             if (studyError) throw studyError;
             coreStudyId = studyId || null;
@@ -235,7 +240,7 @@ export default function ImagingCenter({ patients, primary, clinic }) {
       // The guard is persisted so a page refresh cannot cause a duplicate workflow order.
       if (!coreSyncError) {
         setPendingCoreOrder(null);
-        try { localStorage.removeItem("iapp_pending_core_imaging_order"); } catch (_) {}
+        try { localStorage.removeItem("iapp_pending_core_imaging_order"); } catch (_) { /* storage unavailable (private mode / quota): non-fatal */ }
       }
       if (coreSyncError && coreSyncError !== "offline") {
         alert("✓ تم حفظ الفحص محليًا وربطه بملف المريض، لكن مزامنته مع Core فشلت (" + coreSyncError + "). سيتم عرضه في السجل المحلي، ويُنصح بمراجعته لاحقًا.");

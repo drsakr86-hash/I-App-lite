@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { HashRouter, useNavigate, useLocation } from 'react-router-dom';
 import { createClient } from '@supabase/supabase-js';
 import './styles/legacy.css';
+import './styles/tokens.css';
 import { getSupabaseClient, SUPABASE_URL, SUPABASE_KEY } from './services/supabase.js';
 import { ensureSession } from './services/auth.js';
 import { rpcSafe } from './services/rpc.js';
@@ -50,14 +51,7 @@ import WaitingRoomScreen, { PayBadge } from './screens/WaitingRoom.jsx';
 import AppointmentsScreen from './screens/Appointments.jsx';
 import DashboardScreen from './screens/Dashboard.jsx';
 import PatientsScreen from './screens/Patients.jsx';
-import PatientFileScreen from './screens/PatientFile.jsx';
 import PrescriptionsScreen from './screens/Prescriptions.jsx';
-import RadiologyScreen from './screens/Radiology.jsx';
-import ImagingCenterScreen from './screens/ImagingCenter.jsx';
-import AccountingScreen from './screens/Accounting.jsx';
-import SettingsScreen from './screens/Settings.jsx';
-import SecretaryAppScreen from './screens/SecretaryApp.jsx';
-import PatientAppScreen from './screens/PatientApp.jsx';
 import AppScreen from './screens/App.jsx';
 import { normalizeFileMeta, resolveFileUrl } from './services/storage.js';
 import { screenPreferenceToStore, isNewScreenPreferred } from './modules/ui/screen-preference.js';
@@ -192,7 +186,10 @@ globalThis.IAppModules.auth = {
   lockRemaining, registerLoginFail, clearLoginFails, fmtWait,
   isRealUser, getUsers, saveUsers, pullUsers, resolveProfile, sbSignOut, authenticateStaff
 };
-globalThis.IAppModules.screens = { WaitingRoom: WaitingRoomScreen, Appointments: AppointmentsScreen, Dashboard: DashboardScreen, Patients: PatientsScreen, PatientFile: PatientFileScreen, Prescriptions: PrescriptionsScreen, Radiology: RadiologyScreen, ImagingCenter: ImagingCenterScreen, Accounting: AccountingScreen, Settings: SettingsScreen, SecretaryApp: SecretaryAppScreen, PatientApp: PatientAppScreen, App: AppScreen };
+// Heavy screens (PatientFile, Radiology, ImagingCenter, Accounting, Settings, SecretaryApp,
+// PatientApp) are code-split with React.lazy and intentionally NOT on this bridge: nothing
+// reads them from here, and importing them statically would put them back in the main bundle.
+globalThis.IAppModules.screens = { WaitingRoom: WaitingRoomScreen, Appointments: AppointmentsScreen, Dashboard: DashboardScreen, Patients: PatientsScreen, Prescriptions: PrescriptionsScreen, App: AppScreen };
 globalThis.IAppModules.storage = { normalizeFileMeta, resolveFileUrl };
 // Phase 7 — pure decision logic behind useNewScreen()'s default flip; see
 // src/modules/ui/screen-preference.js.
