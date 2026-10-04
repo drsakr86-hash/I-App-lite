@@ -6,7 +6,7 @@
 import React from 'react';
 import { C } from '../modules/theme/index.js';
 import { useSyncStatus, dirtyKeys, syncKeyLabel, flushAll } from '../modules/sync/index.js';
-import { ThemeToggle } from './common.jsx';
+import { ThemeToggle, LangToggle } from './common.jsx';
 import { topBarSyncView, sessionDisplayText } from './topbar-model.js';
 
 export default function TopBar({ backLabel, onBack, primary, onSearch, syncing, session, onLogout }) {
@@ -68,6 +68,7 @@ export default function TopBar({ backLabel, onBack, primary, onSearch, syncing, 
         </div>
       </div>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        {!backLabel && <LangToggle />}
         {!backLabel && <ThemeToggle />}
         {!backLabel && onSearch && (
           <div onClick={onSearch} title="بحث" style={{

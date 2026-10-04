@@ -1,5 +1,6 @@
 import React from 'react';
 import { C } from '../../modules/theme/index.js';
+import { t, useLang } from '../../modules/i18n/index.js';
 
 const KIND = {
   saving: { color: () => C.accent, icon: '⏳' },
@@ -19,6 +20,7 @@ const hhmm = ts => {
 // Save / sync / load state of the open patient file. role="status" so screen
 // readers announce changes; failures use role="alert".
 export default function StatusBar({ ctx }) {
+  const lang = useLang();
   const { saveStatus, dismissStatus, coreStatus, refreshAll, sync, connection } = ctx;
   const items = [];
   if (connection) {
@@ -40,7 +42,7 @@ export default function StatusBar({ ctx }) {
         style={{ background: color + '15', border: `1px solid ${color}55`, borderRadius: 10, padding: '8px 12px', color, fontSize: 12, display: 'flex', gap: 8, alignItems: 'flex-start', justifyContent: 'space-between' }}>
         <span>{k.icon} {saveStatus.message}</span>
         {saveStatus.kind !== 'saving' && (
-          <button type="button" aria-label="إغلاق" onClick={dismissStatus}
+          <button type="button" aria-label={t('common.close', lang)} onClick={dismissStatus}
             style={{ background: 'transparent', border: 'none', color, fontSize: 16, cursor: 'pointer', lineHeight: 1 }}>×</button>
         )}
       </div>
@@ -49,21 +51,21 @@ export default function StatusBar({ ctx }) {
   if (coreStatus && coreStatus.state === 'error') {
     items.push(
       <div key="core" role="alert" style={{ background: C.gold + '15', border: `1px solid ${C.gold}55`, borderRadius: 10, padding: '8px 12px', color: C.gold, fontSize: 12, display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-        <span>⚠ تعذر تحميل السجل المركزي — يظهر الآن ما هو محفوظ على هذا الجهاز فقط. {coreStatus.error ? '(' + coreStatus.error + ')' : ''}</span>
-        <button type="button" onClick={refreshAll} style={{ background: C.gold + '22', border: 'none', borderRadius: 7, color: C.gold, fontSize: 11, padding: '2px 8px', cursor: 'pointer' }}>إعادة المحاولة</button>
+        <span>⚠ {t('status.coreErr', lang)} {coreStatus.error ? '(' + coreStatus.error + ')' : ''}</span>
+        <button type="button" onClick={refreshAll} style={{ background: C.gold + '22', border: 'none', borderRadius: 7, color: C.gold, fontSize: 11, padding: '2px 8px', cursor: 'pointer' }}>{t('status.retry', lang)}</button>
       </div>
     );
   } else if (coreStatus && coreStatus.state === 'offline') {
-    items.push(<div key="off" role="status" style={{ color: C.muted, fontSize: 11 }}>📴 لا يوجد اتصال — يظهر ما هو محفوظ على هذا الجهاز، وستُزامن التغييرات عند عودة الاتصال.</div>);
+    items.push(<div key="off" role="status" style={{ color: C.muted, fontSize: 11 }}>📴 {t('status.offline', lang)}</div>);
   } else if (coreStatus && coreStatus.state === 'loading') {
-    items.push(<div key="load" role="status" style={{ color: C.muted, fontSize: 11 }}>⏳ جاري تحميل السجل المركزي…</div>);
+    items.push(<div key="load" role="status" style={{ color: C.muted, fontSize: 11 }}>⏳ {t('status.loading', lang)}</div>);
   }
   const last = hhmm(sync && sync.lastSyncAt);
   const pending = sync && sync.pending ? sync.pending : 0;
   items.push(
     <div key="sync" style={{ color: C.muted, fontSize: 10, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-      <span>{pending ? `🔄 ${pending} تغيير بانتظار المزامنة` : '✓ لا توجد تغييرات معلقة'}</span>
-      {last && <span>آخر مزامنة ناجحة: {last}</span>}
+      <span>{pending ? `🔄 ${pending} ${t('status.syncPending', lang)}` : '✓ ' + t('status.none', lang)}</span>
+      {last && <span>{t('status.last', lang)}: {last}</span>}
     </div>
   );
   return <div style={{ margin: '0 0 10px', display: 'flex', flexDirection: 'column', gap: 6 }}>{items}</div>;

@@ -7,12 +7,15 @@ import {
   DX_OPTIONS, INVESTIGATION_OPTIONS, FOLLOWUP_REASON_OPTIONS
 } from '../../modules/patient-file/ophth.js';
 import { VA_OPTIONS } from './exam-form-model.js';
+import { useLang, t } from '../../modules/i18n/index.js';
+import { translateTerm } from '../../modules/i18n/medical-terms.js';
 
 const OTHER = '__other__';
 
 // Drop-down with an "أخرى…" escape hatch. The stored value is always plain text:
 // a value that is not in the list (old record, or typed under "أخرى…") is kept and shown.
 function Pick({ value, onChange, options, label, ltr }) {
+  const lang = useLang();
   const v = value || '';
   const inList = v === '' || options.includes(v);
   const [typing, setTyping] = React.useState(!inList);
@@ -31,9 +34,9 @@ function Pick({ value, onChange, options, label, ltr }) {
           onChange(e.target.value);
         }}
       >
-        <option value="">— اختر —</option>
-        {options.map(o => <option key={o} value={o}>{o}</option>)}
-        <option value={OTHER}>أخرى…</option>
+        <option value="">{lang === 'en' ? '— Select —' : '— اختر —'}</option>
+        {options.map(o => <option key={o} value={o}>{translateTerm(o, lang)}</option>)}
+        <option value={OTHER}>{lang === 'en' ? 'Other…' : 'أخرى…'}</option>
       </select>
       {showText && (
         <input
@@ -42,7 +45,7 @@ function Pick({ value, onChange, options, label, ltr }) {
           dir="auto"
           aria-label={label + ' (كتابة حرة)'}
           value={v}
-          placeholder="اكتب هنا…"
+          placeholder={lang === 'en' ? 'Type here…' : 'اكتب هنا…'}
           onChange={e => onChange(e.target.value)}
         />
       )}

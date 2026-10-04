@@ -3,6 +3,7 @@ import {
   isWarnToast, toastDuration, toastText, btnStyle, nextTheme, themeToggleTitle, themeToggleIcon
 } from './common-model.js';
 import { C, useTheme, setTheme } from '../modules/theme/index.js';
+import { useLang, setLang, t, getLang, dirOf } from '../modules/i18n/index.js';
 
 // Shared UI atoms for both the React screens and the legacy runtime.
 // Phase 8, batch 6: these used to be duplicated — one copy here, one copy
@@ -66,7 +67,7 @@ export function Modal({ title, onClose, children }) {
         tabIndex={-1}
         className="ds-modal"
         onClick={e => e.stopPropagation()}
-        style={{ direction: 'rtl', paddingBottom: 32 }}
+        style={{ direction: dirOf(getLang()), paddingBottom: 32 }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <span id={titleId} style={{ color: C.text, fontWeight: 700, fontSize: 15 }}>{title}</span>
@@ -124,6 +125,23 @@ export function Toast({ msg, onDone }) {
         animation: 'toastIn 0.3s ease'
       }}
     >{toastText(msg, warn)}</div>
+  );
+}
+
+// Arabic <-> English switch (persisted in iapp_lang). Screens that call t() follow it.
+export function LangToggle() {
+  const lang = useLang();
+  return (
+    <button
+      type="button"
+      onClick={() => setLang(lang === 'en' ? 'ar' : 'en')}
+      aria-label={lang === 'en' ? 'التبديل إلى العربية' : 'Switch to English'}
+      title={t('lang.toggle', lang)}
+      style={{
+        minWidth: 44, height: 34, padding: '0 8px', borderRadius: 10, background: C.card, border: `1px solid ${C.border}`,
+        color: C.text, cursor: 'pointer', fontSize: 12, fontWeight: 700, flexShrink: 0
+      }}
+    >{t('lang.toggle', lang)}</button>
   );
 }
 

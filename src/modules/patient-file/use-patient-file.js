@@ -536,7 +536,7 @@ export function usePatientFile({
   const connection = connectionState({ saveStatus, sync });
 
   return {
-    summary, longitudinal, investigationLinks, injections, connection,
+    summary, longitudinal, investigationLinks, injections, connection, coreFile, appointments,
     TABS, aiAnalysis, allRequestTests, analyzeImage, clinic, coreJourneyCount, coreSource, coreStatus,
     curPatient, cycleRequestEye, delImage, delTarget, doctorNames, exams,
     handleImgUpload, handlePatientSave, imageEye, imageFilter, imageOrderId, imageType, images, imagingOrders,

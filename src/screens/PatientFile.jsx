@@ -12,6 +12,9 @@ import RxTab from './patient-file/RxTab.jsx';
 import ImagesTab from './patient-file/ImagesTab.jsx';
 import ImageViewer from './patient-file/ImageViewer.jsx';
 import StatusBar from './patient-file/StatusBar.jsx';
+import EyeReportModal from './patient-file/EyeReportModal.jsx';
+import { t, useLang, dirOf } from '../modules/i18n/index.js';
+import { LangToggle } from '../components/common.jsx';
 import { Modal, Confirm } from '../components/common.jsx';
 import { PatientEditForm, RxForm, VisitForm, ExamForm } from '../components/forms/index.js';
 import { PrintModal } from '../components/modals/index.js';
@@ -38,13 +41,16 @@ export default function PatientFile({ ctx }) {
     clinic, doctorNames, prices, primaryDoctor, onClose, onSaveExam, onSaveVisit, handlePatientSave,
     onAddRxSave, onEditRxSave, onConfirmDelete
   } = ctx;
-  const tabIds = TABS.map(t => t.id);
+  const lang = useLang();
+  const tabIds = TABS.map(x => x.id);
   const onTabKey = e => {
     const i = tabIds.indexOf(tab);
     let n = -1;
     // RTL: the visual "next" tab is to the left, so ArrowLeft advances and ArrowRight goes back.
-    if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') n = (i + 1) % tabIds.length;
-    else if (e.key === 'ArrowRight' || e.key === 'ArrowUp') n = (i - 1 + tabIds.length) % tabIds.length;
+    const fwd = dirOf(lang) === 'rtl' ? 'ArrowLeft' : 'ArrowRight';
+    const back = dirOf(lang) === 'rtl' ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === 'ArrowDown') n = (i + 1) % tabIds.length;
+    else if (e.key === back || e.key === 'ArrowUp') n = (i - 1 + tabIds.length) % tabIds.length;
     else if (e.key === 'Home') n = 0;
     else if (e.key === 'End') n = tabIds.length - 1;
     if (n < 0) return;
@@ -63,7 +69,7 @@ export default function PatientFile({ ctx }) {
         background: C.bg,
         zIndex: 300,
         overflowY: "auto",
-        direction: "rtl",
+        direction: dirOf(lang),
         fontFamily: "'Segoe UI','Tahoma',Arial,sans-serif"
       }}
     >
@@ -82,44 +88,46 @@ export default function PatientFile({ ctx }) {
           <div style={{ flex: 1, minWidth: 180 }}>
             <h1 style={{ color: C.text, fontWeight: 700, fontSize: 17, margin: 0 }}>{curPatient.name}</h1>
             <div style={{ color: C.muted, fontSize: 12, marginTop: 2 }}>
-              <span className="ds-badge ds-badge--info" style={{ marginInlineEnd: 8 }}>{curPatient.patientCode || "غير مسجل"}</span>
-              {ageLabel(curPatient.age)}{" · "}{curPatient.gender || "غير مسجل"}{curPatient.phone ? " · " + curPatient.phone : ""}
+              <span className="ds-badge ds-badge--info" style={{ marginInlineEnd: 8 }}>{curPatient.patientCode || t("common.notRecorded", lang)}</span>
+              {ageLabel(curPatient.age)}{" · "}{curPatient.gender || t("common.notRecorded", lang)}{curPatient.phone ? " · " + curPatient.phone : ""}
             </div>
           </div>
           <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
             <Tag label={curPatient.status} color={SC[curPatient.status] || C.muted}/>
-            <button type="button" className="ds-btn" onClick={() => setModal("editPatient")}>✏ تعديل الملف</button>
+            <LangToggle />
+            <button type="button" className="ds-btn" onClick={() => setModal("eyeReport")}>📄 {t("report.button", lang)}</button>
+            <button type="button" className="ds-btn" onClick={() => setModal("editPatient")}>✏ {t("common.editFile", lang)}</button>
             <button
               type="button"
               className="ds-btn"
               onClick={() => printDoc(getPatientFileHTML(curPatient, visits, patientRecords, rxList, primaryDoctor, clinic))}
             >
-              🖨️ طباعة
+              🖨️ {t("common.print", lang)}
             </button>
           </div>
         </header>
         <StatusBar ctx={ctx} />
         <div className="pf-grid" style={{ marginTop: 10 }}>
-          <nav className="pf-nav" aria-label="أقسام ملف المريض">
-            <div className="ds-tabs" role="tablist" aria-label="أقسام ملف المريض" aria-orientation="horizontal" onKeyDown={onTabKey}>
-              {TABS.map(t => (
+          <nav className="pf-nav" aria-label={t("tabs.aria", lang)}>
+            <div className="ds-tabs" role="tablist" aria-label={t("tabs.aria", lang)} aria-orientation="horizontal" onKeyDown={onTabKey}>
+              {TABS.map(tb => (
                 <button
                   type="button"
                   role="tab"
-                  id={"pf-tab-" + t.id}
-                  aria-selected={tab === t.id}
+                  id={"pf-tab-" + tb.id}
+                  aria-selected={tab === tb.id}
                   aria-controls="pf-panel"
-                  tabIndex={tab === t.id ? 0 : -1}
+                  tabIndex={tab === tb.id ? 0 : -1}
                   className="ds-tab"
-                  key={t.id}
-                  onClick={() => setTab(t.id)}
+                  key={tb.id}
+                  onClick={() => setTab(tb.id)}
                 >
                   <span aria-hidden="true" style={{ marginInlineEnd: 6 }}>
-                    {t.icon === "oct" ? (
-                      <img src={XRAY_ICON} alt="" style={{ width: 16, height: 16, verticalAlign: "middle", filter: tab === t.id ? "brightness(0) invert(1)" : "brightness(0.8)" }} />
-                    ) : t.icon}
+                    {tb.icon === "oct" ? (
+                      <img src={XRAY_ICON} alt="" style={{ width: 16, height: 16, verticalAlign: "middle", filter: tab === tb.id ? "brightness(0) invert(1)" : "brightness(0.8)" }} />
+                    ) : tb.icon}
                   </span>
-                  {t.label}
+                  {t('tab.' + tb.id, lang)}
                 </button>
               ))}
             </div>
@@ -164,6 +172,7 @@ export default function PatientFile({ ctx }) {
         </div>
       </div>
       {viewImg && <ImageViewer ctx={ctx} />}
+      {modal === "eyeReport" && <EyeReportModal ctx={ctx} onClose={() => setModal(null)} />}
       {modal === "editPatient" && (
         <Modal title="تعديل الملف الطبي" onClose={() => setModal(null)}><Dirty onDirty={ctx.markModalDirty}>
           <PatientEditForm patient={curPatient} onSave={handlePatientSave} onClose={() => setModal(null)}/>
