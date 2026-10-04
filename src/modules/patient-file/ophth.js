@@ -199,3 +199,46 @@ export function examForEditing(exam) {
 export const plainText = stripDerived;
 export const EYE_KEYS = EYES;
 export const VA_PLACEHOLDER = '6/12 أو CF أو HM';
+
+// ---- drop-down choices for the structured exam form -----------------------------------------
+// Convenience lists only: the stored value is plain text, so any value typed via "أخرى…" or
+// coming from an old record is kept as is. Nothing here is a default or a suggestion of a finding.
+const range = (from, to, step, fmt) => {
+  const out = [];
+  const n = Math.round((to - from) / step);
+  for (let i = 0; i <= n; i++) out.push(fmt(from + i * step));
+  return out;
+};
+const sign = v => (v > 0 ? '+' : '') + v.toFixed(2);
+export const SPH_OPTIONS = Object.freeze(range(-20, 20, 0.25, sign).map(v => (Number(v) === 0 ? 'Plano' : v)));
+export const CYL_OPTIONS = Object.freeze(range(-8, 8, 0.25, sign).filter(v => Number(v) !== 0));
+export const AXIS_OPTIONS = Object.freeze(range(0, 180, 5, v => String(v)));
+export const CD_OPTIONS = Object.freeze(range(0.1, 1, 0.1, v => v.toFixed(1)));
+
+export const ANTERIOR_OPTIONS = Object.freeze({
+  lids: ['طبيعية', 'التهاب حافة الجفن (Blepharitis)', 'شعيرة / كيس دهني (Chalazion)', 'تدلي الجفن (Ptosis)', 'انقلاب للداخل (Entropion)', 'انقلاب للخارج (Ectropion)', 'وذمة'],
+  conjunctiva: ['طبيعية', 'احتقان', 'التهاب ملتحمة تحسسي', 'التهاب ملتحمة بكتيري / فيروسي', 'ظفرة (Pterygium)', 'نزيف تحت الملتحمة', 'جفاف'],
+  cornea: ['صافية', 'تقرحات نقطية (SPK)', 'قرحة قرنية', 'ندبة قرنية', 'وذمة قرنية', 'مخروط قرنية (Keratoconus)', 'عتامة', 'ترسبات خلفية (KPs)'],
+  ac: ['عميقة ورائقة', 'ضحلة', 'خلايا / Flare', 'نزيف أمامي (Hyphema)', 'قيح أمامي (Hypopyon)'],
+  iris: ['طبيعية', 'التصاقات خلفية', 'تضخم أوعية (Rubeosis)', 'ضمور', 'ثقب قزحية'],
+  lens: ['صافية', 'ماء أبيض بداية (NS +1)', 'ماء أبيض (NS +2)', 'ماء أبيض ناضج', 'ماء أبيض تحت المحفظة الخلفية (PSC)', 'عدسة داخل العين (IOL) في موضعها', 'IOL مع عتامة المحفظة الخلفية (PCO)', 'بلا عدسة (Aphakia)']
+});
+export const POSTERIOR_OPTIONS = Object.freeze({
+  disc: ['طبيعي', 'حفر القرص موسّعة (Cupping)', 'وذمة القرص', 'شحوب', 'ضمور', 'تكوّن أوعية جديدة (NVD)'],
+  macula: ['طبيعية', 'وذمة بقعية (DME / CME)', 'ثقب بقعي', 'غشاء أمام الشبكية (ERM)', 'تنكس بقعي (AMD)', 'ثؤلول (Drusen)', 'نزف بقعي'],
+  vessels: ['طبيعية', 'اعتلال شبكية سكري خفيف (Mild NPDR)', 'سكري متوسط (Moderate NPDR)', 'سكري شديد (Severe NPDR)', 'سكري تكاثري (PDR)', 'ضغط دم (Hypertensive)', 'انسداد وريد (RVO)'],
+  periphery: ['طبيعي', 'تنكس شبكي (Lattice)', 'ثقب شبكية', 'تمزق شبكية', 'انفصال شبكية', 'ليزر سابق']
+});
+export const DX_OPTIONS = Object.freeze([
+  'قصر نظر (Myopia)', 'طول نظر (Hyperopia)', 'استجماتيزم', 'قصور تكيف / شيخوخة بصرية (Presbyopia)',
+  'جفاف العين (Dry eye)', 'التهاب ملتحمة', 'ظفرة (Pterygium)', 'ماء أبيض (Cataract)', 'مياه زرقاء (Glaucoma)', 'اشتباه جلوكوما',
+  'اعتلال شبكية سكري (DR)', 'وذمة بقعية سكرية (DME)', 'تنكس بقعي مرتبط بالعمر (AMD)', 'انسداد وريد شبكي (RVO)',
+  'انفصال شبكية', 'مخروط قرنية', 'قرحة قرنية', 'التهاب قزحية (Uveitis)', 'حول (Strabismus)', 'كسل العين (Amblyopia)'
+]);
+export const INVESTIGATION_OPTIONS = Object.freeze([
+  'OCT بقعة', 'OCT عصب بصري (RNFL)', 'مجال بصري (VF)', 'تصوير قاع العين', 'FFA (تصوير الأوعية بالفلورسين)', 'OCTA',
+  'طبوغرافيا القرنية', 'قياس سُمك القرنية (Pachymetry)', 'موجات صوتية (B-scan)', 'قياس الانكسار بالتقطير (Cycloplegic)'
+]);
+export const FOLLOWUP_REASON_OPTIONS = Object.freeze([
+  'متابعة ضغط العين', 'تقييم الاستجابة بعد الحقن', 'جرعة حقن قادمة', 'مراجعة نتيجة فحص', 'متابعة سكري', 'بعد عملية', 'متابعة روتينية', 'قياس نظارة'
+]);

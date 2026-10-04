@@ -1,0 +1,14 @@
+import React from 'react';
+import TestRenderer, { act } from 'react-test-renderer';
+import { OphthFindings, OphthPlan } from '/home/claude/iapp/I-App-lite/src/components/forms/OphthDetails.jsx';
+globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+let val = { cmt:{od:'300'}, anterior:{cornea:{od:'قيمة قديمة غير موجودة بالقائمة'}}, va:{od:{ucva:'0.5'}} , dx:{od:'DME'}};
+const changes=[];
+let r; await act(async()=>{ r=TestRenderer.create(<><OphthFindings value={val} onChange={v=>changes.push(v)}/><OphthPlan value={val} onChange={v=>changes.push(v)}/></>); });
+const selects=r.root.findAllByType('select'); const inputs=r.root.findAllByType('input');
+console.log('selects',selects.length,'inputs',inputs.length);
+const ucva=selects.find(s=>s.props['aria-label']==='UCVA OD'); console.log('ucva value',ucva.props.value);
+const cornea=selects.find(s=>s.props['aria-label']==='القرنية OD'); console.log('cornea select shows other:',cornea.props.value, 'text input present:', inputs.some(i=>i.props['aria-label']==='القرنية OD (كتابة حرة)'));
+await act(async()=>{ ucva.props.onChange({target:{value:'0.8'}}); });
+console.log('change ->', changes.at(-1).va.od.ucva);
+const dx=selects.find(s=>s.props['aria-label']==='تشخيص العين اليمنى OD'); console.log('dx other (DME not in list):', dx.props.value);

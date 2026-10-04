@@ -47,3 +47,26 @@ test('ophth: structured follow-up reason and investigations are kept in ophth / 
   assert.ok(e.treatmentPlan.includes('فحوصات مطلوبة: OCT'));
   assert.equal(e.ophth.plan.followUpReason, 'تقييم');
 });
+
+import { SPH_OPTIONS, CYL_OPTIONS, AXIS_OPTIONS, CD_OPTIONS, ANTERIOR_OPTIONS, POSTERIOR_OPTIONS, ANTERIOR_PARTS as AP, POSTERIOR_PARTS as PP, DX_OPTIONS, INVESTIGATION_OPTIONS, FOLLOWUP_REASON_OPTIONS } from '../src/modules/patient-file/ophth.js';
+
+test('ophth: drop-down lists are complete, unique and numerically sane', () => {
+  for (const [k] of AP) assert.ok(ANTERIOR_OPTIONS[k]?.length > 2, 'anterior ' + k);
+  for (const [k] of PP) assert.ok(POSTERIOR_OPTIONS[k]?.length > 2, 'posterior ' + k);
+  for (const list of [SPH_OPTIONS, CYL_OPTIONS, AXIS_OPTIONS, CD_OPTIONS, DX_OPTIONS, INVESTIGATION_OPTIONS, FOLLOWUP_REASON_OPTIONS, ...Object.values(ANTERIOR_OPTIONS), ...Object.values(POSTERIOR_OPTIONS)]) {
+    assert.equal(new Set(list).size, list.length, 'duplicates in list');
+  }
+  assert.equal(SPH_OPTIONS[0], '-20.00');
+  assert.equal(SPH_OPTIONS.at(-1), '+20.00');
+  assert.ok(SPH_OPTIONS.includes('Plano') && SPH_OPTIONS.includes('-2.75'));
+  assert.ok(!CYL_OPTIONS.includes('0.00') && !CYL_OPTIONS.includes('+0.00'));
+  assert.deepEqual([AXIS_OPTIONS[0], AXIS_OPTIONS.at(-1)], ['0', '180']);
+  assert.deepEqual([CD_OPTIONS[0], CD_OPTIONS.at(-1)], ['0.1', '1.0']);
+});
+
+test('ophth: values from the lists are read back as numbers where numeric (CMT/CD/refraction pipeline)', async () => {
+  const { toNumber } = await import('../src/modules/patient-file/ophth.js');
+  assert.equal(toNumber('-2.75'), -2.75);
+  assert.equal(toNumber('+1.50'), 1.5);
+  assert.equal(toNumber('0.7'), 0.7);
+});

@@ -19,8 +19,11 @@
 - View `iapp_slots_taken` (SECURITY DEFINER): هل يكشف أي حقل شخصي؟
 - لا اختبار E2E متصفح في هذه البيئة؛ ما جرى: اختبارات وحدة + رسم React بـ react-test-renderer (smoke).
 
+## ✅ طُبّق يدويًا من المالك (2026-10-04) + 🧪 تحقق قراءة فقط
+- سياسات `clinical_staff_*` (admin/doctor) على جداول Core السريرية الثمانية، و`staff_*` على المرضى/الزيارات/الخرائط، وسحب DML من `iapp_staff`. ⚠️ لم تُختبر وظيفيًا بجلسات حقيقية بعد (سكرتير/أدمن). لم يُطبّق حارس مفاتيح `iapp_store`.
+
 ## 🔴 BLOCKED BY BACKEND (لا يُحل من الواجهة)
-- **لا فصل صلاحيات سريرية في الخادم.** جداول Core: سياسة `authenticated_full_access_*` (أي مستخدم مُصادَق)، و`iapp_store/visits/appointments`: `iapp_is_staff()`. السكرتير يقرأ ويكتب الفحوصات مباشرة عبر الـ API. الحل المقترح في `sql/NOT-APPLIED-role-rls.sql` (غير مطبَّق).
+- **(حُلّ جزئيًا بعد التطبيق اليدوي أعلاه)** كان: لا فصل صلاحيات سريرية في الخادم. جداول Core: سياسة `authenticated_full_access_*` (أي مستخدم مُصادَق)، و`iapp_store/visits/appointments`: `iapp_is_staff()`. السكرتير يقرأ ويكتب الفحوصات مباشرة عبر الـ API. الحل المقترح في `sql/NOT-APPLIED-role-rls.sql` (غير مطبَّق).
 - `iapp_users` (داخل `iapp_store`) قابل للكتابة من أي موظف → الدور في المتصفح ليس سلطة أمنية.
 - بوابة المريض معطّلة ويجب أن تبقى كذلك حتى وجود دالة بنطاق المريض (`BACKEND-RECOMMENDATIONS.md`).
 - Leaked-password protection معطّل (إعداد لوحة تحكم).

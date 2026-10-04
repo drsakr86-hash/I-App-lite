@@ -1,7 +1,54 @@
 import React from 'react';
 import { C } from '../../modules/theme/index.js';
 import { inp } from '../../modules/ui/atoms.jsx';
-import { normalizeOphth, ANTERIOR_PARTS, POSTERIOR_PARTS, IOP_METHODS, VA_PLACEHOLDER } from '../../modules/patient-file/ophth.js';
+import {
+  normalizeOphth, ANTERIOR_PARTS, POSTERIOR_PARTS, IOP_METHODS,
+  SPH_OPTIONS, CYL_OPTIONS, AXIS_OPTIONS, CD_OPTIONS, ANTERIOR_OPTIONS, POSTERIOR_OPTIONS,
+  DX_OPTIONS, INVESTIGATION_OPTIONS, FOLLOWUP_REASON_OPTIONS
+} from '../../modules/patient-file/ophth.js';
+import { VA_OPTIONS } from './exam-form-model.js';
+
+const OTHER = '__other__';
+
+// Drop-down with an "أخرى…" escape hatch. The stored value is always plain text:
+// a value that is not in the list (old record, or typed under "أخرى…") is kept and shown.
+function Pick({ value, onChange, options, label, ltr }) {
+  const v = value || '';
+  const inList = v === '' || options.includes(v);
+  const [typing, setTyping] = React.useState(!inList);
+  const showText = typing || !inList;
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
+      <select
+        className="ds-field"
+        style={inp()}
+        aria-label={label}
+        dir={ltr ? 'ltr' : undefined}
+        value={showText ? OTHER : v}
+        onChange={e => {
+          if (e.target.value === OTHER) { setTyping(true); return; }
+          setTyping(false);
+          onChange(e.target.value);
+        }}
+      >
+        <option value="">— اختر —</option>
+        {options.map(o => <option key={o} value={o}>{o}</option>)}
+        <option value={OTHER}>أخرى…</option>
+      </select>
+      {showText && (
+        <input
+          className="ds-field"
+          style={inp()}
+          dir="auto"
+          aria-label={label + ' (كتابة حرة)'}
+          value={v}
+          placeholder="اكتب هنا…"
+          onChange={e => onChange(e.target.value)}
+        />
+      )}
+    </div>
+  );
+}
 
 // Optional structured ophthalmic details (stored in exam.ophth -- see modules/patient-file/ophth.js).
 // Every field is optional and starts empty; nothing is pre-filled or computed.
@@ -24,15 +71,19 @@ function Eye({ label, children }) {
   );
 }
 
-function PairInputs({ o, onChange, group, part, label, placeholder, unit, inputMode }) {
+function PairInputs({ o, onChange, group, part, label, placeholder, unit, inputMode, options }) {
   const val = eye => (part ? o[group][part][eye] : o[group][eye]);
   const path = eye => (part ? [group, part, eye] : [group, eye]);
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
       {['od', 'os'].map(eye => (
         <Eye key={eye} label={`${label} ${eye.toUpperCase()}${unit ? ' (' + unit + ')' : ''}`}>
-          <input className="ds-field" style={inp()} inputMode={inputMode} dir="auto" value={val(eye)} placeholder={placeholder}
-            onChange={e => onChange(setPath(o, path(eye), e.target.value))} />
+          {options ? (
+            <Pick ltr={!!unit || group === 'cd'} label={`${label} ${eye.toUpperCase()}`} options={options} value={val(eye)} onChange={v => onChange(setPath(o, path(eye), v))} />
+          ) : (
+            <input className="ds-field" style={inp()} inputMode={inputMode} dir="auto" value={val(eye)} placeholder={placeholder}
+              onChange={e => onChange(setPath(o, path(eye), e.target.value))} />
+          )}
         </Eye>
       ))}
     </div>
@@ -53,16 +104,16 @@ export function OphthFindings({ value, onChange }) {
   const o = normalizeOphth(value);
   return (
     <Group title="➕ تفاصيل منظّمة للفحص (اختياري)">
-      <div className="ds-sub">UCVA / PH / انكسار / تفصيل القطعتين / C/D / CMT / المجال البصري. اترك أي حقل فارغًا إذا لم يُقَس.</div>
+      <div className="ds-sub">اختر من القوائم، أو «أخرى…» للكتابة الحرة. اترك أي حقل فارغًا إذا لم يُقَس.</div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
         {['od', 'os'].map(eye => (
           <Eye key={'u' + eye} label={`UCVA ${eye.toUpperCase()} (بدون نظارة)`}>
-            <input className="ds-field" style={inp()} dir="ltr" value={o.va[eye].ucva} placeholder={VA_PLACEHOLDER} onChange={e => onChange(setPath(o, ['va', eye, 'ucva'], e.target.value))} />
+            <Pick ltr label={`UCVA ${eye.toUpperCase()}`} options={VA_OPTIONS} value={o.va[eye].ucva} onChange={val => onChange(setPath(o, ['va', eye, 'ucva'], val))} />
           </Eye>
         ))}
         {['od', 'os'].map(eye => (
           <Eye key={'p' + eye} label={`PH ${eye.toUpperCase()} (Pinhole)`}>
-            <input className="ds-field" style={inp()} dir="ltr" value={o.va[eye].ph} placeholder={VA_PLACEHOLDER} onChange={e => onChange(setPath(o, ['va', eye, 'ph'], e.target.value))} />
+            <Pick ltr label={`PH ${eye.toUpperCase()}`} options={VA_OPTIONS} value={o.va[eye].ph} onChange={val => onChange(setPath(o, ['va', eye, 'ph'], val))} />
           </Eye>
         ))}
       </div>
@@ -74,18 +125,18 @@ export function OphthFindings({ value, onChange }) {
       </Eye>
       {['od', 'os'].map(eye => (
         <div key={'r' + eye} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-          {[['sph', 'SPH'], ['cyl', 'CYL'], ['axis', 'AXIS']].map(([k, l]) => (
+          {[['sph', 'SPH', SPH_OPTIONS], ['cyl', 'CYL', CYL_OPTIONS], ['axis', 'AXIS', AXIS_OPTIONS]].map(([k, l, opts]) => (
             <Eye key={k} label={`${l} ${eye.toUpperCase()}`}>
-              <input className="ds-field" style={inp()} dir="ltr" inputMode="decimal" value={o.refraction[eye][k]} onChange={e => onChange(setPath(o, ['refraction', eye, k], e.target.value))} />
+              <Pick ltr label={`${l} ${eye.toUpperCase()}`} options={opts} value={o.refraction[eye][k]} onChange={val => onChange(setPath(o, ['refraction', eye, k], val))} />
             </Eye>
           ))}
         </div>
       ))}
       <div className="ds-h" style={{ marginTop: 4 }}>القطعة الأمامية</div>
-      {ANTERIOR_PARTS.map(([k, l]) => <PairInputs key={k} o={o} onChange={onChange} group="anterior" part={k} label={l} />)}
+      {ANTERIOR_PARTS.map(([k, l]) => <PairInputs key={k} o={o} onChange={onChange} group="anterior" part={k} label={l} options={ANTERIOR_OPTIONS[k]} />)}
       <div className="ds-h" style={{ marginTop: 4 }}>القطعة الخلفية</div>
-      {POSTERIOR_PARTS.map(([k, l]) => <PairInputs key={k} o={o} onChange={onChange} group="posterior" part={k} label={l} />)}
-      <PairInputs o={o} onChange={onChange} group="cd" label="C/D" inputMode="decimal" placeholder="0.3" />
+      {POSTERIOR_PARTS.map(([k, l]) => <PairInputs key={k} o={o} onChange={onChange} group="posterior" part={k} label={l} options={POSTERIOR_OPTIONS[k]} />)}
+      <PairInputs o={o} onChange={onChange} group="cd" label="C/D" options={CD_OPTIONS} />
       <PairInputs o={o} onChange={onChange} group="cmt" label="CMT" unit="µm" inputMode="decimal" />
       <PairInputs o={o} onChange={onChange} group="vfMd" label="MD" unit="dB" inputMode="decimal" />
     </Group>
@@ -99,14 +150,14 @@ export function OphthPlan({ value, onChange }) {
     <Group title="➕ تشخيص لكل عين وتفاصيل الخطة (اختياري)">
       {[['od', 'تشخيص العين اليمنى OD'], ['os', 'تشخيص العين اليسرى OS'], ['ou', 'تشخيص العينين OU']].map(([k, l]) => (
         <Eye key={k} label={l}>
-          <input className="ds-field" style={inp()} dir="auto" value={o.dx[k]} onChange={e => onChange(setPath(o, ['dx', k], e.target.value))} />
+          <Pick label={l} options={DX_OPTIONS} value={o.dx[k]} onChange={v => onChange(setPath(o, ['dx', k], v))} />
         </Eye>
       ))}
       <Eye label="فحوصات مطلوبة">
-        <input className="ds-field" style={inp()} dir="auto" value={o.plan.investigation} onChange={e => onChange(setPath(o, ['plan', 'investigation'], e.target.value))} placeholder="OCT، مجال بصري..." />
+        <Pick label="فحوصات مطلوبة" options={INVESTIGATION_OPTIONS} value={o.plan.investigation} onChange={v => onChange(setPath(o, ['plan', 'investigation'], v))} />
       </Eye>
       <Eye label="سبب المتابعة">
-        <input className="ds-field" style={inp()} dir="auto" value={o.plan.followUpReason} onChange={e => onChange(setPath(o, ['plan', 'followUpReason'], e.target.value))} />
+        <Pick label="سبب المتابعة" options={FOLLOWUP_REASON_OPTIONS} value={o.plan.followUpReason} onChange={v => onChange(setPath(o, ['plan', 'followUpReason'], v))} />
       </Eye>
     </Group>
   );
