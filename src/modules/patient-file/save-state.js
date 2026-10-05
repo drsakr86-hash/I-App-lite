@@ -9,6 +9,8 @@
 // pending") and the Core tables (`coreError` / `status`). "تم الحفظ" is shown ONLY when
 // every destination that was attempted succeeded.
 
+import { t } from '../i18n/index.js';
+
 export const SAVE_KINDS = Object.freeze(['saving', 'retrying', 'saved', 'local-only', 'partial', 'failed', 'invalid']);
 
 const coreText = e => (e && e !== 'offline' ? ` (${String(e).slice(0, 120)})` : '');
@@ -17,29 +19,29 @@ export function interpretSaveResult(what, r) {
   if (r == null || typeof r !== 'object') {
     // Unknown outcome is never reported as success.
     return r === true
-      ? { kind: 'saved', message: `تم حفظ ${what}` }
-      : { kind: 'local-only', message: `حُفظ ${what} على هذا الجهاز ولم يتأكد وصوله للخادم بعد` };
+      ? { kind: 'saved', message: t('g1.save.saved', { what }) }
+      : { kind: 'local-only', message: t('g1.save.unconfirmed', { what }) };
   }
   const legacySynced = r.legacyResult !== false;
   const coreError = r.coreError || null;
   const coreOk = !coreError && r.status !== 'failed';
   if (r.status === 'partial') {
-    return { kind: 'partial', message: `حُفظ ${what}، لكن تعذرت مزامنة بعض بياناته مع السجل المركزي${coreText(coreError)}` };
+    return { kind: 'partial', message: t('g1.save.corePartial', { what }) + coreText(coreError) };
   }
-  if (legacySynced && coreOk) return { kind: 'saved', message: `تم حفظ ${what}` };
+  if (legacySynced && coreOk) return { kind: 'saved', message: t('g1.save.saved', { what }) };
   if (!legacySynced && coreOk) {
-    return { kind: 'partial', message: `حُفظ ${what} في السجل المركزي، ونسخة هذا الجهاز ما زالت في انتظار المزامنة` };
+    return { kind: 'partial', message: t('g1.save.coreOnly', { what }) };
   }
   if (legacySynced && !coreOk) {
     return coreError === 'offline'
-      ? { kind: 'local-only', message: `حُفظ ${what} على هذا الجهاز وسيُزامن عند عودة الاتصال` }
-      : { kind: 'partial', message: `حُفظ ${what} في السجل الرئيسي، ولم تتم مزامنته مع السجل المركزي${coreText(coreError)}` };
+      ? { kind: 'local-only', message: t('g1.save.localReconnect', { what }) }
+      : { kind: 'partial', message: t('g1.save.mainOnly', { what }) + coreText(coreError) };
   }
   return {
     kind: 'local-only',
     message: coreError === 'offline'
-      ? `حُفظ ${what} على هذا الجهاز وسيُزامن عند عودة الاتصال`
-      : `حُفظ ${what} محلياً فقط، ولم يصل للخادم بعد${coreText(coreError)}`
+      ? t('g1.save.localReconnect', { what })
+      : t('g1.save.localOnly', { what }) + coreText(coreError)
   };
 }
 
@@ -47,17 +49,17 @@ export function interpretSaveResult(what, r) {
 // means the write stayed on this device.
 export function interpretWriteOk(what, ok) {
   return ok === false
-    ? { kind: 'local-only', message: `حُفظ ${what} على هذا الجهاز وسيُزامن عند توفر الاتصال` }
-    : { kind: 'saved', message: `تم حفظ ${what}` };
+    ? { kind: 'local-only', message: t('g1.save.localAvailable', { what }) }
+    : { kind: 'saved', message: t('g1.save.saved', { what }) };
 }
 
 export const CONNECTION_STATES = Object.freeze({
-  online: { id: 'online', icon: '🟢', label: 'متصل', tone: 'success' },
-  saving: { id: 'saving', icon: '🔵', label: 'جاري الحفظ', tone: 'info' },
-  pending: { id: 'pending', icon: '🟡', label: 'محفوظ محليًا — في انتظار المزامنة', tone: 'warning' },
-  partial: { id: 'partial', icon: '🟠', label: 'تم الحفظ جزئيًا', tone: 'warning' },
-  failed: { id: 'failed', icon: '🔴', label: 'فشل الحفظ', tone: 'danger' },
-  offline: { id: 'offline', icon: '⚪', label: 'غير متصل — لا توجد تغييرات معلّقة', tone: 'neutral' }
+  online: { id: 'online', icon: '🟢', get label() { return t('g1.conn.online'); }, tone: 'success' },
+  saving: { id: 'saving', icon: '🔵', get label() { return t('g1.conn.saving'); }, tone: 'info' },
+  pending: { id: 'pending', icon: '🟡', get label() { return t('g1.conn.pending'); }, tone: 'warning' },
+  partial: { id: 'partial', icon: '🟠', get label() { return t('g1.conn.partial'); }, tone: 'warning' },
+  failed: { id: 'failed', icon: '🔴', get label() { return t('g1.conn.failed'); }, tone: 'danger' },
+  offline: { id: 'offline', icon: '⚪', get label() { return t('g1.conn.offline'); }, tone: 'neutral' }
 });
 
 // Highest-severity wins: failed > saving > partial > pending > offline > online.
@@ -69,14 +71,14 @@ export function connectionState({ saveStatus = null, sync = null } = {}) {
   let id = 'online';
   let detail = '';
   if (saveStatus && saveStatus.kind === 'failed') { id = 'failed'; detail = saveStatus.message || ''; }
-  else if (s.authError && !offline) { id = 'failed'; detail = 'الجلسة منتهية — سجّل الدخول من جديد لمزامنة التغييرات'; }
+  else if (s.authError && !offline) { id = 'failed'; detail = t('g1.conn.authExpired'); }
   else if (saveStatus && (saveStatus.kind === 'saving' || saveStatus.kind === 'retrying')) id = 'saving';
-  else if (s.syncing && pending > 0) { id = 'saving'; detail = `${pending} عناصر قيد المزامنة`; }
+  else if (s.syncing && pending > 0) { id = 'saving'; detail = t('g1.conn.syncingN', { n: pending }); }
   else if (saveStatus && saveStatus.kind === 'partial') { id = 'partial'; detail = saveStatus.message || ''; }
   else if (pending > 0 || (saveStatus && saveStatus.kind === 'local-only')) {
     id = 'pending';
-    detail = pending > 0 ? `${pending} عناصر بانتظار المزامنة` : (saveStatus.message || '');
-    if (errKeys.length && !offline) detail += ' — آخر محاولة فشلت وستُعاد تلقائيًا';
+    detail = pending > 0 ? t('g1.conn.waitingN', { n: pending }) : (saveStatus.message || '');
+    if (errKeys.length && !offline) detail += ' — ' + t('g1.conn.retryAuto');
   } else if (offline) id = 'offline';
   return { ...CONNECTION_STATES[id], detail, pending, offline };
 }

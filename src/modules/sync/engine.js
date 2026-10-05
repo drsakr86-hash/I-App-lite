@@ -11,7 +11,7 @@
 // principle as every other Phase 8 batch.
 //
 // Behavior is an exact copy of the original: same localStorage key prefixes,
-// same Arabic status labels, same "offline" definition. localStorage/
+// same status labels (now via t()), same "offline" definition. localStorage/
 // navigator access is wrapped in try/catch (or naturally tolerant of a
 // missing global) exactly as it was in legacy, so this module loads safely
 // under node:test — see tests/sync-engine.test.js.
@@ -19,6 +19,7 @@
 import { useState, useEffect } from 'react';
 import { C } from '../theme/index.js';
 import { syncStatusView } from './status-view.js';
+import { t } from '../i18n/index.js';
 
 // ---- localStorage wrapper ------------------------------------------------
 
@@ -71,23 +72,13 @@ export const BACKUP_KEYS = [
 
 // ---- sync-key display labels ---------------------------------------------
 
-export const SYNC_KEY_LABELS = {
-  patients: 'المرضى',
-  visits: 'الزيارات',
-  exams: 'الفحوصات',
-  prescriptions: 'الوصفات الطبية',
-  appointments: 'المواعيد',
-  expenses: 'المصروفات',
-  recurring_expenses: 'المصروفات المتكررة',
-  imaging: 'الفحوصات والصور',
-  imaging_studies: 'دراسات الصور',
-  audit: 'سجل المراجعة',
-  backups: 'النسخ الاحتياطية',
-  trash: 'المحذوفات'
-};
+const SYNC_KEY_IDS = ['patients', 'visits', 'exams', 'prescriptions', 'appointments', 'expenses', 'recurring_expenses', 'imaging', 'imaging_studies', 'audit', 'backups', 'trash'];
+
+// Canonical Arabic labels (kept for callers/tests); syncKeyLabel() returns the CURRENT-language label.
+export const SYNC_KEY_LABELS = Object.fromEntries(SYNC_KEY_IDS.map(k => [k, t('g4.syncKey.' + k, 'ar')]));
 
 export function syncKeyLabel(key) {
-  return SYNC_KEY_LABELS[key] || key;
+  return SYNC_KEY_LABELS[key] ? t('g4.syncKey.' + key) : key;
 }
 
 // ---- online/offline -------------------------------------------------------

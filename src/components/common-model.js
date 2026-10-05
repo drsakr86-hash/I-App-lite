@@ -2,6 +2,8 @@
 // React). Every value mirrors the legacy runtime's Btn / Toast / ThemeToggle
 // expressions exactly (public/legacy/app-runtime.js).
 
+import { t } from '../modules/i18n/index.js';
+
 // ---- Toast -------------------------------------------------------------------
 
 // A toast whose text starts with "⚠" is a warning: gold, shown longer, and
@@ -36,6 +38,6 @@ export const btnStyle = (C, { danger, full, small, outline, color } = {}) => {
 
 // ---- ThemeToggle -------------------------------------------------------------
 
-export const nextTheme = t => (t === 'dark' ? 'light' : 'dark');
-export const themeToggleTitle = t => (t === 'dark' ? 'الوضع النهاري' : 'الوضع الليلي');
-export const themeToggleIcon = t => (t === 'dark' ? '☀️' : '🌙');
+export const nextTheme = theme => (theme === 'dark' ? 'light' : 'dark');
+export const themeToggleTitle = theme => (theme === 'dark' ? t('g3.common.themeLight') : t('g3.common.themeDark'));
+export const themeToggleIcon = theme => (theme === 'dark' ? '☀️' : '🌙');

@@ -18,8 +18,11 @@ import {
 import { imagingStudyParams as imagingStudyRpcParams } from "../modules/imaging/index.js";
 import { singleImagingOrderParams as imagingSingleOrderParams } from "../modules/investigations/index.js";
 import { logError } from "../services/logger.js";
+import { t, useLang, dirOf, getLang } from "../modules/i18n/index.js";
+import { tv } from "../modules/i18n/tv.js";
 
 export default function ImagingCenter({ patients, primary, clinic }) {
+  const lang = useLang();
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [patientSearch, setPatientSearch] = useState("");
   const [type, setType] = useState("oct");
@@ -131,11 +134,11 @@ export default function ImagingCenter({ patients, primary, clinic }) {
   };
   const saveStudy = async () => {
     if (!selectedPatient) {
-      alert("اختر المريض أولاً");
+      alert(t('g6.img.pickPatient', lang));
       return;
     }
     if (!files.length && !report.trim() && !notes.trim()) {
-      alert("أضف صورة/ملف أو تقريراً أو ملاحظات");
+      alert(t('g6.img.addContent', lang));
       return;
     }
     setUploading(true);
@@ -243,20 +246,20 @@ export default function ImagingCenter({ patients, primary, clinic }) {
         try { localStorage.removeItem("iapp_pending_core_imaging_order"); } catch (_) { /* storage unavailable (private mode / quota): non-fatal */ }
       }
       if (coreSyncError && coreSyncError !== "offline") {
-        alert("✓ تم حفظ الفحص محليًا وربطه بملف المريض، لكن مزامنته مع Core فشلت (" + coreSyncError + "). سيتم عرضه في السجل المحلي، ويُنصح بمراجعته لاحقًا.");
+        alert(t('g6.img.savedSyncFailed', lang, { err: coreSyncError }));
       } else if (coreSyncError === "offline") {
-        alert("✓ تم حفظ الفحص محليًا. الجهاز غير متصل حاليًا، وستتم مزامنته مع Core عند توفر الاتصال.");
+        alert(t('g6.img.savedOffline', lang));
       } else {
-        alert("✓ تم تنفيذ الفحص وربطه بطلب الأشعة وملف المريض");
+        alert(t('g6.img.savedDone', lang));
       }
     } catch (e) {
-      alert("فشل حفظ الفحص: " + e.message);
+      alert(t('g6.img.saveFailed', lang, { msg: e.message }));
     } finally {
       setUploading(false);
     }
   };
   const deleteStudy = async id => {
-    if (!confirm("حذف سجل الفحص من التطبيق؟ سيتم الاحتفاظ بالملفات على Cloudinary حتى يتم حذفها من الخادم بشكل آمن.")) return;
+    if (!confirm(t('g6.img.confirmDelete', lang))) return;
     const remote = await sbGet("iapp_imaging_studies");
     const base = Array.isArray(remote) ? remote : studies;
     const target = base.find(x => x.id === id);
@@ -283,7 +286,7 @@ export default function ImagingCenter({ patients, primary, clinic }) {
     <div style={{ padding: "16px 16px 90px" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
         <div>
-          <div style={{ color: C.text, fontWeight: 800, fontSize: 16 }}>🖼️ Imaging Center</div>
+          <div style={{ color: C.text, fontWeight: 800, fontSize: 16 }}>{t('g6.img.title', lang)}</div>
           <div style={{ color: C.muted, fontSize: 11, marginTop: 3 }}>
             OCT · OCTA · FFA · Fundus · Pentacam · ERG · VF · Optos
           </div>
@@ -298,14 +301,13 @@ export default function ImagingCenter({ patients, primary, clinic }) {
             fontWeight: 700,
           }}
         >
-          {studies.length}
-          {" سجل"}
+          {t('g6.img.recordsCount', lang, { n: studies.length })}
         </span>
       </div>
       <div
         style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 14, marginBottom: 14 }}
       >
-        <SecHead icon="👤" label="اختيار المريض" />
+        <SecHead icon="👤" label={t('g6.img.selectPatient', lang)} />
         {selectedPatient ? (
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <div
@@ -343,7 +345,7 @@ export default function ImagingCenter({ patients, primary, clinic }) {
             <input
               value={patientSearch}
               onChange={(e) => setPatientSearch(e.target.value)}
-              placeholder="ابحث بالاسم أو رقم الملف..."
+              placeholder={t('g6.img.searchPatientPh', lang)}
               style={inp()}
             />
             {patientSearch && (
@@ -351,8 +353,8 @@ export default function ImagingCenter({ patients, primary, clinic }) {
                 style={{
                   position: "absolute",
                   zIndex: 20,
-                  left: 0,
-                  right: 0,
+                  insetInlineStart: 0,
+                  insetInlineEnd: 0,
                   top: 48,
                   background: C.surface,
                   border: `1px solid ${C.border}`,
@@ -393,7 +395,7 @@ export default function ImagingCenter({ patients, primary, clinic }) {
             marginBottom: 14,
           }}
         >
-          <SecHead icon="🩻" label="طلبات معلقة لهذا المريض" />
+          <SecHead icon="🩻" label={t('g6.img.pendingOrders', lang)} />
           <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
             {pendingOrdersForPatient(orders, selectedPatient.id).map((o) => (
               <div
@@ -422,7 +424,7 @@ export default function ImagingCenter({ patients, primary, clinic }) {
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
                     <span style={{ color: C.text, fontSize: 11, fontWeight: 700 }}>{o.id}</span>
                     <Tag
-                      label={IMAGING_ORDER_STATUSES[o.status] || o.status}
+                      label={tv(IMAGING_ORDER_STATUSES[o.status] || o.status)}
                       color={o.status === "requested" ? C.gold : C.teal}
                     />
                   </div>
@@ -469,7 +471,7 @@ export default function ImagingCenter({ patients, primary, clinic }) {
                         padding: 5,
                       }}
                     >
-                      📅 جدولة
+                      {t('g6.img.schedule', lang)}
                     </button>
                   )}
                   {o.status === "scheduled" && (
@@ -485,12 +487,12 @@ export default function ImagingCenter({ patients, primary, clinic }) {
                         padding: 5,
                       }}
                     >
-                      ▶ بدء التنفيذ
+                      {t('g6.img.start', lang)}
                     </button>
                   )}
                   {o.status === "in_progress" && (
                     <span style={{ flex: 1, textAlign: "center", color: C.teal, fontSize: 9, padding: 5 }}>
-                      جارٍ التنفيذ — احفظ النتيجة بعد الانتهاء
+                      {t('g6.img.inProgressHint', lang)}
                     </span>
                   )}
                 </div>
@@ -502,7 +504,7 @@ export default function ImagingCenter({ patients, primary, clinic }) {
       <div
         style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 14, marginBottom: 14 }}
       >
-        <SecHead icon="🔬" label="نوع الفحص" />
+        <SecHead icon="🔬" label={t('g6.img.examType', lang)} />
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
           {IMAGING_TYPES.map((t) => (
             <div
@@ -518,23 +520,23 @@ export default function ImagingCenter({ patients, primary, clinic }) {
             >
               <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
                 <span>{t.icon}</span>
-                <span style={{ color: type === t.id ? C.accent : C.text, fontWeight: 700, fontSize: 12 }}>{t.name}</span>
+                <span style={{ color: type === t.id ? C.accent : C.text, fontWeight: 700, fontSize: 12 }}>{tv(t.name)}</span>
               </div>
-              <div style={{ color: C.muted, fontSize: 9, marginTop: 3 }}>{t.hint}</div>
+              <div style={{ color: C.muted, fontSize: 9, marginTop: 3 }}>{tv(t.hint)}</div>
             </div>
           ))}
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 12 }}>
-          <Field label="العين">
+          <Field label={t('g6.img.eye', lang)}>
             <select style={inp()} value={eye} onChange={(e) => setEye(e.target.value)}>
               {IMAGING_EYES.map((x) => (
                 <option key={x.v} value={x.v}>
-                  {x.l}
+                  {t('g6.img.eye.' + x.v, lang)}
                 </option>
               ))}
             </select>
           </Field>
-          <Field label="التاريخ">
+          <Field label={t('g6.img.date', lang)}>
             <input style={inp()} type="date" value={localDateStr()} readOnly />
           </Field>
         </div>
@@ -542,7 +544,7 @@ export default function ImagingCenter({ patients, primary, clinic }) {
       <div
         style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 14, marginBottom: 14 }}
       >
-        <SecHead icon="☁️" label="رفع الصور / الملفات" />
+        <SecHead icon="☁️" label={t('g6.img.upload', lang)} />
         <label
           style={{
             display: "block",
@@ -565,8 +567,8 @@ export default function ImagingCenter({ patients, primary, clinic }) {
             }}
           />
           <div style={{ fontSize: 25 }}>📤</div>
-          <div style={{ color: C.accent, fontWeight: 700, fontSize: 12 }}>اختيار صور / ملفات الفحص</div>
-          <div style={{ color: C.muted, fontSize: 10, marginTop: 3 }}>يمكن اختيار أكثر من ملف</div>
+          <div style={{ color: C.accent, fontWeight: 700, fontSize: 12 }}>{t('g6.img.pickFiles', lang)}</div>
+          <div style={{ color: C.muted, fontSize: 10, marginTop: 3 }}>{t('g6.img.multiHint', lang)}</div>
         </label>
         {files.length > 0 && (
           <div style={{ marginTop: 10 }}>
@@ -615,7 +617,7 @@ export default function ImagingCenter({ patients, primary, clinic }) {
         style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 14, marginBottom: 14 }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-          <SecHead icon="📝" label="التقرير" />
+          <SecHead icon="📝" label={t('g6.img.report', lang)} />
           <button
             onClick={() => setReport(IMAGING_REPORT_TEMPLATES[type] || "")}
             style={{
@@ -627,31 +629,31 @@ export default function ImagingCenter({ patients, primary, clinic }) {
               padding: "5px 8px",
             }}
           >
-            ↻ قالب
+            {t('g6.img.template', lang)}
           </button>
         </div>
         <textarea
           value={report}
           onChange={(e) => setReport(e.target.value)}
           rows={9}
-          style={{ ...inp(), resize: "vertical", direction: "ltr", textAlign: "left", lineHeight: 1.7 }}
+          style={{ ...inp(), resize: "vertical", direction: "ltr", textAlign: "start", lineHeight: 1.7 }}
         />
-        <Field label="ملاحظات إضافية">
+        <Field label={t('g6.img.extraNotes', lang)}>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={3}
             style={{ ...inp(), resize: "none" }}
-            placeholder="ملاحظات الطبيب أو الفني..."
+            placeholder={t('g6.img.notesPh', lang)}
           />
         </Field>
         <Btn full onClick={saveStudy}>
-          {uploading ? "⏳ جاري الرفع والحفظ..." : "💾 حفظ الفحص والتقرير"}
+          {uploading ? t('g6.img.saving', lang) : t('g6.img.saveStudy', lang)}
         </Btn>
       </div>
       <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 14 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-          <SecHead icon="🗂️" label="السجل" />
+          <SecHead icon="🗂️" label={t('g6.img.log', lang)} />
           <button
             onClick={loadStudies}
             style={{
@@ -668,7 +670,7 @@ export default function ImagingCenter({ patients, primary, clinic }) {
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="بحث في السجل..."
+          placeholder={t('g6.img.searchLogPh', lang)}
           style={{ ...inp(), marginBottom: 8 }}
         />
         <div style={{ display: "flex", gap: 5, overflowX: "auto", marginBottom: 10 }}>
@@ -686,14 +688,14 @@ export default function ImagingCenter({ patients, primary, clinic }) {
                 whiteSpace: "nowrap",
               }}
             >
-              {x.l}
+              {x.id === 'all' ? t('g6.img.all', lang) : tv(x.l)}
             </button>
           ))}
         </div>
         {loading ? (
-          <div style={{ padding: 25, textAlign: "center", color: C.muted }}>⏳ جاري التحميل...</div>
+          <div style={{ padding: 25, textAlign: "center", color: C.muted }}>{t('g6.img.loading', lang)}</div>
         ) : filtered.length === 0 ? (
-          <div style={{ padding: 25, textAlign: "center", color: C.muted }}>No investigations saved</div>
+          <div style={{ padding: 25, textAlign: "center", color: C.muted }}>{t('g6.img.noStudies', lang)}</div>
         ) : (
           filtered.slice(0, 30).map((x) => (
             <div
@@ -717,20 +719,19 @@ export default function ImagingCenter({ patients, primary, clinic }) {
                   </span>
                 </div>
                 <Tag
-                  label={x.status === "reported" ? "تم التقرير" : "بدون تقرير"}
+                  label={x.status === "reported" ? t('g6.img.reported', lang) : t('g6.img.unreported', lang)}
                   color={x.status === "reported" ? C.success : C.gold}
                 />
               </div>
               <div style={{ color: C.accent, fontSize: 10, marginTop: 4 }}>
-                {x.typeName}
+                {tv(x.typeName)}
                 {" · "}
                 {x.eye}
                 {" · "}
                 {x.date} {x.time}
               </div>
               <div style={{ color: C.muted, fontSize: 9, marginTop: 3 }}>
-                {x.files?.length || 0}
-                {" ملف · "}
+                {t('g6.img.filesCount', lang, { n: x.files?.length || 0 })}
                 {x.doctor || ""}
               </div>
             </div>
@@ -738,14 +739,14 @@ export default function ImagingCenter({ patients, primary, clinic }) {
         )}
       </div>
       {view && (
-        <Modal title={"📄 " + view.typeName + " — " + view.patient} onClose={() => setView(null)}>
+        <Modal title={"📄 " + tv(view.typeName) + " — " + view.patient} onClose={() => setView(null)}>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <div style={{ background: C.bg, borderRadius: 10, padding: 10, color: C.muted, fontSize: 11 }}>
               {view.date} {view.time}
               {" · "}
               {view.eye}
               {" · "}
-              {view.doctor}
+              {tv(view.doctor)}
             </div>
             {view.files?.map((f, i) => (
               <div key={i} style={{ border: `1px solid ${C.border}`, borderRadius: 10, padding: 8 }}>
@@ -770,7 +771,7 @@ export default function ImagingCenter({ patients, primary, clinic }) {
                       fontSize: 11,
                     }}
                   >
-                    📄 فتح الملف
+                    {t('g6.img.openFile', lang)}
                   </a>
                 )}
                 <div style={{ color: C.text, fontSize: 10, marginTop: 5 }}>{f.name}</div>
@@ -778,7 +779,7 @@ export default function ImagingCenter({ patients, primary, clinic }) {
             ))}
             {view.report && (
               <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 10 }}>
-                <div style={{ color: C.gold, fontWeight: 700, fontSize: 11, marginBottom: 6 }}>التقرير</div>
+                <div style={{ color: C.gold, fontWeight: 700, fontSize: 11, marginBottom: 6 }}>{t('g6.img.report', lang)}</div>
                 <div
                   style={{
                     color: C.text,
@@ -786,7 +787,7 @@ export default function ImagingCenter({ patients, primary, clinic }) {
                     lineHeight: 1.8,
                     whiteSpace: "pre-wrap",
                     direction: "ltr",
-                    textAlign: "left",
+                    textAlign: "start",
                   }}
                 >
                   {view.report}
@@ -805,14 +806,14 @@ export default function ImagingCenter({ patients, primary, clinic }) {
                 full
                 onClick={() =>
                   printDoc(
-                    `<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8"><title>${view.typeName}</title><style>body{font-family:Arial;padding:20px}img{max-width:100%;max-height:500px}pre{white-space:pre-wrap;line-height:1.7}</style></head><body><h2>${view.typeName}</h2><p>${view.patient} · ${view.patientCode || ""} · ${view.date}</p>${(view.files || []).map((f) => (f.src && f.resource_type !== "raw" ? `<img src="${f.src}"/>` : f.src ? `<p><a href="${f.src}">فتح الملف: ${f.name || "file"}</a></p>` : "")).join("")}<h3>Report</h3><pre>${view.report || ""}</pre><p>${view.notes || ""}</p></body></html>`,
+                    `<!DOCTYPE html><html dir="${dirOf(getLang())}"><head><meta charset="UTF-8"><title>${tv(view.typeName)}</title><style>body{font-family:Arial;padding:20px}img{max-width:100%;max-height:500px}pre{white-space:pre-wrap;line-height:1.7}</style></head><body><h2>${tv(view.typeName)}</h2><p>${view.patient} · ${view.patientCode || ""} · ${view.date}</p>${(view.files || []).map((f) => (f.src && f.resource_type !== "raw" ? `<img src="${f.src}"/>` : f.src ? `<p><a href="${f.src}">${t('g6.img.openFileLabel')}: ${f.name || "file"}</a></p>` : "")).join("")}<h3>${t('g6.img.reportHeading')}</h3><pre>${view.report || ""}</pre><p>${view.notes || ""}</p></body></html>`,
                   )
                 }
               >
-                🖨️ طباعة
+                {t('g6.img.print', lang)}
               </Btn>
               <Btn danger full onClick={() => deleteStudy(view.id)}>
-                🗑 حذف السجل
+                {t('g6.img.deleteRecord', lang)}
               </Btn>
             </div>
           </div>

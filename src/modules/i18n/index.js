@@ -8,7 +8,11 @@
 // language only affects labels and the generated report.
 
 import { useState, useEffect } from 'react';
-import { AR, EN } from './dictionary.js';
+import { AR as BASE_AR, EN as BASE_EN } from './dictionary.js';
+import { EXTRA_AR, EXTRA_EN } from './dict/index.js';
+
+const AR = { ...BASE_AR, ...EXTRA_AR };
+const EN = { ...BASE_EN, ...EXTRA_EN };
 
 export const LANGS = Object.freeze(['ar', 'en']);
 const KEY = 'iapp_lang';
@@ -20,6 +24,13 @@ try {
 } catch { /* storage unavailable (private mode / node tests): default Arabic */ }
 
 const subs = new Set();
+function applyDocLang(lang) {
+  try {
+    document.documentElement.setAttribute('lang', lang);
+    document.documentElement.setAttribute('dir', lang === 'en' ? 'ltr' : 'rtl');
+  } catch { /* no DOM (node tests): non-fatal */ }
+}
+applyDocLang(_lang);
 export const getLang = () => _lang;
 export const dirOf = lang => (lang === 'en' ? 'ltr' : 'rtl');
 
@@ -27,8 +38,9 @@ export function setLang(lang) {
   if (!LANGS.includes(lang) || lang === _lang) return;
   _lang = lang;
   try { localStorage.setItem(KEY, lang); } catch { /* storage unavailable: non-fatal */ }
+  applyDocLang(lang);
   try {
-    document.documentElement.setAttribute('lang', lang);
+    void 0;
   } catch { /* no DOM (node tests): non-fatal */ }
   subs.forEach(fn => { try { fn(lang); } catch { /* a broken subscriber must not block the others */ } });
 }
@@ -43,7 +55,16 @@ export function useLang() {
   return lang;
 }
 
-export function t(key, lang = _lang) {
+// t(key[, lang][, vars]) -- vars replace {name} placeholders. lang defaults to the CURRENT language, so pure
+// model functions can call t('key') and still be Arabic in node tests.
+export function t(key, lang, vars) {
+  if (lang && typeof lang === 'object') { vars = lang; lang = undefined; }
+  if (!lang) lang = _lang;
+  let out = raw(key, lang);
+  if (vars) out = out.replace(/\{(\w+)\}/g, (m, k) => (vars[k] == null ? m : String(vars[k])));
+  return out;
+}
+function raw(key, lang) {
   const table = lang === 'en' ? EN : AR;
   if (table[key] != null) return table[key];
   if (AR[key] != null) return AR[key];

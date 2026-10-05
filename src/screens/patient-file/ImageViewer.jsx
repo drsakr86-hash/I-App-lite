@@ -1,9 +1,11 @@
 import React from 'react';
 import { C } from '../../modules/theme/index.js';
+import { t, useLang } from '../../modules/i18n/index.js';
 
 // Full-screen image viewer (viewImg) of the patient file.
 export default function ImageViewer({ ctx }) {
   const { setViewImg, viewImg } = ctx;
+  const lang = useLang();
   return (
     <div
       style={{
@@ -45,9 +47,13 @@ export default function ImageViewer({ ctx }) {
               textDecoration: "none"
             }}
           >
-            ⬇ تحميل
+            ⬇ {t("g1.img.download", lang)}
           </a>
           <span
+            role="button"
+            tabIndex={0}
+            aria-label={t("g1.common.close", lang)}
+            onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setViewImg(null); } }}
             onClick={() => setViewImg(null)}
             style={{ color: "#fff", fontSize: 28, cursor: "pointer", lineHeight: 1, padding: "0 4px" }}
           >
@@ -67,7 +73,7 @@ export default function ImageViewer({ ctx }) {
       </div>
       {viewImg.notes && (
         <div
-          style={{ padding: "10px 16px", background: "rgba(0,0,0,0.7)", color: "#ccc", fontSize: 12, textAlign: "right" }}
+          style={{ padding: "10px 16px", background: "rgba(0,0,0,0.7)", color: "#ccc", fontSize: 12, textAlign: "start" }}
         >
           {"📝 "}
           {viewImg.notes}

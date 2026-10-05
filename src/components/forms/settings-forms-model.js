@@ -6,6 +6,8 @@
 
 // ---- PriceForm -------------------------------------------------------------
 
+import { t, getLang } from '../../modules/i18n/index.js';
+
 export const PRICE_ICONS = ['👁', '💬', '🔍', '👓', '🔵', '⚡', '🏥', '💉', '📋', '🩺', '💊', '🔬', '🧪', '📊', '🩻'];
 
 export const blankPrice = () => ({ name: '', price: '', icon: '👁' });
@@ -16,14 +18,19 @@ export const canSavePrice = f => f.name && f.price;
 
 // ---- DoctorForm ------------------------------------------------------------
 
-export const blankDoctor = () => ({ name: '', short: '', title: 'طبيب عيون', initial: '', isPrimary: false });
+export const blankDoctor = () => ({ name: '', short: '', title: t('g3.doctor.titlePh'), initial: '', isPrimary: false });
 export const initialDoctorState = initial => (initial ? { ...initial } : blankDoctor());
 
 // Suggested avatar letter and short name for a typed full name.
 export const deriveDoctorNameFields = name => {
-  const parts = name.replace('د.', '').trim().split(' ');
+  // English mode also understands a typed "Dr." title and suggests "Dr. X"; Arabic behaviour is unchanged.
+  const en = getLang() === 'en';
+  const drEn = /^\s*dr\.?\s+/i;
+  const base = name.replace('د.', '');
+  const parts = (en ? base.replace(drEn, '') : base).trim().split(' ');
   const ini = parts[0] && parts[0][0] || '';
-  const short = name.includes('د.') ? name.split(' ').slice(0, 2).join(' ') : 'د. ' + parts[0];
+  const hasTitle = name.includes('د.') || (en && drEn.test(name));
+  const short = hasTitle ? name.split(' ').slice(0, 2).join(' ') : (en ? 'Dr. ' : 'د. ') + parts[0];
   return { ini, short };
 };
 
@@ -62,4 +69,4 @@ export const isUserFormValid = (f, saving) => String(f.email || '').includes('@'
 
 export const buildUserPayload = (f, now) => ({ ...f, id: f.id || now });
 
-export const userSaveLabel = (saving, isEdit) => (saving ? '⏳ جاري الحفظ...' : isEdit ? '✓ حفظ التعديل' : '✓ إضافة مستخدم');
+export const userSaveLabel = (saving, isEdit) => (saving ? t('g3.user.saving') : isEdit ? t('g3.user.saveEdit') : t('g3.user.add'));

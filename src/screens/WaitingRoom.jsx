@@ -4,6 +4,10 @@ import { C } from '../modules/theme/index.js';
 import { clinicLabel } from '../modules/constants/index.js';
 import { inp } from '../modules/ui/atoms.jsx';
 import { broadcastCall, callChannel } from '../modules/realtime/index.js';
+import { t, useLang } from '../modules/i18n/index.js';
+import { tv } from '../modules/i18n/tv.js';
+
+const clinicName = c => tv(clinicLabel(c));
 
 const btn = (C, tone, extra = {}) => ({
   background: C[tone] + '22',
@@ -29,7 +33,7 @@ export function PayBadge({ a, onCollect, C }) {
   };
   return (
     <span onClick={() => onCollect(a)} style={style}>
-      {a.cost ? <>{a.paid ? '✓ مدفوع' : 'غير مدفوع'} {a.cost}ج</> : '💰 تحصيل'}
+      {a.cost ? <>{a.paid ? t('g5.wait.paid') : t('g5.wait.unpaid')} {a.cost}{t('g5.unit.egpShort')}</> : t('g5.wait.collect')}
     </span>
   );
 }
@@ -67,6 +71,7 @@ function Row({ C, a, sub, children, border, single, dim }) {
 }
 
 export default function WaitingRoom({ apts, today, onUpdateApt, onCollect, doctorNames = [], isAdmin = false }) {
+  const lang = useLang();
   useEffect(() => { callChannel(); }, []);
 
   const priorityKey = 'iapp_priority_doctor_' + today;
@@ -75,8 +80,8 @@ export default function WaitingRoom({ apts, today, onUpdateApt, onCollect, docto
   });
   const [clock, setClock] = useState(Date.now());
   useEffect(() => {
-    const t = setInterval(() => setClock(Date.now()), 60000);
-    return () => clearInterval(t);
+    const iv = setInterval(() => setClock(Date.now()), 60000);
+    return () => clearInterval(iv);
   }, []);
 
   const setPriority = d => {
@@ -87,7 +92,7 @@ export default function WaitingRoom({ apts, today, onUpdateApt, onCollect, docto
   const v = buildQueueView(apts, { today, priorityDoctor, doctorNames });
   const { waiting, called, inRoom, done, postponed, noShow, pending, stale, orderedWaiting, priorityOptions, avgDurationMin } = v;
   const go = (a, key) => onUpdateApt(transitions[key](a, Date.now()));
-  const place = a => a.time + ' · ' + a.type + ' · ' + clinicLabel(a.clinic);
+  const place = a => a.time + ' · ' + tv(a.type) + ' · ' + clinicName(a.clinic);
 
   const call = a => {
     const upd = transitions.call(a, Date.now());
@@ -95,21 +100,21 @@ export default function WaitingRoom({ apts, today, onUpdateApt, onCollect, docto
     broadcastCall(upd);
   };
   const cancelStatus = a => {
-    if (!window.confirm('إلغاء حالة ' + a.patient + ' وإرجاعه إلى «لم يصل»؟')) return;
+    if (!window.confirm(t('g5.wait.confirmCancelStatus', lang, { name: a.patient }))) return;
     return go(a, 'cancelStatus');
   };
   const closeStale = async () => {
-    if (!window.confirm(`إغلاق ${stale.length} حالة منسية من أيام سابقة؟`)) return;
+    if (!window.confirm(t('g5.wait.confirmCloseStale', lang, { n: stale.length }))) return;
     for (const a of stale) await onUpdateApt(transitions.cancelArrival(a));
   };
 
   const stats = [
-    { l: 'ينتظر', v: waiting.length, c: C.gold },
-    { l: 'في العيادة', v: inRoom.length, c: C.accent },
-    { l: 'انتهى', v: done.length, c: C.success },
-    { l: 'مؤجل', v: postponed.length, c: C.purple },
-    { l: 'لم يصل', v: pending.length, c: C.muted },
-    { l: 'لم يحضر', v: noShow.length, c: C.danger }
+    { l: t('g5.wait.statWaiting', lang), v: waiting.length, c: C.gold },
+    { l: t('g5.wait.statInClinic', lang), v: inRoom.length, c: C.accent },
+    { l: t('g5.wait.statDone', lang), v: done.length, c: C.success },
+    { l: t('g5.wait.statPostponed', lang), v: postponed.length, c: C.purple },
+    { l: t('g5.wait.statNotArrived', lang), v: pending.length, c: C.muted },
+    { l: t('g5.wait.statNoShow', lang), v: noShow.length, c: C.danger }
   ];
   const gradBtn = { background: `linear-gradient(135deg,${C.accent},${C.teal})`, border: 'none', borderRadius: 9, padding: '8px 12px', color: C.bg, fontSize: 11, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' };
 
@@ -118,24 +123,24 @@ export default function WaitingRoom({ apts, today, onUpdateApt, onCollect, docto
       {stale.length > 0 && (
         <div style={{ background: C.gold + '18', border: `1px solid ${C.gold}66`, borderRadius: 12, padding: '10px 12px', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={{ flex: 1, color: C.text, fontSize: 12, fontWeight: 700 }}>
-            {`⚠️ ${stale.length} حالة منسية من أيام سابقة: ${stale.map(a => a.patient).join('، ')}`}
+            {t('g5.wait.staleLine', lang, { n: stale.length, names: stale.map(a => a.patient).join(t('g5.common.listSep', lang)) })}
           </div>
-          <button onClick={closeStale} style={{ ...btn(C, 'gold'), background: C.gold + '33', border: `1px solid ${C.gold}88`, borderRadius: 9, padding: '8px 12px', fontWeight: 800 }}>إغلاق الكل</button>
+          <button onClick={closeStale} style={{ ...btn(C, 'gold'), background: C.gold + '33', border: `1px solid ${C.gold}88`, borderRadius: 9, padding: '8px 12px', fontWeight: 800 }}>{t('g5.wait.closeAll', lang)}</button>
         </div>
       )}
 
       <div style={{ background: C.card, border: `1px solid ${priorityDoctor ? C.accent : C.border}`, borderRadius: 12, padding: '10px 12px', marginBottom: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
           <span style={{ fontSize: 16 }}>👨‍⚕️</span>
-          <div style={{ flex: 1, color: C.text, fontWeight: 800, fontSize: 12 }}>طبيب اليوم / صاحب الأولوية</div>
-          {priorityDoctor && <span style={{ background: C.accent + '22', color: C.accent, borderRadius: 8, padding: '2px 7px', fontSize: 9, fontWeight: 700 }}>أولوية</span>}
+          <div style={{ flex: 1, color: C.text, fontWeight: 800, fontSize: 12 }}>{t('g5.wait.priorityTitle', lang)}</div>
+          {priorityDoctor && <span style={{ background: C.accent + '22', color: C.accent, borderRadius: 8, padding: '2px 7px', fontSize: 9, fontWeight: 700 }}>{t('g5.wait.priorityBadge', lang)}</span>}
         </div>
         <select value={priorityDoctor} onChange={e => setPriority(e.target.value)} style={{ ...inp(), padding: '8px 10px', fontSize: 12 }}>
-          <option value="">بدون أولوية محددة</option>
-          {priorityOptions.map(d => <option key={d} value={d}>{d}</option>)}
+          <option value="">{t('g5.wait.noPriority', lang)}</option>
+          {priorityOptions.map(d => <option key={d} value={d}>{tv(d)}</option>)}
         </select>
-        {priorityDoctor && <div style={{ color: C.muted, fontSize: 9, marginTop: 5 }}>حالات هذا الطبيب تظهر أولاً في قائمة الانتظار، بينما حالات الأطباء الآخرين تظل في الانتظار.</div>}
-        {priorityOptions.length === 0 && <div style={{ color: C.muted, fontSize: 9, marginTop: 5 }}>لا يوجد طبيب آخر مسجل له موعد اليوم.</div>}
+        {priorityDoctor && <div style={{ color: C.muted, fontSize: 9, marginTop: 5 }}>{t('g5.wait.priorityNote', lang)}</div>}
+        {priorityOptions.length === 0 && <div style={{ color: C.muted, fontSize: 9, marginTop: 5 }}>{t('g5.wait.noOtherDoctor', lang)}</div>}
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 6, marginBottom: 16 }}>
@@ -149,7 +154,7 @@ export default function WaitingRoom({ apts, today, onUpdateApt, onCollect, docto
 
       {v.hasDurations && (
         <div style={{ textAlign: 'center', color: C.muted, fontSize: 11, marginBottom: 12 }}>
-          ⏱ متوسط وقت الكشف: <span style={{ color: C.accent, fontWeight: 700 }}>{avgDurationMin} دقيقة</span>
+          {t('g5.wait.avgExam', lang)} <span style={{ color: C.accent, fontWeight: 700 }}>{t('g5.wait.avgExamMin', lang, { n: avgDurationMin })}</span>
         </div>
       )}
 
@@ -158,17 +163,17 @@ export default function WaitingRoom({ apts, today, onUpdateApt, onCollect, docto
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ fontSize: 24 }}>📣</div>
             <div style={{ flex: 1 }}>
-              <div style={{ color: C.gold, fontWeight: 900, fontSize: 15 }}>تم استدعاء المريض</div>
+              <div style={{ color: C.gold, fontWeight: 900, fontSize: 15 }}>{t('g5.wait.called', lang)}</div>
               <div style={{ color: C.text, fontWeight: 700, fontSize: 14 }}>{a.patient}</div>
-              <div style={{ color: C.muted, fontSize: 10 }}>{a.doctor || ''} · {clinicLabel(a.clinic)}</div>
+              <div style={{ color: C.muted, fontSize: 10 }}>{tv(a.doctor || '')} · {clinicName(a.clinic)}</div>
             </div>
-            <button title="إعادة النداء على كل الشاشات" onClick={() => broadcastCall(a, Date.now())}
-              style={{ ...btn(C, 'gold'), borderRadius: 9, padding: '8px 10px', fontWeight: 800, marginLeft: 6 }}>🔁 إعادة النداء</button>
-            <button onClick={() => go(a, 'startExam')} style={gradBtn}>بدء الكشف</button>
+            <button title={t('g5.wait.recallTitle', lang)} onClick={() => broadcastCall(a, Date.now())}
+              style={{ ...btn(C, 'gold'), borderRadius: 9, padding: '8px 10px', fontWeight: 800, marginInlineEnd: 6 }}>{t('g5.wait.recall', lang)}</button>
+            <button onClick={() => go(a, 'startExam')} style={gradBtn}>{t('g5.wait.startExam', lang)}</button>
           </div>
           {isAdmin && (
             <div style={{ marginTop: 8 }}>
-              <button onClick={() => cancelStatus(a)} style={btn(C, 'danger')}>✕ إلغاء الحالة</button>
+              <button onClick={() => cancelStatus(a)} style={btn(C, 'danger')}>{t('g5.wait.cancelStatus', lang)}</button>
             </div>
           )}
         </div>
@@ -180,20 +185,20 @@ export default function WaitingRoom({ apts, today, onUpdateApt, onCollect, docto
             <span style={{ fontSize: 18 }}>🩺</span>
             <div style={{ flex: 1 }}>
               <div style={{ color: C.accent, fontWeight: 800, fontSize: 14 }}>{a.patient}</div>
-              <div style={{ color: C.muted, fontSize: 11 }}>في العيادة الآن · {a.time} · {clinicLabel(a.clinic)}</div>
+              <div style={{ color: C.muted, fontSize: 11 }}>{t('g5.wait.inClinicNow', lang)} · {a.time} · {clinicName(a.clinic)}</div>
             </div>
           </div>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-            <button onClick={() => go(a, 'finish')} style={btn(C, 'success')}>✓ انتهى الكشف</button>
-            <button onClick={() => go(a, 'backToWaiting')} style={btn(C, 'gold')}>↩ رجوع للانتظار</button>
-            {isAdmin && <button onClick={() => cancelStatus(a)} style={btn(C, 'danger')}>✕ إلغاء الحالة</button>}
+            <button onClick={() => go(a, 'finish')} style={btn(C, 'success')}>{t('g5.wait.finish', lang)}</button>
+            <button onClick={() => go(a, 'backToWaiting')} style={btn(C, 'gold')}>{t('g5.wait.backToWaiting', lang)}</button>
+            {isAdmin && <button onClick={() => cancelStatus(a)} style={btn(C, 'danger')}>{t('g5.wait.cancelStatus', lang)}</button>}
             <PayBadge a={a} onCollect={onCollect} C={C} />
           </div>
         </div>
       ))}
 
       {waiting.length > 0 && (
-        <Section C={C} title="⏳ قائمة الانتظار" top={0}>
+        <Section C={C} title={t('g5.wait.sectionWaiting', lang)} top={0}>
           {orderedWaiting.map((a, idx) => {
             const isP = v.isPriority(a);
             const est = estimateWait(a, idx, { clock, inRoomCount: inRoom.length, avgDurationMin });
@@ -203,19 +208,19 @@ export default function WaitingRoom({ apts, today, onUpdateApt, onCollect, docto
                 <div style={{ flex: 1, minWidth: 100 }}>
                   <div style={{ color: C.text, fontWeight: 700, fontSize: 13 }}>{a.patient}</div>
                   <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexWrap: 'wrap', color: C.muted, fontSize: 11 }}>
-                    {a.doctor && <span style={{ background: isP ? C.accent + '22' : C.border, color: isP ? C.accent : C.muted, borderRadius: 6, padding: '2px 6px', fontWeight: isP ? 700 : 500 }}>{a.doctor}{isP ? ' · أولوية' : ''}</span>}
-                    <span>{a.type} · {a.time} · {clinicLabel(a.clinic)} · ⏱ ~{fmtWait(est)}</span>
+                    {a.doctor && <span style={{ background: isP ? C.accent + '22' : C.border, color: isP ? C.accent : C.muted, borderRadius: 6, padding: '2px 6px', fontWeight: isP ? 700 : 500 }}>{tv(a.doctor)}{isP ? t('g5.wait.priorityTag', lang) : ''}</span>}
+                    <span>{tv(a.type)} · {a.time} · {clinicName(a.clinic)} · ⏱ ~{fmtWait(est)}</span>
                   </div>
                   {a.phone && <a href={'tel:' + a.phone} style={{ color: C.accent, fontSize: 11, textDecoration: 'none' }}>📞 {a.phone}</a>}
                   <div style={{ marginTop: 4 }}><PayBadge a={a} onCollect={onCollect} C={C} /></div>
                 </div>
                 <div style={{ display: 'flex', gap: 6 }}>
                   {inRoom.length === 0 && called.length === 0 && idx === 0 && (
-                    <button onClick={() => call(a)} style={{ background: `linear-gradient(135deg,${C.gold},#e0951f)`, border: 'none', borderRadius: 8, padding: '6px 10px', color: '#fff', fontSize: 11, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>📣 استدعاء</button>
+                    <button onClick={() => call(a)} style={{ background: `linear-gradient(135deg,${C.gold},#e0951f)`, border: 'none', borderRadius: 8, padding: '6px 10px', color: '#fff', fontSize: 11, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>{t('g5.wait.callBtn', lang)}</button>
                   )}
-                  <button title="تأجيل" onClick={() => go(a, 'postpone')} style={mini(C, 'purple')}>⏸</button>
-                  <button title="لم يحضر" onClick={() => go(a, 'noShow')} style={mini(C, 'danger')}>لم يحضر</button>
-                  <button title={isAdmin ? 'إلغاء الحالة' : 'إلغاء الوصول'} onClick={() => (isAdmin ? cancelStatus(a) : go(a, 'cancelArrival'))} style={mini(C, 'danger')}>✕</button>
+                  <button title={t('g5.wait.postpone', lang)} onClick={() => go(a, 'postpone')} style={mini(C, 'purple')}>⏸</button>
+                  <button title={t('g5.wait.noShow', lang)} onClick={() => go(a, 'noShow')} style={mini(C, 'danger')}>{t('g5.wait.noShow', lang)}</button>
+                  <button title={isAdmin ? t('g5.wait.cancelStatusTitle', lang) : t('g5.wait.cancelArrivalTitle', lang)} onClick={() => (isAdmin ? cancelStatus(a) : go(a, 'cancelArrival'))} style={mini(C, 'danger')}>✕</button>
                 </div>
               </div>
             );
@@ -224,12 +229,12 @@ export default function WaitingRoom({ apts, today, onUpdateApt, onCollect, docto
       )}
 
       {pending.length > 0 && (
-        <Section C={C} title="📋 لم يصلوا بعد">
+        <Section C={C} title={t('g5.wait.sectionPending', lang)}>
           {pending.map(a => (
             <Row key={a.id} C={C} a={a} sub={place(a)}>
               <div style={{ display: 'flex', gap: 6 }}>
-                <button onClick={() => go(a, 'arrive')} style={mini(C, 'gold', { padding: '6px 10px', fontWeight: 700 })}>وصل ✓</button>
-                <button title="تأجيل" onClick={() => go(a, 'postpone')} style={mini(C, 'purple')}>⏸</button>
+                <button onClick={() => go(a, 'arrive')} style={mini(C, 'gold', { padding: '6px 10px', fontWeight: 700 })}>{t('g5.wait.arrive', lang)}</button>
+                <button title={t('g5.wait.postpone', lang)} onClick={() => go(a, 'postpone')} style={mini(C, 'purple')}>⏸</button>
               </div>
             </Row>
           ))}
@@ -237,27 +242,27 @@ export default function WaitingRoom({ apts, today, onUpdateApt, onCollect, docto
       )}
 
       {postponed.length > 0 && (
-        <Section C={C} title="⏸ تم تأجيلهم">
+        <Section C={C} title={t('g5.wait.sectionPostponed', lang)}>
           {postponed.map(a => (
             <Row key={a.id} C={C} a={a} sub={place(a)}>
-              <button onClick={() => go(a, 'backToWaiting')} style={mini(C, 'gold', { padding: '6px 10px', fontWeight: 700 })}>🔁 إعادة للانتظار</button>
+              <button onClick={() => go(a, 'backToWaiting')} style={mini(C, 'gold', { padding: '6px 10px', fontWeight: 700 })}>{t('g5.wait.requeue', lang)}</button>
             </Row>
           ))}
         </Section>
       )}
 
       {noShow.length > 0 && (
-        <Section C={C} title="🚫 لم يحضروا">
+        <Section C={C} title={t('g5.wait.sectionNoShow', lang)}>
           {noShow.map(a => (
-            <Row key={a.id} C={C} a={a} single border={C.danger + '33'} sub={a.patient + ' · ' + a.time + ' · ' + (a.doctor || '')}>
-              <button onClick={() => go(a, 'restoreNoShow')} style={mini(C, 'gold', { padding: '6px 10px', fontWeight: 700 })}>إعادة للانتظار</button>
+            <Row key={a.id} C={C} a={a} single border={C.danger + '33'} sub={a.patient + ' · ' + a.time + ' · ' + tv(a.doctor || '')}>
+              <button onClick={() => go(a, 'restoreNoShow')} style={mini(C, 'gold', { padding: '6px 10px', fontWeight: 700 })}>{t('g5.wait.restoreNoShow', lang)}</button>
             </Row>
           ))}
         </Section>
       )}
 
       {done.length > 0 && (
-        <Section C={C} title="✅ انتهوا اليوم">
+        <Section C={C} title={t('g5.wait.sectionDone', lang)}>
           {done.map(a => (
             <Row key={a.id} C={C} a={a} single dim sub={a.patient + ' · ' + a.time}>
               <PayBadge a={a} onCollect={onCollect} C={C} />
@@ -267,7 +272,7 @@ export default function WaitingRoom({ apts, today, onUpdateApt, onCollect, docto
       )}
 
       {v.todayApts.length === 0 && (
-        <div style={{ color: C.muted, textAlign: 'center', padding: 40, fontSize: 13 }}>لا توجد مواعيد اليوم</div>
+        <div style={{ color: C.muted, textAlign: 'center', padding: 40, fontSize: 13 }}>{t('g5.wait.noAptsToday', lang)}</div>
       )}
     </div>
   );

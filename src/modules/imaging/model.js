@@ -4,6 +4,8 @@
 // The async save/delete/load orchestration (Supabase writes, Core RPCs and the
 // pending-Core-order retry guard) stays in the screen component unchanged.
 
+import { t } from '../i18n/index.js';
+
 // Patient search dropdown: case-insensitive on name / file code, raw on phone, max 8.
 export function filterImagingPatients(patients, patientSearch) {
   return patients.filter(p => {
@@ -32,7 +34,7 @@ export function findImagingType(imagingTypes, test) {
 export function buildTypeFilters(imagingTypes) {
   return [{
     id: "all",
-    l: "الكل"
+    l: t('g6.img.all')
   }, ...imagingTypes.map(t => ({
     id: t.id,
     l: t.name

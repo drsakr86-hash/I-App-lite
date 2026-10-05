@@ -25,6 +25,7 @@ import { SyncStore, dirtyKeys, offlineNow } from '../sync/engine.js';
 import { flushAll, sbGet, sbSet } from '../sync/wiring.js';
 import { publicUser } from './session.js';
 import { logError } from '../../services/logger.js';
+import { t } from '../i18n/index.js';
 import { purgeCachedPhi, requestImageCacheClear } from '../sync/phi-purge.js';
 
 export const ADMIN_EMAILS = ['admin@sakr.clinic'];
@@ -74,7 +75,7 @@ export function clearLoginFails(k) {
     localStorage.setItem(GUARD_KEY, JSON.stringify(all));
   } catch { /* storage unavailable (private mode / quota): non-fatal */ }
 }
-export const fmtWait = s => (s >= 60 ? Math.ceil(s / 60) + ' دقيقة' : s + ' ثانية');
+export const fmtWait = s => (s >= 60 ? t('g6.auth.minutes', { n: Math.ceil(s / 60) }) : t('g6.auth.seconds', { n: s }));
 
 // ---- local user list ---------------------------------------------------------
 
@@ -175,7 +176,7 @@ export async function resolveProfile(email) {
   const pulled = await Promise.race([pullUsers().catch(() => false), new Promise(r => setTimeout(() => r(false), 5000))]);
   const key = emailKey(email);
   if (key === emailKey(KIOSK_EMAIL)) return {
-    error: '❌ حساب الشاشة لا يُستخدم للدخول إلى البرنامج'
+    error: t('g6.auth.kioskAccount')
   };
   const users = getUsers().filter(u => u && (u.email || u.username));
   let u = users.find(x => emailKey(x.email) === key) || users.find(x => emailKey(x.username) === key);
@@ -192,7 +193,7 @@ export async function resolveProfile(email) {
   const provision = async (rec) => {
     // Creating an admin locally also requires the server to confirm it.
     if (rec.role === 'admin' && (await verifyServerAdmin()) !== true) return {
-      error: '❌ تعذر التحقق من صلاحية المدير من الخادم — تأكد من الاتصال وأن الحساب مسجل كمدير'
+      error: t('g6.auth.adminVerifyFailed')
     };
     saveUsers([...getUsers().filter(x => emailKey(x.email) !== key), rec]);
     return {
@@ -217,7 +218,7 @@ export async function resolveProfile(email) {
     role: 'admin'
   });
   return {
-    error: '❌ هذا الحساب غير مضاف إلى صلاحيات البرنامج — اطلب من المدير إضافة بريدك من الإعدادات'
+    error: t('g6.auth.notProvisioned')
   };
 }
 
@@ -257,34 +258,34 @@ export async function authenticateStaff(email, password) {
   const key = emailKey(email);
   const wait = lockRemaining(key);
   if (wait) return {
-    error: '⏳ محاولات خاطئة كثيرة لهذا الحساب — حاول مرة أخرى بعد ' + fmtWait(wait)
+    error: t('g6.auth.tooManyAccount', { wait: fmtWait(wait) })
   };
   const sb = getSB();
   if (!sb) return {
-    error: '❌ تعذر الاتصال بقاعدة البيانات — تأكد من الإنترنت'
+    error: t('g6.auth.dbUnreachable')
   };
   if (!key.includes('@')) return {
-    error: '❌ اكتب البريد الإلكتروني كاملاً (مثال: admin@sakr.clinic)'
+    error: t('g6.auth.emailFull')
   };
   let res;
   try {
     res = await sb.auth.signInWithPassword({ email: key, password });
   } catch (e) {
     return {
-      error: '❌ تعذر الاتصال بالخادم — حاول مرة أخرى'
+      error: t('g6.auth.serverUnreachable')
     };
   }
   if (res.error) {
     const m = String(res.error.message || '');
     const w = registerLoginFail(key);
     if (w) return {
-      error: '⏳ تم إيقاف الدخول لهذا الحساب مؤقتاً — حاول بعد ' + fmtWait(w)
+      error: t('g6.auth.lockedAccount', { wait: fmtWait(w) })
     };
     if (/Email not confirmed/i.test(m)) return {
-      error: '❌ البريد غير مُفعّل — أكّده من رسالة Supabase أو أوقف تأكيد البريد من إعدادات Supabase'
+      error: t('g6.auth.emailUnconfirmed')
     };
     if (/Invalid login/i.test(m)) return {
-      error: '❌ البريد الإلكتروني أو كلمة المرور غير صحيحة'
+      error: t('g6.auth.badCredentials')
     };
     return {
       error: '❌ ' + m

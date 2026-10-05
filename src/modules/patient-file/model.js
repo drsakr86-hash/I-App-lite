@@ -1,3 +1,5 @@
+import { t, getLang } from "../i18n/index.js";
+
 // Pure view-model helpers for the patient file screen (no DOM / React / Supabase).
 // Each function reproduces an expression that used to live inline in the
 // legacy PatientFile JSX, so results must stay identical to that code.
@@ -9,7 +11,7 @@ export function latestExamByDateTime(exams) {
 
 // Age for display: "58 سنة", or "—" when blank / null / NaN (0 is a valid age).
 export function ageLabel(age) {
-  return age || age === 0 ? age + " سنة" : "—";
+  return age || age === 0 ? t("g1.age.years", { n: age }) : "—";
 }
 
 // Comparison tab: exams with at least one VA/IOP value, oldest first.
@@ -25,7 +27,7 @@ export function buildTimelineEvents({ visits = [], requests = [], exams = [], rx
     date: v.date || "",
     time: v.time || "",
     type: "زيارة",
-    title: v.type || "زيارة عيادة",
+    title: v.type || t("g1.tl.clinicVisit"),
     detail: v.result || v.complaint || v.notes || "",
     doctor: v.doctor || "",
     icon: "🩺",
@@ -34,8 +36,8 @@ export function buildTimelineEvents({ visits = [], requests = [], exams = [], rx
     date: e.date || "",
     time: e.time || "",
     type: "طلب أشعة",
-    title: "طلب فحوصات",
-    detail: "المطلوب: " + (e.requestedTests || []).map(t => t.name + " (" + (t.eye || "OU") + ")").join("، ") + (e.notes ? " · " + e.notes : ""),
+    title: t("g1.tl.testRequest"),
+    detail: t("g1.tl.requested") + ": " + (e.requestedTests || []).map(x => x.name + " (" + (x.eye || "OU") + ")").join(getLang() === "en" ? ", " : "، ") + (e.notes ? " · " + e.notes : ""),
     doctor: e.doctor || "",
     icon: "🩻",
     color: C.gold
@@ -43,7 +45,7 @@ export function buildTimelineEvents({ visits = [], requests = [], exams = [], rx
     date: e.date || "",
     time: e.time || "",
     type: "فحص",
-    title: e.testType || e.type || "فحص عيون",
+    title: e.testType || e.type || t("g1.tl.eyeExam"),
     detail: e.diagnosis || e.chiefComplaint || e.notes || "",
     doctor: e.doctor || "",
     icon: "🔍",
@@ -52,7 +54,7 @@ export function buildTimelineEvents({ visits = [], requests = [], exams = [], rx
     date: r.date || "",
     time: r.time || "",
     type: "وصفة",
-    title: "وصفة طبية",
+    title: t("g1.tl.prescription"),
     detail: r.notes || r.medications || r.drugs || "",
     doctor: r.doctor || "",
     icon: "💊",
@@ -61,7 +63,7 @@ export function buildTimelineEvents({ visits = [], requests = [], exams = [], rx
     date: img.date || "",
     time: img.time || "",
     type: "صورة",
-    title: img.type || "صورة طبية",
+    title: img.type || t("g1.tl.medicalImage"),
     detail: `${img.eye && img.eye !== "OU" ? img.eye + " · " : ""}${img.name || ""}${img.notes ? " · " + img.notes : ""}`,
     doctor: "",
     icon: "🖼️",

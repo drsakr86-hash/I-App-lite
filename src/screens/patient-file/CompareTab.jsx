@@ -1,6 +1,8 @@
 import React from 'react';
 import { C } from '../../modules/theme/index.js';
 import { THRESHOLDS, describeChange, METRIC_LABEL } from '../../modules/patient-file/longitudinal.js';
+import { t, useLang } from '../../modules/i18n/index.js';
+import { tv } from '../../modules/i18n/tv.js';
 
 // Longitudinal comparison. Everything shown is a recorded value from ctx.longitudinal
 // (see modules/patient-file/longitudinal.js); with fewer than two dated points a metric shows
@@ -12,14 +14,12 @@ const H = 150;
 const PAD = { l: 38, r: 10, t: 12, b: 24 };
 const dayNum = d => Math.round(Date.UTC(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10)) / 86400000);
 
-const STATUS = {
-  improving: ['ds-badge--ok', 'تحسّن', 'القياسات المسجلة تتجه للأفضل'],
-  worsening: ['ds-badge--bad', 'تراجع', 'بعض القياسات المسجلة تتجه للأسوأ'],
-  mixed: ['ds-badge--warn', 'متباين', 'بعض القياسات تحسنت وبعضها تراجع'],
-  stable: ['ds-badge--info', 'مستقر', 'لا تغيير ذو دلالة بين القياسات المسجلة'],
-  insufficient: ['ds-badge--mute', 'بيانات غير كافية', 'يلزم قياسان مؤرخان على الأقل لنفس المؤشر والعين']
+const STATUS_CLASS = { improving: 'ds-badge--ok', worsening: 'ds-badge--bad', mixed: 'ds-badge--warn', stable: 'ds-badge--info', insufficient: 'ds-badge--mute' };
+const statusOf = (status, lang) => {
+  const k = STATUS_CLASS[status] ? status : 'insufficient';
+  return [STATUS_CLASS[k], t('g1.cmp.st.' + k, lang), t('g1.cmp.stDesc.' + k, lang)];
 };
-const RESP = { responding: 'استجابة للعلاج', worsening: 'تراجع رغم العلاج', mixed: 'استجابة متباينة', 'no-change': 'لا تغيير بعد العلاج', insufficient: 'بيانات غير كافية' };
+const RESP_KEYS = { responding: 'g1.cmp.resp.responding', worsening: 'g1.cmp.resp.worsening', mixed: 'g1.cmp.resp.mixed', 'no-change': 'g1.cmp.resp.noChange', insufficient: 'g1.cmp.resp.insufficient' };
 
 function Marker({ eye, x, y, color }) {
   return eye === 'od'
@@ -28,13 +28,14 @@ function Marker({ eye, x, y, color }) {
 }
 
 function Chart({ title, unit, series, injections, flip, refLine }) {
+  const lang = useLang();
   const all = ['od', 'os'].flatMap(eye => (series[eye] || []).map(p => ({ ...p, eye }))).filter(p => p.value != null && p.date);
   const enough = ['od', 'os'].some(eye => (series[eye] || []).filter(p => p.value != null).length >= 2);
   if (!enough) {
     return (
       <div className="ds-card ds-card--flat">
         <h3 className="ds-h">{title}</h3>
-        <div className="ds-empty" role="note">بيانات غير كافية — يلزم قياسان مؤرخان على الأقل لنفس العين.</div>
+        <div className="ds-empty" role="note">{t('cmp.insufficient', lang)}</div>
       </div>
     );
   }
@@ -54,7 +55,7 @@ function Chart({ title, unit, series, injections, flip, refLine }) {
   return (
     <div className="ds-card ds-card--flat">
       <h3 className="ds-h">{title}{unit ? <span className="ds-sub"> ({unit})</span> : null}</h3>
-      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${title}: ${all.length} قياس بين ${first} و ${last}. الجدول أدناه يحتوي على القيم.`} style={{ width: '100%', height: 'auto', display: 'block' }} direction="ltr">
+      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={t('g1.cmp.chartAria', lang, { title, n: all.length, first, last })} style={{ width: '100%', height: 'auto', display: 'block' }} direction="ltr">
         <line x1={PAD.l} y1={H - PAD.b} x2={W - PAD.r} y2={H - PAD.b} stroke={C.border} />
         <line x1={PAD.l} y1={PAD.t} x2={PAD.l} y2={H - PAD.b} stroke={C.border} />
         <text x={PAD.l - 4} y={PAD.t + 4} fontSize="9" fill={C.muted} textAnchor="end">{(flip ? lo : hi).toFixed(flip ? 1 : 0)}</text>
@@ -77,20 +78,21 @@ function Chart({ title, unit, series, injections, flip, refLine }) {
         })}
       </svg>
       <div className="ds-sub" style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-        <span>● OD (خط متصل)</span><span>■ OS (خط متقطع)</span>{injDates.length > 0 && <span style={{ color: C.purple }}>┆ 💉 حقنة</span>}
-        {refLine != null && <span style={{ color: C.danger }}>┄ حد الارتفاع {refLine}</span>}
-        {flip && <span>الأعلى = رؤية أفضل</span>}
+        <span>● OD ({t('g1.cmp.solid', lang)})</span><span>■ OS ({t('g1.cmp.dashed', lang)})</span>{injDates.length > 0 && <span style={{ color: C.purple }}>┆ 💉 {t('g1.cmp.injection', lang)}</span>}
+        {refLine != null && <span style={{ color: C.danger }}>┄ {t('g1.cmp.highLimit', lang)} {refLine}</span>}
+        {flip && <span>{t('g1.cmp.higherBetter', lang)}</span>}
       </div>
     </div>
   );
 }
 
-const cell = v => (v == null || v === '' ? 'غير مسجل' : v);
+const cell = v => (v == null || v === '' ? t('common.notRecorded') : v);
 
 export default function CompareTab({ ctx }) {
+  const lang = useLang();
   const L = ctx.longitudinal;
   if (!L) return null;
-  const st = STATUS[L.status] || STATUS.insufficient;
+  const st = statusOf(L.status, lang);
   const allInj = [...L.injections.od, ...L.injections.os];
   const injByDate = [...new Map(allInj.map(i => [i.date + i.drug, i])).values()];
   const hasAny = L.rows.length > 0 || injByDate.length > 0;
@@ -98,8 +100,8 @@ export default function CompareTab({ ctx }) {
   if (!hasAny) {
     return (
       <div>
-        <h2 className="ds-h">📊 المقارنة الزمنية</h2>
-        <div className="ds-empty" role="note">لا توجد قياسات مسجلة للمقارنة بعد. تظهر المقارنة تلقائيًا بعد تسجيل فحصين مؤرخين أو أكثر.</div>
+        <h2 className="ds-h">📊 {t('cmp.title', lang)}</h2>
+        <div className="ds-empty" role="note">{t('cmp.empty', lang)}</div>
       </div>
     );
   }
@@ -108,21 +110,21 @@ export default function CompareTab({ ctx }) {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 6 }}>
-        <h2 className="ds-h" style={{ margin: 0 }}>📊 المقارنة الزمنية</h2>
+        <h2 className="ds-h" style={{ margin: 0 }}>📊 {t('cmp.title', lang)}</h2>
         <span className={'ds-badge ' + st[0]}>{st[1]}</span>
       </div>
-      <p className="ds-sub" style={{ marginBottom: 10 }}>{st[2]}. ({L.counts.exams} فحص{L.undated ? `، ${L.undated} بدون تاريخ لم يُستخدم` : ''})</p>
+      <p className="ds-sub" style={{ marginBottom: 10 }}>{st[2]}. ({t('g1.cmp.examsN', lang, { n: L.counts.exams })}{L.undated ? t('g1.cmp.undated', lang, { n: L.undated }) : ''})</p>
 
       {L.changes.length > 0 && (
         <div className="ds-card ds-card--flat" style={{ marginBottom: 12 }}>
-          <h3 className="ds-h">ما الذي تغيّر؟ (آخر قياسين)</h3>
+          <h3 className="ds-h">{t('cmp.changed', lang)}</h3>
           <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
             {L.changes.map(c => (
               <li key={c.metric + c.eye} style={{ fontSize: 13, color: C.text }}>
                 <span className={'ds-badge ' + (c.favorable === true ? 'ds-badge--ok' : c.favorable === false ? 'ds-badge--bad' : 'ds-badge--mute')} style={{ marginInlineEnd: 8 }}>
-                  {c.favorable === true ? 'أفضل' : c.favorable === false ? 'أسوأ' : c.significant ? 'تغيّر' : 'دون دلالة'}
+                  {c.favorable === true ? t('trend.better', lang) : c.favorable === false ? t('trend.worse', lang) : c.significant ? t('trend.changed', lang) : t('trend.nosig', lang)}
                 </span>
-                <strong>{METRIC_LABEL[c.metric]} {c.eye.toUpperCase()}</strong> — {describeChange(c)}{c.days != null ? ` خلال ${c.days} يوم` : ''}
+                <strong>{METRIC_LABEL[c.metric]} {c.eye.toUpperCase()}</strong> — {describeChange(c, lang)}{c.days != null ? ' ' + t('g1.cmp.withinDays', lang, { n: c.days }) : ''}
               </li>
             ))}
           </ul>
@@ -131,11 +133,11 @@ export default function CompareTab({ ctx }) {
 
       {treatmentRows.length > 0 && (
         <div className="ds-card ds-card--flat" style={{ marginBottom: 12 }}>
-          <h3 className="ds-h">هل العلاج يعمل؟</h3>
+          <h3 className="ds-h">{t('cmp.works', lang)}</h3>
           <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {treatmentRows.map(t => (
-              <li key={t.eye} style={{ fontSize: 13, color: C.text }}>
-                <strong>{t.eye.toUpperCase()}</strong> — {RESP[t.status] || RESP.insufficient} ({t.injections} حقنة{t.drug ? ' · ' + t.drug : ''}، {t.firstInjection} ← {t.lastInjection})
+            {treatmentRows.map(tr => (
+              <li key={tr.eye} style={{ fontSize: 13, color: C.text }}>
+                <strong>{tr.eye.toUpperCase()}</strong> — {t(RESP_KEYS[tr.status] || RESP_KEYS.insufficient, lang)} ({t('g1.cmp.injectionsN', lang, { n: tr.injections })}{tr.drug ? ' · ' + tv(tr.drug) : ''}{lang === 'en' ? ', ' : '، '}{tr.firstInjection} {t('g1.lg.arrow', lang)} {tr.lastInjection})
               </li>
             ))}
           </ul>
@@ -143,27 +145,27 @@ export default function CompareTab({ ctx }) {
       )}
 
       <div className="cmp-charts" style={{ marginBottom: 12 }}>
-        <Chart title="حدة الإبصار (BCVA)" unit="logMAR، للمقارنة فقط" series={vaSeries} injections={injByDate} flip />
-        <Chart title="ضغط العين IOP" unit="mmHg" series={L.series.iop} injections={injByDate} refLine={THRESHOLDS.iopHigh} />
-        <Chart title="سُمك البقعة CMT" unit="µm" series={L.series.cmt} injections={injByDate} />
-        <Chart title="نسبة الكأس للقرص C/D" series={L.series.cd} injections={[]} />
-        <Chart title="المجال البصري MD" unit="dB" series={L.series.vfMd} injections={[]} />
+        <Chart title={t('g1.cmp.chart.va', lang)} unit={t('g1.cmp.chart.vaUnit', lang)} series={vaSeries} injections={injByDate} flip />
+        <Chart title={t('g1.cmp.chart.iop', lang)} unit="mmHg" series={L.series.iop} injections={injByDate} refLine={THRESHOLDS.iopHigh} />
+        <Chart title={t('g1.cmp.chart.cmt', lang)} unit="µm" series={L.series.cmt} injections={injByDate} />
+        <Chart title={t('g1.cmp.chart.cd', lang)} series={L.series.cd} injections={[]} />
+        <Chart title={t('g1.cmp.chart.md', lang)} unit="dB" series={L.series.vfMd} injections={[]} />
       </div>
 
       <div className="ds-card ds-card--flat" style={{ marginBottom: 12 }}>
-        <h3 className="ds-h">الحقن داخل العين</h3>
-        {injByDate.length === 0 ? <div className="ds-empty">لا توجد حقن مسجلة.</div> : (
+        <h3 className="ds-h">{t('cmp.injections', lang)}</h3>
+        {injByDate.length === 0 ? <div className="ds-empty">{t('g1.cmp.noInjections', lang)}</div> : (
           <div className="cmp-scroll">
             <table className="cmp-table">
-              <caption className="ds-sub" style={{ textAlign: 'start' }}>تواريخ الحقن والفاصل بينها لكل عين</caption>
-              <thead><tr><th scope="col">العين</th><th scope="col">التاريخ</th><th scope="col">الدواء</th><th scope="col">الجرعة</th><th scope="col">الفاصل (يوم)</th></tr></thead>
+              <caption className="ds-sub" style={{ textAlign: 'start' }}>{t('g1.cmp.injCaption', lang)}</caption>
+              <thead><tr><th scope="col">{t('g1.cmp.eye', lang)}</th><th scope="col">{t('common.date', lang)}</th><th scope="col">{t('g1.cmp.drug', lang)}</th><th scope="col">{t('g1.cmp.dose', lang)}</th><th scope="col">{t('g1.cmp.interval', lang)}</th></tr></thead>
               <tbody>
                 {['od', 'os'].flatMap(eye => L.injections[eye].map((i, idx, arr) => {
                   const prev = arr[idx - 1];
                   const iv = L.injectionStats[eye].intervals.find(x => x.to === i.date && (!prev || x.from === prev.date));
                   return (
                     <tr key={eye + i.id + i.date}>
-                      <td>{eye.toUpperCase()}</td><td>{i.date}</td><td>{cell(i.drug)}</td><td>{cell(i.doseNo)}</td><td>{iv ? iv.days : idx === 0 ? '—' : 'غير محسوب'}</td>
+                      <td>{eye.toUpperCase()}</td><td>{i.date}</td><td>{cell(tv(i.drug))}</td><td>{cell(i.doseNo)}</td><td>{iv ? iv.days : idx === 0 ? '—' : t('g1.cmp.notComputed', lang)}</td>
                     </tr>
                   );
                 }))}
@@ -174,13 +176,13 @@ export default function CompareTab({ ctx }) {
       </div>
 
       <div className="ds-card ds-card--flat" style={{ marginBottom: 12 }}>
-        <h3 className="ds-h">جدول القياسات</h3>
+        <h3 className="ds-h">{t('cmp.table', lang)}</h3>
         <div className="cmp-scroll">
           <table className="cmp-table">
-            <caption className="ds-sub" style={{ textAlign: 'start' }}>القيم كما سُجلت، الأقدم أولًا</caption>
+            <caption className="ds-sub" style={{ textAlign: 'start' }}>{t('g1.cmp.tableCaption', lang)}</caption>
             <thead>
               <tr>
-                <th scope="col">التاريخ</th>
+                <th scope="col">{t('common.date', lang)}</th>
                 <th scope="col">VA OD</th><th scope="col">VA OS</th>
                 <th scope="col">IOP OD</th><th scope="col">IOP OS</th>
                 <th scope="col">CMT OD</th><th scope="col">CMT OS</th>
@@ -205,8 +207,7 @@ export default function CompareTab({ ctx }) {
       </div>
 
       <p className="ds-sub" role="note">
-        حدود العرض (ليست تشخيصًا): تغيّر الرؤية ≥ {THRESHOLDS.va} logMAR، IOP ≥ {THRESHOLDS.iop} mmHg (مرتفع &gt; {THRESHOLDS.iopHigh})، CMT ≥ {THRESHOLDS.cmtPct}%، C/D ≥ {THRESHOLDS.cd}، MD ≥ {THRESHOLDS.vfMd} dB.
-        يُفترض أن انخفاض CMT أفضل (وذمة). القرار السريري للطبيب.
+        {t('g1.cmp.footnote', lang, { va: THRESHOLDS.va, iop: THRESHOLDS.iop, iopHigh: THRESHOLDS.iopHigh, cmt: THRESHOLDS.cmtPct, cd: THRESHOLDS.cd, md: THRESHOLDS.vfMd })}
       </p>
     </div>
   );

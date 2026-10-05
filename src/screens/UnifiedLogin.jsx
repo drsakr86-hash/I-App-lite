@@ -9,8 +9,9 @@ import { ensureKiosk, PATIENT_FILE_LOGIN } from '../modules/auth/kiosk-session.j
 import { sbGet } from '../modules/sync/wiring.js';
 import {
   nextLoginMode, staffLoginFieldsMissing, patientLoginFieldsMissing, patientLoginLockKey,
-  findPatientByCodeAndName, STAFF_LOGIN_EMPTY_ERROR, PATIENT_LOGIN_EMPTY_ERROR
+  findPatientByCodeAndName
 } from '../modules/auth/unified-login-view.js';
+import { t, useLang, dirOf } from '../modules/i18n/index.js';
 
 // The app's single entry gate: staff (email/password via Supabase), patient
 // (file number + name) or guest. Exact port of the legacy runtime's
@@ -19,6 +20,7 @@ import {
 // live in src/modules/auth/unified-login-view.js; this keeps only what
 // touches state, Supabase, or storage.
 export default function UnifiedLogin({ onLogin }) {
+  const lang = useLang();
   const [mode, setMode] = useState('staff');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -40,7 +42,7 @@ export default function UnifiedLogin({ onLogin }) {
     if (loading) return;
     if (mode === 'staff') {
       if (staffLoginFieldsMissing(username, password)) {
-        setError(STAFF_LOGIN_EMPTY_ERROR);
+        setError(t('g6.login.emptyStaff', lang));
         return;
       }
       setLoading(true);
@@ -54,13 +56,13 @@ export default function UnifiedLogin({ onLogin }) {
       onLogin({ kind: 'staff', user: r.user }, remember);
     } else if (mode === 'patient') {
       if (patientLoginFieldsMissing(code, name)) {
-        setError(PATIENT_LOGIN_EMPTY_ERROR);
+        setError(t('g6.login.emptyPatient', lang));
         return;
       }
       const pkey = patientLoginLockKey(code);
       const wait = lockRemaining(pkey);
       if (wait) {
-        setError('⏳ محاولات خاطئة كثيرة — حاول بعد ' + fmtWait(wait));
+        setError(t('g6.login.tooMany', lang, { wait: fmtWait(wait) }));
         return;
       }
       setLoading(true);
@@ -68,13 +70,13 @@ export default function UnifiedLogin({ onLogin }) {
       const patients = await sbGet('iapp_patients');
       setLoading(false);
       if (!Array.isArray(patients)) {
-        setError(KIOSK_EMAIL ? '❌ تعذر الاتصال بقاعدة البيانات' : '❌ بوابة المريض غير مفعّلة حالياً — تواصل مع العيادة للحجز');
+        setError(KIOSK_EMAIL ? t('g6.login.dbUnreachable', lang) : t('g6.login.portalDisabled', lang));
         return;
       }
       const p = findPatientByCodeAndName(patients, code, name);
       if (!p) {
         const w = registerLoginFail(pkey);
-        setError(w ? '⏳ تم إيقاف الدخول مؤقتاً — حاول بعد ' + fmtWait(w) : '❌ رقم الملف أو الاسم غير صحيح');
+        setError(w ? t('g6.login.locked', lang, { wait: fmtWait(w) }) : t('g6.login.badPatient', lang));
         return;
       }
       clearLoginFails(pkey);
@@ -89,7 +91,7 @@ export default function UnifiedLogin({ onLogin }) {
     <div
       style={{
         minHeight: '100vh', background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center',
-        direction: 'rtl', fontFamily: "'Segoe UI','Tahoma',Arial,sans-serif", padding: '24px 20px', overflowY: 'auto'
+        direction: dirOf(lang), fontFamily: "'Segoe UI','Tahoma',Arial,sans-serif", padding: '24px 20px', overflowY: 'auto'
       }}
     >
       <div style={{ width: '100%', maxWidth: 430 }}>
@@ -102,8 +104,8 @@ export default function UnifiedLogin({ onLogin }) {
             }}
           >👁</div>
           <div style={{ color: C.accent, fontWeight: 900, fontSize: 28, letterSpacing: 1 }}>I App</div>
-          <div style={{ color: C.text, fontSize: 14, fontWeight: 600, marginTop: 4 }}>نظام إدارة عيادة العيون</div>
-          <div style={{ color: C.muted, fontSize: 11, marginTop: 5 }}>تسجيل دخول موحّد — د. عبدالستار صقر</div>
+          <div style={{ color: C.text, fontSize: 14, fontWeight: 600, marginTop: 4 }}>{t('g6.login.appName', lang)}</div>
+          <div style={{ color: C.muted, fontSize: 11, marginTop: 5 }}>{t('g6.login.subtitle', lang)}</div>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 14 }}>
           <button
@@ -113,7 +115,7 @@ export default function UnifiedLogin({ onLogin }) {
               borderRadius: 12, padding: '11px 8px', color: mode === 'staff' ? C.accent : C.muted, fontWeight: 800,
               fontFamily: 'inherit', cursor: 'pointer'
             }}
-          >👨‍⚕️ الفريق</button>
+          >{t('g6.login.tabStaff', lang)}</button>
           <button
             onClick={() => choose('patient')}
             style={{
@@ -121,7 +123,7 @@ export default function UnifiedLogin({ onLogin }) {
               borderRadius: 12, padding: '11px 8px', color: mode !== 'staff' ? C.teal : C.muted, fontWeight: 800,
               fontFamily: 'inherit', cursor: 'pointer'
             }}
-          >👤 المريض</button>
+          >{t('g6.login.tabPatient', lang)}</button>
         </div>
         <div
           style={{
@@ -131,21 +133,21 @@ export default function UnifiedLogin({ onLogin }) {
         >
           {mode === 'staff' ? (
             <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div style={{ color: C.text, fontWeight: 800, fontSize: 15, marginBottom: 2 }}>دخول الطبيب / السكرتارية</div>
-              <div style={{ color: C.muted, fontSize: 11, marginTop: -4 }}>بالبريد الإلكتروني وكلمة المرور المسجّلين في Supabase</div>
-              <Field label="البريد الإلكتروني">
+              <div style={{ color: C.text, fontWeight: 800, fontSize: 15, marginBottom: 2 }}>{t('g6.login.staffTitle', lang)}</div>
+              <div style={{ color: C.muted, fontSize: 11, marginTop: -4 }}>{t('g6.login.staffHint', lang)}</div>
+              <Field label={t('g6.login.email', lang)}>
                 <input
                   autoFocus type="email" autoComplete="username"
-                  style={{ ...inp(), background: C.bg2, direction: 'ltr', textAlign: 'left' }}
+                  style={{ ...inp(), background: C.bg2, direction: 'ltr', textAlign: 'start' }}
                   value={username}
                   onChange={e => { setUsername(e.target.value); setError(''); }}
                   placeholder="admin@sakr.clinic"
                 />
               </Field>
-              <Field label="كلمة المرور">
+              <Field label={t('g6.login.password', lang)}>
                 <div style={{ position: 'relative' }}>
                   <input
-                    style={{ ...inp(), background: C.bg2, paddingLeft: 40, direction: 'ltr', textAlign: 'center' }}
+                    style={{ ...inp(), background: C.bg2, paddingInlineEnd: 40, direction: 'ltr', textAlign: 'center' }}
                     type={showPass ? 'text' : 'password'}
                     value={password}
                     onChange={e => { setPassword(e.target.value); setError(''); }}
@@ -153,7 +155,7 @@ export default function UnifiedLogin({ onLogin }) {
                   />
                   <span
                     onClick={() => setShowPass(v => !v)}
-                    style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', color: C.muted }}
+                    style={{ position: 'absolute', insetInlineEnd: 12, top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', color: C.muted }}
                   >{showPass ? '🙈' : '👁'}</span>
                 </div>
               </Field>
@@ -165,7 +167,7 @@ export default function UnifiedLogin({ onLogin }) {
                     justifyContent: 'center', fontSize: 11, color: C.bg, fontWeight: 700
                   }}
                 >{remember ? '✓' : ''}</div>
-                <span style={{ color: C.muted, fontSize: 12 }}>تذكرني على هذا الجهاز</span>
+                <span style={{ color: C.muted, fontSize: 12 }}>{t('g6.login.remember', lang)}</span>
               </div>
               {error && (
                 <div style={{ background: C.danger + '22', border: '1px solid ' + C.danger + '44', borderRadius: 10, padding: '9px 12px', color: C.danger, fontSize: 12, textAlign: 'center' }}>
@@ -178,12 +180,12 @@ export default function UnifiedLogin({ onLogin }) {
                   background: `linear-gradient(135deg,${C.accent},${C.teal})`, border: 'none', borderRadius: 11, padding: 13,
                   color: C.bg, fontWeight: 800, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', opacity: loading ? 0.7 : 1
                 }}
-              >{loading ? '⏳ جاري التحقق...' : 'تسجيل الدخول ←'}</button>
+              >{loading ? t('g6.login.verifying', lang) : t('g6.login.signIn', lang)}</button>
             </form>
           ) : PATIENT_FILE_LOGIN ? (
             <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div style={{ color: C.text, fontWeight: 800, fontSize: 15, marginBottom: 2 }}>دخول المريض</div>
-              <Field label="رقم الملف">
+              <div style={{ color: C.text, fontWeight: 800, fontSize: 15, marginBottom: 2 }}>{t('g6.login.patientTitle', lang)}</div>
+              <Field label={t('g6.login.fileNo', lang)}>
                 <input
                   autoFocus
                   style={{ ...inp(), background: C.bg2, direction: 'ltr', textAlign: 'center' }}
@@ -192,12 +194,12 @@ export default function UnifiedLogin({ onLogin }) {
                   placeholder="P-0001"
                 />
               </Field>
-              <Field label="الاسم الكامل">
+              <Field label={t('g6.login.fullName', lang)}>
                 <input
                   style={{ ...inp(), background: C.bg2 }}
                   value={name}
                   onChange={e => { setName(e.target.value); setError(''); }}
-                  placeholder="كما هو مسجل في الملف"
+                  placeholder={t('g6.login.namePh', lang)}
                 />
               </Field>
               {error && (
@@ -211,35 +213,35 @@ export default function UnifiedLogin({ onLogin }) {
                   background: `linear-gradient(135deg,${C.teal},${C.accent})`, border: 'none', borderRadius: 11, padding: 13,
                   color: C.bg, fontWeight: 800, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', opacity: loading ? 0.7 : 1
                 }}
-              >{loading ? '⏳ جاري التحقق...' : 'دخول المريض ←'}</button>
+              >{loading ? t('g6.login.verifying', lang) : t('g6.login.patientSignIn', lang)}</button>
               <button
                 type="button"
                 onClick={() => { setMode('guest'); setError(''); }}
                 style={{ background: 'transparent', border: '1px solid ' + C.border, borderRadius: 11, padding: 11, color: C.muted, fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}
-              >🆕 مريض جديد — حجز بدون حساب</button>
+              >{t('g6.login.newNoAccount', lang)}</button>
             </form>
           ) : null}
           {mode !== 'staff' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div style={{ color: C.text, fontWeight: 800, fontSize: 15 }}>مريض جديد</div>
-              <div style={{ color: C.muted, fontSize: 12, lineHeight: 1.7 }}>يمكنك حجز موعد دون تسجيل ملف مسبق. ستُطلب بياناتك أثناء الحجز.</div>
+              <div style={{ color: C.text, fontWeight: 800, fontSize: 15 }}>{t('g6.login.newPatient', lang)}</div>
+              <div style={{ color: C.muted, fontSize: 12, lineHeight: 1.7 }}>{t('g6.login.newPatientHint', lang)}</div>
               <button
                 onClick={submit} disabled={loading}
                 style={{
                   background: `linear-gradient(135deg,${C.teal},${C.accent})`, border: 'none', borderRadius: 11, padding: 13,
                   color: C.bg, fontWeight: 800, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit'
                 }}
-              >متابعة للحجز ←</button>
+              >{t('g6.login.continueBooking', lang)}</button>
               {PATIENT_FILE_LOGIN && (
                 <button
                   onClick={() => choose('patient')}
                   style={{ background: 'transparent', border: '1px solid ' + C.border, borderRadius: 11, padding: 11, color: C.muted, fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}
-                >رجوع لدخول المريض</button>
+                >{t('g6.login.backToPatient', lang)}</button>
               )}
             </div>
           )}
         </div>
-        <div style={{ textAlign: 'center', color: '#40536b', fontSize: 10, marginTop: 14 }}>صلاحيات كل مستخدم تحدد الواجهة المتاحة له</div>
+        <div style={{ textAlign: 'center', color: '#40536b', fontSize: 10, marginTop: 14 }}>{t('g6.login.footer', lang)}</div>
       </div>
     </div>
   );

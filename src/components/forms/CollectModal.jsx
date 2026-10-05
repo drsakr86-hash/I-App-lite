@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { matchCollectPrice, initialCollectCost, initialCollectPaid } from './secretary-forms-model.js';
 import { C } from '../../modules/theme/index.js';
 import { inp } from '../../modules/ui/atoms.jsx';
+import { t, useLang } from '../../modules/i18n/index.js';
 
 // Payment collection form (secretary app, "💰 تحصيل"). Exact port of the
 // legacy runtime's CollectModal (public/legacy/app-runtime.js). onSave(cost,
@@ -9,6 +10,7 @@ import { inp } from '../../modules/ui/atoms.jsx';
 // value when untouched) and the paid flag — the contract SecretaryApp's
 // handleSaveCollect expects.
 export default function CollectModal({ apt, prices = [], onSave, onClose }) {
+  const lang = useLang();
   const matched = matchCollectPrice(prices, apt.type);
   const [cost, setCost] = useState(initialCollectCost(apt, matched));
   const [paid, setPaid] = useState(initialCollectPaid(apt));
@@ -16,7 +18,7 @@ export default function CollectModal({ apt, prices = [], onSave, onClose }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ color: C.text, fontSize: 13, fontWeight: 700 }}>{apt.patient}</div>
       <div>
-        <label style={{ color: C.muted, fontSize: 11, display: 'block', marginBottom: 4 }}>قيمة الكشف (ج.م)</label>
+        <label style={{ color: C.muted, fontSize: 11, display: 'block', marginBottom: 4 }}>{t('g3.collect.cost', lang)}</label>
         <input
           style={{ ...inp(), textAlign: 'center', fontSize: 18, fontWeight: 700 }}
           type="number"
@@ -54,7 +56,7 @@ export default function CollectModal({ apt, prices = [], onSave, onClose }) {
             fontWeight: 700
           }}
         >{paid ? '✓' : ''}</div>
-        <span style={{ color: paid ? C.success : C.muted, fontSize: 13, fontWeight: 600 }}>تم تحصيل المبلغ نقداً</span>
+        <span style={{ color: paid ? C.success : C.muted, fontSize: 13, fontWeight: 600 }}>{t('g3.collect.paidCash', lang)}</span>
       </div>
       <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
         <button
@@ -71,7 +73,7 @@ export default function CollectModal({ apt, prices = [], onSave, onClose }) {
             cursor: 'pointer',
             fontFamily: 'inherit'
           }}
-        >إلغاء</button>
+        >{t('g3.common.cancel', lang)}</button>
         <button
           onClick={() => onSave(cost, paid)}
           style={{
@@ -86,7 +88,7 @@ export default function CollectModal({ apt, prices = [], onSave, onClose }) {
             cursor: 'pointer',
             fontFamily: 'inherit'
           }}
-        >💰 حفظ التحصيل</button>
+        >{t('g3.collect.save', lang)}</button>
       </div>
     </div>
   );

@@ -67,7 +67,7 @@ test('Modal is an accessible dialog (role, aria-modal, ESC, focus return, real c
   assert.match(c, /aria-labelledby/);
   assert.match(c, /e\.key === 'Escape'/);
   assert.match(c, /opener\.focus/);
-  assert.match(c, /<button\s[\s\S]*?aria-label="إغلاق"/);
+  assert.match(c, /<button\s[\s\S]*?aria-label=("إغلاق"|\{t\('common\.close'\)\})/); // label is translated via the common.close key
 });
 
 test('decorative glow / float / orb keyframes are gone', () => {

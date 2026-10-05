@@ -10,6 +10,10 @@ import { inp } from '../../modules/ui/atoms.jsx';
 import { localISO, PATIENT_CLINICS, CLINIC_CODE } from '../../modules/constants/index.js';
 import { getSB } from '../../modules/data-access/index.js';
 import { logError } from '../../services/logger.js';
+import { t, useLang, dirOf } from '../../modules/i18n/index.js';
+import { tv } from '../../modules/i18n/tv.js';
+
+const STEP_KEYS = { 'بياناتك': 'details', 'العيادة': 'clinic', 'التاريخ': 'date', 'الوقت': 'time', 'تأكيد': 'confirm' };
 
 // Patient booking wizard (patient app): guest info (guests only) → clinic →
 // date → time → confirm. Exact port of the legacy runtime's BookingForm
@@ -17,6 +21,7 @@ import { logError } from '../../services/logger.js';
 // PatientApp's bookForm; PatientApp's doBook (onBook) validates and submits,
 // unchanged. (The clinic list is the same instance PatientApp uses.)
 export default function BookingForm({ patient, bookForm, setBookForm, booking, onBook, slotsVersion }) {
+  const lang = useLang();
   const [step, setStep] = useState(initialBookingStep(patient.isGuest));
   const [selClinic, setSelClinic] = useState(null);
   const [availDates, setAvailDates] = useState([]);
@@ -66,8 +71,8 @@ export default function BookingForm({ patient, bookForm, setBookForm, booking, o
     setBookForm(v => withDatePicked(v, d));
     setStep(4);
   };
-  const selTimeFn = t => {
-    setBookForm(v => withTimePicked(v, t));
+  const selTimeFn = slot => {
+    setBookForm(v => withTimePicked(v, slot));
     setStep(5);
   };
   const steps = bookingSteps(patient.isGuest);
@@ -98,7 +103,7 @@ export default function BookingForm({ patient, bookForm, setBookForm, booking, o
                   transition: 'all 0.3s'
                 }}
               >{i < currentStep ? '✓' : i + 1}</div>
-              <div style={{ color: i === currentStep ? C.accent : C.muted, fontSize: 8, whiteSpace: 'nowrap' }}>{l}</div>
+              <div style={{ color: i === currentStep ? C.accent : C.muted, fontSize: 8, whiteSpace: 'nowrap' }}>{STEP_KEYS[l] ? t('g3.booking.step.' + STEP_KEYS[l], lang) : l}</div>
             </div>
             {i < steps.length - 1 && (
               <div
@@ -117,19 +122,19 @@ export default function BookingForm({ patient, bookForm, setBookForm, booking, o
       </div>
       {patient.isGuest && step === 1 && (
         <div style={{ background: C.surface, borderRadius: 16, padding: 16, border: '1px solid ' + C.border, marginBottom: 14 }}>
-          <div style={{ color: C.text, fontWeight: 700, fontSize: 14, marginBottom: 14 }}>👤 بياناتك أولاً</div>
+          <div style={{ color: C.text, fontWeight: 700, fontSize: 14, marginBottom: 14 }}>{t('g3.booking.yourDetails', lang)}</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div>
-              <label style={label(5)}>الاسم الكامل</label>
+              <label style={label(5)}>{t('g3.booking.fullName', lang)}</label>
               <input
                 style={inp()}
                 value={bookForm.newName || ''}
                 onChange={e => setBookForm(v => ({ ...v, newName: e.target.value }))}
-                placeholder="اكتب اسمك كاملاً"
+                placeholder={t('g3.booking.fullNamePh', lang)}
               />
             </div>
             <div>
-              <label style={label(5)}>رقم الهاتف</label>
+              <label style={label(5)}>{t('g3.booking.phone', lang)}</label>
               <input
                 style={inp()}
                 value={bookForm.newPhone || ''}
@@ -163,7 +168,7 @@ export default function BookingForm({ patient, bookForm, setBookForm, booking, o
               fontFamily: 'inherit',
               boxShadow: '0 4px 16px ' + C.accent + '44'
             }}
-          >التالي ← اختيار العيادة</button>
+          >{t('g3.booking.nextClinic', lang)}</button>
         </div>
       )}
       {patient.isGuest && step > 1 && (
@@ -186,13 +191,13 @@ export default function BookingForm({ patient, bookForm, setBookForm, booking, o
           <span
             onClick={() => setStep(1)}
             style={{ color: C.accent, fontSize: 11, cursor: 'pointer', background: C.accent + '22', padding: '3px 10px', borderRadius: 8 }}
-          >تغيير</span>
+          >{t('g3.booking.change', lang)}</span>
         </div>
       )}
       {step >= 2 && (
         <div style={{ marginBottom: 14 }}>
           <div style={sectionHead}>
-            <span style={stepTitle(2)}>🏥 اختر مكان الكشف</span>
+            <span style={stepTitle(2)}>{t('g3.booking.chooseClinic', lang)}</span>
             {step > 2 && (
               <span
                 onClick={() => {
@@ -201,7 +206,7 @@ export default function BookingForm({ patient, bookForm, setBookForm, booking, o
                   setBookForm(withDateTimeCleared);
                 }}
                 style={changeLink}
-              >تغيير</span>
+              >{t('g3.booking.change', lang)}</span>
             )}
           </div>
           {step === 2 ? (
@@ -228,9 +233,9 @@ export default function BookingForm({ patient, bookForm, setBookForm, booking, o
                       }}
                     >{c.icon}</div>
                     <div style={{ flex: 1 }}>
-                      <div style={{ color: C.text, fontWeight: 700, fontSize: 14 }}>{c.name}</div>
-                      <div style={{ color: C.muted, fontSize: 11, marginTop: 2 }}>{'📍 '}{c.address}</div>
-                      <div style={{ color: C.accent, fontSize: 11, marginTop: 2 }}>{'📅 '}{c.dayNames?.join(' · ')}</div>
+                      <div style={{ color: C.text, fontWeight: 700, fontSize: 14 }}>{tv(c.name, lang)}</div>
+                      <div style={{ color: C.muted, fontSize: 11, marginTop: 2 }}>{'📍 '}{tv(c.address, lang)}</div>
+                      <div style={{ color: C.accent, fontSize: 11, marginTop: 2 }}>{'📅 '}{c.dayNames?.map(n => tv(n, lang)).join(' · ')}</div>
                       <a
                         href={'tel:' + c.phone}
                         onClick={e => e.stopPropagation()}
@@ -250,7 +255,7 @@ export default function BookingForm({ patient, bookForm, setBookForm, booking, o
                         fontSize: 18,
                         flexShrink: 0
                       }}
-                    >←</div>
+                    >{dirOf(lang) === 'rtl' ? '←' : '→'}</div>
                   </div>
                 </div>
               ))}
@@ -269,10 +274,10 @@ export default function BookingForm({ patient, bookForm, setBookForm, booking, o
             >
               <span style={{ fontSize: 22 }}>{selClinic?.icon}</span>
               <div>
-                <div style={{ color: C.text, fontWeight: 700, fontSize: 13 }}>{selClinic?.name}</div>
-                <div style={{ color: C.muted, fontSize: 11 }}>{'📍 '}{selClinic?.address}</div>
+                <div style={{ color: C.text, fontWeight: 700, fontSize: 13 }}>{tv(selClinic?.name, lang)}</div>
+                <div style={{ color: C.muted, fontSize: 11 }}>{'📍 '}{tv(selClinic?.address, lang)}</div>
               </div>
-              <span style={{ marginRight: 'auto', color: C.success, fontSize: 16 }}>✓</span>
+              <span style={{ marginInlineStart: 'auto', color: C.success, fontSize: 16 }}>✓</span>
             </div>
           )}
         </div>
@@ -280,7 +285,7 @@ export default function BookingForm({ patient, bookForm, setBookForm, booking, o
       {step >= 3 && (
         <div style={{ marginBottom: 14 }}>
           <div style={sectionHead}>
-            <span style={stepTitle(3)}>📅 اختر التاريخ</span>
+            <span style={stepTitle(3)}>{t('g3.booking.chooseDate', lang)}</span>
             {step > 3 && (
               <span
                 onClick={() => {
@@ -288,7 +293,7 @@ export default function BookingForm({ patient, bookForm, setBookForm, booking, o
                   setBookForm(withTimeCleared);
                 }}
                 style={changeLink}
-              >تغيير</span>
+              >{t('g3.booking.change', lang)}</span>
             )}
           </div>
           {step === 3 ? (
@@ -308,14 +313,14 @@ export default function BookingForm({ patient, bookForm, setBookForm, booking, o
                     minWidth: 76
                   }}
                 >
-                  <div style={{ color: C.accent, fontSize: 10, marginBottom: 4 }}>{d.dayName}</div>
+                  <div style={{ color: C.accent, fontSize: 10, marginBottom: 4 }}>{tv(d.dayName, lang)}</div>
                   <div style={{ color: C.text, fontWeight: 700, fontSize: 13 }}>{d.date.slice(5)}</div>
                 </div>
               ))}
             </div>
           ) : (
             <div style={doneCard}>
-              <div style={{ color: C.text, fontWeight: 700, fontSize: 13 }}>{'📅 '}{selDate?.dayName}{' · '}{bookForm.date}</div>
+              <div style={{ color: C.text, fontWeight: 700, fontSize: 13 }}>{'📅 '}{tv(selDate?.dayName, lang)}{' · '}{bookForm.date}</div>
               <span style={{ color: C.success, fontSize: 16 }}>✓</span>
             </div>
           )}
@@ -324,20 +329,20 @@ export default function BookingForm({ patient, bookForm, setBookForm, booking, o
       {step >= 4 && (
         <div style={{ marginBottom: 14 }}>
           <div style={sectionHead}>
-            <span style={stepTitle(4)}>⏰ اختر الوقت</span>
-            {step > 4 && <span onClick={() => setStep(4)} style={changeLink}>تغيير</span>}
+            <span style={stepTitle(4)}>{t('g3.booking.chooseTime', lang)}</span>
+            {step > 4 && <span onClick={() => setStep(4)} style={changeLink}>{t('g3.booking.change', lang)}</span>}
           </div>
           {step === 4 ? (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
               {slotsLoading && (
-                <div style={{ gridColumn: '1 / -1', color: C.muted, fontSize: 11, textAlign: 'center' }}>⏳ جاري تحميل المواعيد المتاحة...</div>
+                <div style={{ gridColumn: '1 / -1', color: C.muted, fontSize: 11, textAlign: 'center' }}>{t('g3.booking.loadingSlots', lang)}</div>
               )}
-              {getSlotsForDate(selClinic, selDate?.dayOfWeek, selDate?.date, new Date(), localISO).map(t => {
-                const full = isSlotFull(taken, t);
+              {getSlotsForDate(selClinic, selDate?.dayOfWeek, selDate?.date, new Date(), localISO).map(slot => {
+                const full = isSlotFull(taken, slot);
                 return (
                   <div
-                    key={t}
-                    onClick={() => canPickSlot(full, slotsLoading) && selTimeFn(t)}
+                    key={slot}
+                    onClick={() => canPickSlot(full, slotsLoading) && selTimeFn(slot)}
                     style={{
                       background: full ? C.bg : C.card,
                       border: '1px solid ' + C.border,
@@ -351,8 +356,8 @@ export default function BookingForm({ patient, bookForm, setBookForm, booking, o
                       opacity: full ? 0.45 : 1
                     }}
                   >
-                    {t}
-                    {full && <div style={{ fontSize: 9, fontWeight: 600, marginTop: 2 }}>محجوز</div>}
+                    {slot}
+                    {full && <div style={{ fontSize: 9, fontWeight: 600, marginTop: 2 }}>{t('g3.booking.booked', lang)}</div>}
                   </div>
                 );
               })}
@@ -368,26 +373,26 @@ export default function BookingForm({ patient, bookForm, setBookForm, booking, o
       {step >= 5 && (
         <div style={{ background: C.surface, borderRadius: 16, padding: 16, border: '1px solid ' + C.border, marginBottom: 14 }}>
           <div style={{ marginBottom: 12 }}>
-            <label style={label(6)}>🔬 نوع الكشف</label>
+            <label style={label(6)}>{t('g3.booking.visitType', lang)}</label>
             <select style={inp()} value={bookForm.type} onChange={s('type')}>
-              {BOOK_VISIT_TYPES.map(t => <option key={t}>{t}</option>)}
+              {BOOK_VISIT_TYPES.map(vt => <option key={vt} value={vt}>{tv(vt, lang)}</option>)}
             </select>
           </div>
           <div style={{ marginBottom: 14 }}>
-            <label style={label(6)}>📝 ملاحظات (اختياري)</label>
+            <label style={label(6)}>{t('g3.booking.notes', lang)}</label>
             <textarea
               style={{ ...inp(), minHeight: 55, resize: 'none' }}
               value={bookForm.notes || ''}
               onChange={s('notes')}
-              placeholder="أي أعراض أو ملاحظات للطبيب..."
+              placeholder={t('g3.booking.notesPh', lang)}
             />
           </div>
           <div style={{ background: C.bg, borderRadius: 12, padding: 12, marginBottom: 14, border: '1px solid ' + C.border }}>
-            <div style={{ color: C.muted, fontSize: 11, fontWeight: 700, marginBottom: 8 }}>📋 ملخص الحجز</div>
+            <div style={{ color: C.muted, fontSize: 11, fontWeight: 700, marginBottom: 8 }}>{t('g3.booking.summary', lang)}</div>
             {bookingSummaryRows(bookForm, patient.isGuest).map(([icon, val]) => (
               <div key={icon} style={{ display: 'flex', gap: 10, marginBottom: 5, alignItems: 'center' }}>
                 <span style={{ fontSize: 14 }}>{icon}</span>
-                <span style={{ color: C.text, fontSize: 12 }}>{val}</span>
+                <span style={{ color: C.text, fontSize: 12 }}>{tv(val, lang)}</span>
               </div>
             ))}
           </div>

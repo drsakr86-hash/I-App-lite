@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Btn } from '../common.jsx';
 import { C } from '../../modules/theme/index.js';
 import { inp } from '../../modules/ui/atoms.jsx';
+import { useLang, t } from '../../modules/i18n/index.js';
+import { tv } from '../../modules/i18n/tv.js';
 import {
   DEFAULT_DRUGS, DOSE_OPTIONS, loadDrugs, saveDrug, deleteDrug,
   loadRxTemplates, refreshRxTemplates, addRxTemplate, deleteRxTemplate
@@ -18,13 +20,14 @@ import { parseMedicines, serializeMedicines, medicinesTextForTemplate } from './
 // window.IAppModules bridge), same unification as Btn/Modal/Confirm/Toast/
 // ThemeToggle in batch 6. Exact copy of the original markup and logic.
 export default function MedicinesStep({ medicines, onChange }) {
+  const lang = useLang();
   const [meds, setMeds] = useState(() => parseMedicines(medicines));
   const [drugList, setDrugList] = useState(loadDrugs);
   const [templates, setTemplates] = useState(loadRxTemplates);
   useEffect(() => {
     (async () => {
-      const t = await refreshRxTemplates();
-      setTemplates(t);
+      const tpls = await refreshRxTemplates();
+      setTemplates(tpls);
     })();
   }, []);
   const [newDrug, setNewDrug] = useState('');
@@ -51,58 +54,58 @@ export default function MedicinesStep({ medicines, onChange }) {
   };
   const handleDeleteDrug = drugName => {
     if (DEFAULT_DRUGS.includes(drugName)) {
-      alert('لا يمكن حذف الأدوية الأصلية');
+      alert(t('g2.meds.cantDeleteDefault', lang));
       return;
     }
-    if (!window.confirm('حذف ' + drugName + ' من القائمة؟')) return;
+    if (!window.confirm(t('g2.meds.confirmDelDrug', lang, { name: drugName }))) return;
     deleteDrug(drugName);
     setDrugList(loadDrugs());
   };
 
   return React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 10 } },
     React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 } },
-      React.createElement('span', { style: { color: C.text, fontWeight: 700, fontSize: 13 } }, '💊 الأدوية الموصوفة'),
+      React.createElement('span', { style: { color: C.text, fontWeight: 700, fontSize: 13 } }, '💊 ' + t('g2.meds.title', lang)),
       React.createElement('div', { style: { display: 'flex', gap: 6 } },
-        React.createElement(Btn, { small: true, color: C.teal, onClick: () => setAddingNew(v => !v) }, '+ صنف جديد'),
-        React.createElement(Btn, { small: true, onClick: addMed }, '+ إضافة')
+        React.createElement(Btn, { small: true, color: C.teal, onClick: () => setAddingNew(v => !v) }, t('g2.meds.newItem', lang)),
+        React.createElement(Btn, { small: true, onClick: addMed }, t('g2.meds.add', lang))
       )
     ),
     React.createElement('div', { style: { background: C.bg, border: `1px solid ${C.border}`, borderRadius: 12, padding: 10 } },
       React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: templates.length ? 8 : 0 } },
-        React.createElement('span', { style: { color: C.muted, fontSize: 11, fontWeight: 700 } }, '⚡ قوالب جاهزة'),
+        React.createElement('span', { style: { color: C.muted, fontSize: 11, fontWeight: 700 } }, t('g2.meds.templates', lang)),
         React.createElement('span', {
           onClick: async () => {
             const txt = medicinesTextForTemplate(meds);
             if (!txt) {
-              alert('أضف الأدوية أولاً ثم احفظها كقالب');
+              alert(t('g2.meds.addFirst', lang));
               return;
             }
-            const name = window.prompt('اسم القالب (مثال: ما بعد المياه البيضاء)');
+            const name = window.prompt(t('g2.meds.tplNamePrompt', lang));
             if (!name || !name.trim()) return;
             const next = await addRxTemplate({ name: name.trim(), medicines: txt });
-            if (next) setTemplates(next); else alert('❌ تعذر حفظ القالب');
+            if (next) setTemplates(next); else alert(t('g2.meds.tplSaveFail', lang));
           },
           style: { color: C.teal, fontSize: 11, cursor: 'pointer', background: C.teal + '22', borderRadius: 8, padding: '3px 9px' }
-        }, '💾 حفظ الحالي كقالب')
+        }, t('g2.meds.saveAsTpl', lang))
       ),
       templates.length === 0
-        ? React.createElement('div', { style: { color: C.muted, fontSize: 11, marginTop: 6 } }, 'لا توجد قوالب بعد — اكتب روشتة ثم احفظها كقالب لاستخدامها لاحقاً')
+        ? React.createElement('div', { style: { color: C.muted, fontSize: 11, marginTop: 6 } }, t('g2.meds.noTemplates', lang))
         : React.createElement('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap' } },
-            templates.map(t => React.createElement('span', {
-              key: t.id,
+            templates.map(tpl => React.createElement('span', {
+              key: tpl.id,
               style: { display: 'inline-flex', alignItems: 'center', gap: 6, background: C.gold + '18', border: `1px solid ${C.gold}44`, borderRadius: 9, padding: '5px 9px' }
             },
               React.createElement('span', {
                 onClick: () => {
-                  const add = parseMedicines(t.medicines || '');
+                  const add = parseMedicines(tpl.medicines || '');
                   save([...meds.filter(m => m.name), ...add]);
                 },
                 style: { color: C.gold, fontSize: 11, fontWeight: 700, cursor: 'pointer' }
-              }, t.name),
+              }, tpl.name),
               React.createElement('span', {
                 onClick: async () => {
-                  if (!window.confirm('حذف القالب «' + t.name + '»؟')) return;
-                  const next = await deleteRxTemplate(t.id);
+                  if (!window.confirm(t('g2.meds.confirmDelTpl', lang, { name: tpl.name }))) return;
+                  const next = await deleteRxTemplate(tpl.id);
                   if (next) setTemplates(next);
                 },
                 style: { color: C.danger, fontSize: 12, cursor: 'pointer' }
@@ -118,15 +121,15 @@ export default function MedicinesStep({ medicines, onChange }) {
         value: newDrug,
         onChange: e => setNewDrug(e.target.value),
         onKeyDown: e => e.key === 'Enter' && handleAddNewDrug(),
-        placeholder: 'اسم الدواء الجديد...',
+        placeholder: t('g2.meds.newDrugPh', lang),
         style: { ...inp(), flex: 1, fontSize: 12 }
       }),
-      React.createElement(Btn, { small: true, color: C.teal, onClick: handleAddNewDrug }, 'حفظ'),
+      React.createElement(Btn, { small: true, color: C.teal, onClick: handleAddNewDrug }, t('g2.common.save', lang)),
       React.createElement('span', { onClick: () => setAddingNew(false), style: { color: C.muted, fontSize: 20, cursor: 'pointer' } }, '×')
     ),
     meds.length === 0 && React.createElement('div', {
       style: { color: C.muted, fontSize: 12, textAlign: 'center', padding: 20, background: C.card, borderRadius: 10 }
-    }, 'اضغط "+ إضافة" لإضافة الأدوية'),
+    }, t('g2.meds.empty', lang)),
     meds.map((m, i) => React.createElement('div', {
       key: i,
       style: { background: C.card, border: '1px solid ' + C.border, borderRadius: 12, padding: 12 }
@@ -141,13 +144,13 @@ export default function MedicinesStep({ medicines, onChange }) {
             value: m.name,
             onChange: e => update(i, 'name', e.target.value)
           },
-            React.createElement('option', { value: '' }, '-- اختر دواء --'),
-            drugList.map(d => React.createElement('option', { key: d, value: d }, d))
+            React.createElement('option', { value: '' }, t('g2.meds.pickDrug', lang)),
+            drugList.map(d => React.createElement('option', { key: d, value: d }, tv(d)))
           )
         ),
         React.createElement('div', {
           onClick: () => remove(i),
-          style: { color: C.danger, fontSize: 20, cursor: 'pointer', flexShrink: 0, paddingRight: 4 }
+          style: { color: C.danger, fontSize: 20, cursor: 'pointer', flexShrink: 0, paddingInlineStart: 4 }
         }, '×')
       ),
       React.createElement('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap' } },
@@ -164,9 +167,9 @@ export default function MedicinesStep({ medicines, onChange }) {
             cursor: 'pointer',
             fontWeight: m.dose === d ? 700 : 400
           }
-        }, d))
+        }, tv(d)))
       ),
-      m.dose && React.createElement('div', { style: { color: C.muted, fontSize: 11, marginTop: 6 } }, '📋 ', m.name, ' - ', m.dose)
+      m.dose && React.createElement('div', { style: { color: C.muted, fontSize: 11, marginTop: 6 } }, '📋 ', m.name, ' - ', tv(m.dose))
     ))
   );
 }

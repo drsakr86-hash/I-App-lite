@@ -1,29 +1,31 @@
 import React, { useState } from 'react';
 import { Btn } from '../common.jsx';
 import {
-  USER_ROLE_OPTIONS, USER_PASSWORD_NOTE, initialUserState, isUserFormValid, buildUserPayload, userSaveLabel
+  USER_ROLE_OPTIONS, initialUserState, isUserFormValid, buildUserPayload, userSaveLabel
 } from './settings-forms-model.js';
 import { C } from '../../modules/theme/index.js';
 import { Field, inp } from '../../modules/ui/atoms.jsx';
+import { t, useLang } from '../../modules/i18n/index.js';
 
 // Staff user add/edit form (Settings). Exact port of the legacy runtime's
 // UserForm (public/legacy/app-runtime.js). The form only checks email/name
 // shape; duplicate and last-admin checks happen in the awaited onSave (the
 // Settings screen), whose message comes back as `error`.
 export default function UserForm({ initial, onSave, onClose, error }) {
+  const lang = useLang();
   const [f, setF] = useState(() => initialUserState(initial));
   const s = k => e => setF(v => ({ ...v, [k]: e.target.value }));
   const [saving, setSaving] = useState(false);
   const valid = isUserFormValid(f, saving);
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <Field label="الاسم">
-        <input style={inp()} value={f.name} onChange={s('name')} placeholder="اسم المستخدم الكامل" />
+      <Field label={t('g3.user.name', lang)}>
+        <input style={inp()} value={f.name} onChange={s('name')} placeholder={t('g3.user.namePh', lang)} />
       </Field>
-      <Field label="البريد الإلكتروني (للدخول)">
+      <Field label={t('g3.user.email', lang)}>
         <input
           type="email"
-          style={{ ...inp(), direction: 'ltr', textAlign: 'left' }}
+          style={{ ...inp(), direction: 'ltr', textAlign: 'start' }}
           value={f.email}
           onChange={s('email')}
           placeholder="name@sakr.clinic"
@@ -39,10 +41,10 @@ export default function UserForm({ initial, onSave, onClose, error }) {
           fontSize: 11,
           lineHeight: 1.7
         }}
-      >{USER_PASSWORD_NOTE}</div>
-      <Field label="الصلاحية">
+      >{t('g3.user.passwordNote', lang)}</div>
+      <Field label={t('g3.user.role', lang)}>
         <select style={inp()} value={f.role} onChange={s('role')}>
-          {USER_ROLE_OPTIONS.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
+          {USER_ROLE_OPTIONS.map(o => <option key={o.v} value={o.v}>{t('g3.user.role.' + o.v, lang)}</option>)}
         </select>
       </Field>
       {error && (
@@ -59,7 +61,7 @@ export default function UserForm({ initial, onSave, onClose, error }) {
         >{error}</div>
       )}
       <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
-        <Btn outline full onClick={onClose}>إلغاء</Btn>
+        <Btn outline full onClick={onClose}>{t('g3.common.cancel', lang)}</Btn>
         <Btn
           full
           color={C.purple}

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Btn } from '../common.jsx';
 import { C } from '../../modules/theme/index.js';
+import { useLang, t } from '../../modules/i18n/index.js';
+import { tv } from '../../modules/i18n/tv.js';
 import { Field, inp } from '../../modules/ui/atoms.jsx';
 import { localISO } from '../../modules/constants/index.js';
 import MedicinesStep from './MedicinesStep.jsx';
@@ -8,7 +10,6 @@ import { DEFAULT_DOCTOR_NAMES } from './visit-form-model.js';
 import {
   RX_EYES, RX_LAST_STEP, SPH_OPTIONS, CYL_OPTIONS, AXIS_OPTIONS, ADD_OPTIONS, IPD_OPTIONS,
   SPH_DISPLAY_DEFAULT, CYL_DISPLAY_DEFAULT, AXIS_DISPLAY_DEFAULT, ADD_DISPLAY_DEFAULT, IPD_DISPLAY_DEFAULT,
-  AXIS_FIELD_ERR_TEXT, AXIS_BANNER_TEXT, NO_PATIENTS_WARNING,
   autoPatientOf, initialRxState, initialRxStep, rxStepLabels, rxRealStep,
   validateRx, isRxValid, patientStepBlocked, findRxPatient, withRxPatient, axisStarShown, clearsAxisError,
   axisBannerEye, refractionSides
@@ -22,6 +23,7 @@ import {
 // no more reads from the IAppLegacy bridge. `doctorNames` is accepted but
 // unused, as in legacy.
 export default function RxForm({ initial, patients, onSave, onClose, doctorNames = DEFAULT_DOCTOR_NAMES }) {
+  const lang = useLang();
   const autoPatient = autoPatientOf(patients);
   const [f, setF] = useState(() => initialRxState(initial, autoPatient, localISO()));
   const [step, setStep] = useState(() => initialRxStep(autoPatient, initial));
@@ -62,7 +64,7 @@ export default function RxForm({ initial, patients, onSave, onClose, doctorNames
         >
           <span style={{ fontSize: 16 }}>👤</span>
           <span style={{ color: C.accent, fontWeight: 700, fontSize: 13 }}>{autoPatient.name}</span>
-          <span style={{ color: C.muted, fontSize: 11, marginRight: 'auto' }}>{autoPatient.patientCode || ''}</span>
+          <span style={{ color: C.muted, fontSize: 11, marginInlineStart: 'auto' }}>{autoPatient.patientCode || ''}</span>
         </div>
       )}
       <div style={{ display: 'flex', marginBottom: 18, background: C.card, borderRadius: 12, padding: 4 }}>
@@ -89,7 +91,7 @@ export default function RxForm({ initial, patients, onSave, onClose, doctorNames
       </div>
       {step === 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <Field label="المريض">
+          <Field label={t('g2.rx.step.patient', lang)}>
             <select
               style={inp()}
               value={f.patientId || ''}
@@ -98,19 +100,19 @@ export default function RxForm({ initial, patients, onSave, onClose, doctorNames
                 setF(v => withRxPatient(v, e.target.value, p));
               }}
             >
-              <option value="">اختر مريض</option>
+              <option value="">{t('g2.rx.pickPatient', lang)}</option>
               {patients.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           </Field>
           {patients.length === 0 && (
             <div style={{ color: C.gold, fontSize: 12, textAlign: 'center', padding: '8px', background: C.gold + '11', borderRadius: 8 }}>
-              {NO_PATIENTS_WARNING}
+              {t('g2.rx.noPatients', lang)}
             </div>
           )}
-          <Field label="تاريخ الوصفة">
+          <Field label={t('g2.rx.date', lang)}>
             <input style={inp()} type="date" value={f.date} onChange={s('date')} />
           </Field>
-          <Field label="العين المعالجة">
+          <Field label={t('g2.rx.eyeTreated', lang)}>
             <div style={{ display: 'flex', gap: 8 }}>
               {RX_EYES.map(opt => (
                 <div
@@ -128,12 +130,12 @@ export default function RxForm({ initial, patients, onSave, onClose, doctorNames
                     fontSize: 10,
                     fontWeight: 600
                   }}
-                >{opt}</div>
+                >{tv(opt)}</div>
               ))}
             </div>
           </Field>
-          <Field label="ملاحظات">
-            <textarea style={{ ...inp(), resize: 'none' }} rows={2} value={f.notes} onChange={s('notes')} placeholder="ملاحظات..." />
+          <Field label={t('g2.common.notes', lang)}>
+            <textarea style={{ ...inp(), resize: 'none' }} rows={2} value={f.notes} onChange={s('notes')} placeholder={t('g2.rx.notesPh', lang)} />
           </Field>
         </div>
       )}
@@ -151,7 +153,7 @@ export default function RxForm({ initial, patients, onSave, onClose, doctorNames
               }}
             >
               <div style={{ color: C.accent, fontWeight: 700, fontSize: 13, marginBottom: 12 }}>
-                {'👁 العين '}{lbl}{' '}{!needed && <span style={{ color: C.muted, fontSize: 10, fontWeight: 400 }}>(غير مختارة)</span>}
+                {'👁 '}{t('g2.rx.eyeHead', lang, { eye: lbl })}{' '}{!needed && <span style={{ color: C.muted, fontSize: 10, fontWeight: 400 }}>{t('g2.rx.notSelected', lang)}</span>}
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
                 <div>
@@ -200,13 +202,13 @@ export default function RxForm({ initial, patients, onSave, onClose, doctorNames
                   >
                     {AXIS_OPTIONS.map(o => <option key={o} value={o}>{o}{'°'}</option>)}
                   </select>
-                  {errors['axis' + side] && <div style={{ color: C.danger, fontSize: 9, marginTop: 3 }}>{AXIS_FIELD_ERR_TEXT}</div>}
+                  {errors['axis' + side] && <div style={{ color: C.danger, fontSize: 9, marginTop: 3 }}>{t('g2.rx.axisFieldErr', lang)}</div>}
                 </div>
               </div>
             </div>
           ))}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <Field label="ADD (الإضافة)">
+            <Field label={t('g2.rx.add', lang)}>
               <select style={inp({ textAlign: 'center' })} value={f.add || ADD_DISPLAY_DEFAULT} onChange={s('add')}>
                 {ADD_OPTIONS.map(o => <option key={o} value={o}>{'+'}{o}</option>)}
               </select>
@@ -230,20 +232,20 @@ export default function RxForm({ initial, patients, onSave, onClose, doctorNames
               }}
             >
               <span style={{ fontSize: 16 }}>⚠️</span>
-              <span style={{ color: C.danger, fontSize: 12, fontWeight: 600 }}>{AXIS_BANNER_TEXT}{axisBannerEye(errors)}</span>
+              <span style={{ color: C.danger, fontSize: 12, fontWeight: 600 }}>{t('g2.rx.axisBanner', lang)}{axisBannerEye(errors)}</span>
             </div>
           )}
         </div>
       )}
       {step === 2 && <MedicinesStep medicines={f.medicines} onChange={val => setF(v => ({ ...v, medicines: val }))} />}
       <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
-        {step > 0 && <Btn outline onClick={() => setStep(p => p - 1)}>السابق</Btn>}
+        {step > 0 && <Btn outline onClick={() => setStep(p => p - 1)}>{t('g2.common.prev', lang)}</Btn>}
         {step < RX_LAST_STEP ? (
-          <Btn full onClick={handleNext}>التالي →</Btn>
+          <Btn full onClick={handleNext}>{t('g2.common.next', lang)}</Btn>
         ) : (
           <>
-            <Btn outline full onClick={onClose}>إلغاء</Btn>
-            <Btn full onClick={handleSave}>✓ حفظ</Btn>
+            <Btn outline full onClick={onClose}>{t('g2.common.cancel', lang)}</Btn>
+            <Btn full onClick={handleSave}>{t('g2.common.saveCheck', lang)}</Btn>
           </>
         )}
       </div>

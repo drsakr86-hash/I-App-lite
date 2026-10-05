@@ -33,14 +33,15 @@ import { buildClinicalSummary } from './clinical-summary.js';
 import { buildLongitudinal } from './longitudinal.js';
 import { buildInvestigationLinks } from './investigation-links.js';
 import { logError } from '../../services/logger.js';
+import { t } from '../i18n/index.js';
 
 const CLD_CLOUD = 'daihhusnc';
 const CLD_PRESET = 'iapp_clinic';
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
-const DIRTY_MODAL_MSG = 'لديك تغييرات غير محفوظة. هل تريد تجاهلها وإغلاق النافذة؟';
+const dirtyModalMsg = () => t('g1.hook.dirtyConfirm');
 
 const isCoreOnly = rec => !!rec && Array.isArray(rec._sources) && rec._sources.length > 0 && !rec._sources.includes('legacy');
-const errMsg = e => (e && (e.message || e.hint)) || String(e || 'خطأ غير معروف');
+const errMsg = e => (e && (e.message || e.hint)) || String(e || t('g1.hook.unknownError'));
 
 export function usePatientFile({
   patient, allExams, allRx, allVisits, onClose, onUpdatePatient,
@@ -76,7 +77,7 @@ export function usePatientFile({
   // ---- modal handling with unsaved-changes protection ------------------------
   const setModal = useCallback(next => {
     if (next === null) {
-      if (modalDirty.current && !window.confirm(DIRTY_MODAL_MSG)) return;
+      if (modalDirty.current && !window.confirm(dirtyModalMsg())) return;
       modalDirty.current = false;
     } else {
       modalDirty.current = false;
@@ -105,7 +106,7 @@ export function usePatientFile({
       const raw = data && typeof data === 'object' ? data : null;
       const file = raw ? { ...raw, ...(raw.patient || {}) } : null;
       if (!file || !coreFileMatchesPatient(file, patient)) {
-        setCoreStatus({ state: 'error', error: 'بيانات السجل المركزي لا تخص هذا المريض وتم تجاهلها', loadedAt: null });
+        setCoreStatus({ state: 'error', error: t('g1.hook.coreMismatch'), loadedAt: null });
         return;
       }
       setCoreFile(file);
@@ -148,7 +149,7 @@ export function usePatientFile({
           if (!isDirty(metaKey)) LS.set(metaKey, JSON.stringify(remote));
         }
       } catch (e) {
-        if (active) setImgError('تعذر تحميل بيانات الصور من السيرفر. يتم عرض آخر نسخة محفوظة على هذا الجهاز.');
+        if (active) setImgError(t('g1.hook.imgLoadFail'));
         console.warn('img meta load:', e);
       }
       if (active) setImgLoading(false);
@@ -184,9 +185,9 @@ export function usePatientFile({
         const o = await sbGet('iapp_imaging_orders');
         if (!active) return;
         setImagingOrders(Array.isArray(o) ? o.filter(x => x && x.patientId === patient.id) : []);
-        setOrdersError(Array.isArray(o) || o === null ? null : 'تعذر قراءة حالة الطلبات');
+        setOrdersError(Array.isArray(o) || o === null ? null : t('g1.hook.ordersFail'));
       } catch (e) {
-        if (active) setOrdersError('تعذر قراءة حالة الطلبات: ' + errMsg(e));
+        if (active) setOrdersError(t('g1.hook.ordersFail') + ': ' + errMsg(e));
       }
     })();
     return () => { active = false; };
@@ -232,15 +233,15 @@ export function usePatientFile({
   const totalSpent = useMemo(() => visits.reduce((s, v) => s + (v.paid ? Number(v.cost || 0) : 0), 0), [visits]);
 
   const TABS = [
-    { id: 'info', label: 'نظرة عامة', icon: '👤' },
-    { id: 'timeline', label: 'السجل الزمني', icon: '🕘' },
-    { id: 'visits', label: 'الزيارات', icon: '🗓' },
-    { id: 'exams', label: 'الفحوصات', icon: '🔍' },
-    { id: 'requests', label: 'طلبات الفحوصات', icon: '🩻' },
-    { id: 'treatment', label: 'العلاج', icon: '💊' },
-    { id: 'rx', label: 'الوصفات', icon: '🔬' },
-    { id: 'images', label: 'الصور الطبية', icon: 'oct' },
-    { id: 'compare', label: 'المقارنة', icon: '📊' }
+    { id: 'info', label: t('tab.info'), icon: '👤' },
+    { id: 'timeline', label: t('tab.timeline'), icon: '🕘' },
+    { id: 'visits', label: t('tab.visits'), icon: '🗓' },
+    { id: 'exams', label: t('tab.exams'), icon: '🔍' },
+    { id: 'requests', label: t('tab.requests'), icon: '🩻' },
+    { id: 'treatment', label: t('tab.treatment'), icon: '💊' },
+    { id: 'rx', label: t('tab.rx'), icon: '🔬' },
+    { id: 'images', label: t('tab.images'), icon: 'oct' },
+    { id: 'compare', label: t('tab.compare'), icon: '📊' }
   ];
 
   // Timeline -> source record navigation.
@@ -292,14 +293,14 @@ export function usePatientFile({
     if (!img || !img.src) return;
     setAiAnalysis(prev => ({
       ...prev,
-      [img.id]: { loading: false, result: null, error: 'تحليل AI غير مفعّل في نسخة المتصفح الحالية. يجب ربطه عبر Backend / Supabase Edge Function بشكل آمن.' }
+      [img.id]: { loading: false, result: null, error: t('g1.hook.aiOff') }
     }));
   };
 
   const uploadOneFile = async function (file) {
     const setProg = v => { if (activeRef.current) setUploadProgress(v); };
     if (file.size > MAX_IMAGE_BYTES) {
-      if (activeRef.current) setImgError(`الملف ${file.name} أكبر من 10 ميجابايت ولم يُرفع`);
+      if (activeRef.current) setImgError(t('g1.hook.tooBig', { name: file.name }));
       return false;
     }
     setProg({ name: file.name, pct: 10 });
@@ -314,7 +315,7 @@ export function usePatientFile({
       data = await res.json().catch(() => null);
       if (!res.ok) throw new Error((data && data.error && data.error.message) || res.status);
     } catch (err) {
-      if (activeRef.current) setImgError(`فشل رفع ${file.name}: ${errMsg(err)}. لم تتم إضافة الصورة للملف.`);
+      if (activeRef.current) setImgError(t('g1.hook.uploadFail', { name: file.name, err: errMsg(err) }));
       return false;
     }
     const newImg = {
@@ -325,11 +326,11 @@ export function usePatientFile({
     setProg({ name: file.name, pct: 100 });
     try {
       const r = await mergeImageMeta(base => [newImg, ...base.filter(x => x.id !== newImg.id)]);
-      if (!r.synced && activeRef.current) setImgError(`تم رفع ${file.name} وحُفظت بياناته على هذا الجهاز وستُزامن عند توفر الاتصال.`);
+      if (!r.synced && activeRef.current) setImgError(t('g1.hook.uploadedLocal', { name: file.name }));
       return true;
     } catch (err) {
       // The file exists in Cloudinary but its record was not saved: say so, with the URL for recovery.
-      if (activeRef.current) setImgError(`رُفع ${file.name} لكن تعذر حفظ بياناته في الملف (${errMsg(err)}). الرابط: ${data.secure_url}`);
+      if (activeRef.current) setImgError(t('g1.hook.uploadedNoMeta', { name: file.name, err: errMsg(err), url: data.secure_url }));
       return false;
     }
   };
@@ -345,7 +346,7 @@ export function usePatientFile({
       if (activeRef.current) {
         setUploadProgress(null);
         report(ok === files.length ? 'saved' : (ok ? 'partial' : 'failed'),
-          ok === files.length ? `تم رفع ${ok} صورة` : `تم رفع ${ok} من ${files.length} صورة`);
+          ok === files.length ? t('g1.hook.uploadedN', { n: ok }) : t('g1.hook.uploadedNofM', { n: ok, m: files.length }));
       }
     });
   };
@@ -353,11 +354,11 @@ export function usePatientFile({
   const delImage = async id => {
     const img = images.find(i => i.id === id);
     if (img && img._sources && img._sources.includes('core')) {
-      setImgError('هذه الصورة مسجلة في السجل المركزي (دراسة تصويرية) ولا يمكن حذفها من هنا.');
+      setImgError(t('g1.hook.imgCoreOnly'));
       return;
     }
     await exclusive('delimg:' + id, async () => {
-      try { await mergeImageMeta(base => base.filter(i => i.id !== id)); } catch (e) { setImgError('تعذر حذف الصورة: ' + errMsg(e)); }
+      try { await mergeImageMeta(base => base.filter(i => i.id !== id)); } catch (e) { setImgError(t('g1.hook.imgDelFail') + ': ' + errMsg(e)); }
     });
   };
   const editImgNotesLocal = (id, notes) => setMetaImages(prev => {
@@ -373,7 +374,7 @@ export function usePatientFile({
         const core = images.find(i => i.id === id);
         return core ? [{ ...core, notes }, ...base] : base;
       });
-    } catch (e) { setImgError('تعذر حفظ ملاحظات الصورة: ' + errMsg(e)); }
+    } catch (e) { setImgError(t('g1.hook.imgNotesFail') + ': ' + errMsg(e)); }
   };
 
   // ---- investigation requests ------------------------------------------------------------------------
@@ -384,7 +385,7 @@ export function usePatientFile({
   const [requestResult, setRequestResult] = useState(null);
   const draft = useRef(null); // { id, resume } — one id per draft; reused on retry
 
-  const allRequestTests = [...DEFAULT_TESTS, ...(customTests || []).map(t => ({ ...t, cat: 'مخصص' }))];
+  const allRequestTests = [...DEFAULT_TESTS, ...(customTests || []).map(ct => ({ ...ct, cat: 'مخصص' }))];
   const toggleRequestTest = id => setRequestTests(v => (v[id]
     ? Object.fromEntries(Object.entries(v).filter(([k]) => k !== id))
     : { ...v, [id]: requestEye }));
@@ -413,7 +414,7 @@ export function usePatientFile({
 
   const savePatientRadiologyRequest = () => exclusive('request', async () => {
     const ids = Object.keys(requestTests);
-    if (!ids.length) { setRequestResult({ status: 'invalid', message: 'اختر فحصاً واحداً على الأقل' }); return; }
+    if (!ids.length) { setRequestResult({ status: 'invalid', message: t('g1.req.invalid') }); return; }
     const tests = ids.map(id => {
       const t = allRequestTests.find(x => x.id === id);
       return t ? { id: t.id, name: t.name, name_ar: t.name_ar, category: t.cat, eye: requestTests[id] || 'OU' } : null;
@@ -435,7 +436,7 @@ export function usePatientFile({
       report(result.status === 'saved' ? 'saved' : (result.status === 'local-only' ? 'local-only' : result.status), result.message);
       refreshAll();
     } catch (e) {
-      const message = 'تعذر حفظ الطلب: ' + errMsg(e);
+      const message = t('g1.hook.reqSaveFail') + ': ' + errMsg(e);
       if (activeRef.current) setRequestResult({ status: 'failed', message });
       report('failed', message);
     } finally {
@@ -445,7 +446,7 @@ export function usePatientFile({
 
   const resyncRequest = rec => exclusive('resync:' + rec.id, async () => {
     const result = await resyncInvestigationRequest(requestDeps(), rec, curPatient);
-    report(result.status === 'synced' ? 'saved' : 'failed', result.status === 'synced' ? 'تمت مزامنة الطلب مع السجل المركزي' : (result.message || 'تعذرت المزامنة'));
+    report(result.status === 'synced' ? 'saved' : 'failed', result.status === 'synced' ? t('g1.hook.reqSynced') : (result.message || t('g1.req.syncFailed')));
     if (result.status === 'synced') refreshAll();
   });
 
@@ -458,7 +459,7 @@ export function usePatientFile({
   const runSave = (key, what, fn) => exclusive(key, async () => {
     try {
       const r = await fn({
-        onLocalSaved: () => { closeModalClean(); report('saving', `تم حفظ ${what} على هذا الجهاز — جاري المزامنة مع السجل المركزي…`); }
+        onLocalSaved: () => { closeModalClean(); report('saving', t('g1.hook.savedLocalSyncing', { what })); }
       });
       const [kind, message] = coreMessage(what, r);
       closeModalClean();
@@ -466,24 +467,24 @@ export function usePatientFile({
       return r;
     } catch (e) {
       logError('patientFile.save.' + key.split(':')[0], e, { op: key.split(':')[0] });
-      report('failed', `لم يُحفظ ${what}: ${errMsg(e)}. النافذة ما زالت مفتوحة لتحاول مجدداً.`);
+      report('failed', t('g1.hook.notSaved', { what, err: errMsg(e) }));
       return undefined;
     }
   });
 
-  const handleSaveExam = e => runSave('exam:' + (e && e.id), 'الفحص', opts => onSaveExam(e, opts));
-  const handleSaveVisit = v => runSave('visit:' + (v && v.id), 'الزيارة', opts => onSaveVisit(v, opts));
+  const handleSaveExam = e => runSave('exam:' + (e && e.id), t('g1.what.exam'), opts => onSaveExam(e, opts));
+  const handleSaveVisit = v => runSave('visit:' + (v && v.id), t('g1.what.visit'), opts => onSaveVisit(v, opts));
   const handlePatientSave = updated => exclusive('patient:' + (updated && updated.id), async () => {
     setCurPatient(updated);
     closeModalClean();
-    report('saving', 'جاري حفظ بيانات المريض…');
+    report('saving', t('g1.hook.savingPatient'));
     try {
       const ok = await onUpdatePatient(updated);
-      const o = interpretWriteOk('بيانات المريض', ok);
+      const o = interpretWriteOk(t('g1.what.patient'), ok);
       report(o.kind, o.message);
     } catch (e) {
       logError('patientFile.save.patient', e, { patientId: updated && updated.id });
-      report('failed', 'لم تُحفظ بيانات المريض: ' + errMsg(e));
+      report('failed', t('g1.hook.patientNotSaved') + ': ' + errMsg(e));
     }
   });
 
@@ -494,41 +495,41 @@ export function usePatientFile({
     const list = target.type === 'visit' ? visits : patientRecords;
     const rec = list.find(r => String(r.id) === String(target.id));
     if (isCoreOnly(rec)) {
-      report('failed', 'هذا السجل مسجل في السجل المركزي فقط ولا يمكن حذفه من هذه الشاشة.');
+      report('failed', t('g1.hook.recCoreOnly'));
       return;
     }
     setDelTargetRaw(target);
   };
   const onConfirmDelete = () => {
-    const t = delTarget;
+    const target = delTarget;
     setDelTargetRaw(null);
-    if (!t) return undefined;
-    return exclusive('del:' + t.type + ':' + t.id, async () => {
+    if (!target) return undefined;
+    return exclusive('del:' + target.type + ':' + target.id, async () => {
       try {
-        await (t.type === 'visit' ? onDelVisit(t.id) : onDelExam(t.id));
-        report('saved', 'تم نقل السجل إلى سلة المحذوفات');
+        await (target.type === 'visit' ? onDelVisit(target.id) : onDelExam(target.id));
+        report('saved', t('g1.hook.movedTrash'));
       } catch (e) {
-        report('failed', 'تعذر الحذف: ' + errMsg(e));
+        report('failed', t('g1.hook.delFail') + ': ' + errMsg(e));
       }
     });
   };
 
   const onDeleteRx = rx => {
-    if (isCoreOnly(rx)) { report('failed', 'هذه الوصفة مسجلة في السجل المركزي فقط ولا يمكن حذفها من هنا.'); return; }
-    if (!window.confirm('نقل هذه الوصفة إلى سلة المحذوفات؟')) return;
+    if (isCoreOnly(rx)) { report('failed', t('g1.hook.rxCoreOnly')); return; }
+    if (!window.confirm(t('g1.hook.rxTrashConfirm'))) return;
     exclusive('delrx:' + rx.id, async () => {
       try {
         await trashPut('iapp_prescriptions', rx, 'روشتة');
         logAudit('حذف روشتة', (rx.date || '') + ' · ' + ((curPatient && curPatient.name) || ''));
         if (onSaveRx) await onSaveRx((allRx || []).filter(r => r.id !== rx.id));
-        report('saved', 'تم نقل الوصفة إلى سلة المحذوفات');
-      } catch (e) { report('failed', 'تعذر حذف الوصفة: ' + errMsg(e)); }
+        report('saved', t('g1.hook.rxMovedTrash'));
+      } catch (e) { report('failed', t('g1.hook.rxDelFail') + ': ' + errMsg(e)); }
     });
   };
-  const onAddRxSave = rx => runSave('rx:new', 'الوصفة', opts => onSaveRx(
+  const onAddRxSave = rx => runSave('rx:new', t('g1.what.rx'), opts => onSaveRx(
     [...(allRx || []), { ...rx, id: Date.now(), patientId: curPatient.id, patient: curPatient.name }], opts
   ));
-  const onEditRxSave = rx => runSave('rx:' + rx.id, 'الوصفة', opts => onSaveRx(
+  const onEditRxSave = rx => runSave('rx:' + rx.id, t('g1.what.rx'), opts => onSaveRx(
     (allRx || []).map(r => (r.id === rx.id ? { ...rx, patientId: curPatient.id, patient: curPatient.name } : r)), opts
   ));
 

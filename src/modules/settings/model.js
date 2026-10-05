@@ -3,10 +3,14 @@
 // alert, network calls) and only asks these helpers "is this allowed?" and
 // "what should the new record / list look like?".
 
-export const DUPLICATE_EMAIL_ERR = '❌ هذا البريد مضاف بالفعل';
-export const USER_NOT_FOUND_ERR = '❌ المستخدم غير موجود';
-export const LAST_ADMIN_ROLE_ERR = '❌ لا يمكن إلغاء صلاحية آخر مدير في النظام';
-export const LAST_ADMIN_DELETE_ALERT = 'لا يمكن حذف آخر مدير في النظام';
+import { t } from '../i18n/index.js';
+
+// Canonical (Arabic) texts, kept as constants for callers/tests; the functions below return the CURRENT-language text.
+export const DUPLICATE_EMAIL_ERR = t('g4.settings.errDupEmail', 'ar');
+export const USER_NOT_FOUND_ERR = t('g4.settings.errUserNotFound', 'ar');
+export const LAST_ADMIN_ROLE_ERR = t('g4.settings.errLastAdminRole', 'ar');
+export const LAST_ADMIN_DELETE_ALERT = t('g4.settings.errLastAdminDelete', 'ar');
+export const lastAdminDeleteAlert = () => t('g4.settings.errLastAdminDelete');
 
 // Case/whitespace-insensitive name comparison.
 export const sameName = (a, b) => String(a || '').trim().toLowerCase() === String(b || '').trim().toLowerCase();
@@ -18,7 +22,7 @@ export const adminCount = list => list.filter(u => u.role === 'admin').length;
 // addUser: an email is taken if any user has that email, or a username equal to it.
 // `emailKey` is the legacy normalizer (passed in so behaviour stays identical).
 export function addUserError(cur, mail, emailKey) {
-  if (cur.some(u => emailKey(u.email) === mail || sameName(u.username, mail))) return DUPLICATE_EMAIL_ERR;
+  if (cur.some(u => emailKey(u.email) === mail || sameName(u.username, mail))) return t('g4.settings.errDupEmail');
   return null;
 }
 
@@ -40,10 +44,10 @@ export function canRemoveAdminRole(prev, nextRole, cur) {
 // editUser checks, in the legacy order: duplicate email (email only, other ids),
 // user not found, last-admin demotion. Returns the error string or null.
 export function editUserError(cur, f, mail, emailKey) {
-  if (cur.some(u => u.id !== f.id && emailKey(u.email) === mail)) return DUPLICATE_EMAIL_ERR;
+  if (cur.some(u => u.id !== f.id && emailKey(u.email) === mail)) return t('g4.settings.errDupEmail');
   const prev = cur.find(u => u.id === f.id);
-  if (!prev) return USER_NOT_FOUND_ERR;
-  if (!canRemoveAdminRole(prev, f.role, cur)) return LAST_ADMIN_ROLE_ERR;
+  if (!prev) return t('g4.settings.errUserNotFound');
+  if (!canRemoveAdminRole(prev, f.role, cur)) return t('g4.settings.errLastAdminRole');
   return null;
 }
 
@@ -89,8 +93,8 @@ export const primaryDoctor = doctors => doctors.find(d => d.isPrimary) || doctor
 
 // Local checks done before any network call; returns the error text or null.
 export function passwordFormError(pwForm, minLen) {
-  if (pwForm.new1.length < minLen) return '❌ يجب أن تكون كلمة المرور الجديدة ' + minLen + ' أحرف على الأقل';
-  if (pwForm.new1 !== pwForm.new2) return '❌ كلمتا المرور الجديدتان غير متطابقتين';
+  if (pwForm.new1.length < minLen) return t('g4.settings.pwTooShort', { min: minLen });
+  if (pwForm.new1 !== pwForm.new2) return t('g4.settings.pwMismatch');
   return null;
 }
 
@@ -101,17 +105,19 @@ export const computeTotalRevenue = visits => visits.reduce((s, v) => s + (v.paid
 export function buildDatabaseSummaryRows({ patients, appointments, visits, prescriptions, exams }) {
   const totalRev = computeTotalRevenue(visits);
   return [
-    ['👥 المرضى', patients.length],
-    ['📋 المواعيد', appointments.length],
-    ['🗓 الزيارات', visits.length],
-    ['🔬 الوصفات', prescriptions.length],
-    ['🩺 Examinations', exams.length],
-    ['💰 الإيرادات', totalRev.toLocaleString() + ' ج.م']
+    [t('g4.settings.sumPatients'), patients.length],
+    [t('g4.settings.sumAppointments'), appointments.length],
+    [t('g4.settings.sumVisits'), visits.length],
+    [t('g4.settings.sumPrescriptions'), prescriptions.length],
+    [t('g4.settings.sumExams'), exams.length],
+    [t('g4.settings.sumRevenue'), totalRev.toLocaleString() + ' ' + t('g4.common.currency')]
   ];
 }
 
-export const STATIC_INFO_ROWS = [
-  ['🏥', 'I App للعيون', 'بيانات العيادة'],
-  ['🕐', 'ساعات العمل', '8ص - 8م'],
-  ['💾', 'النسخ الاحتياطي', 'محفوظ تلقائياً']
+// Function so the labels follow the current language; STATIC_INFO_ROWS is a load-time snapshot kept for callers/tests.
+export const staticInfoRows = () => [
+  ['🏥', t('g4.settings.infoClinicName'), t('g4.settings.infoClinicSub')],
+  ['🕐', t('g4.settings.infoHours'), t('g4.settings.infoHoursVal')],
+  ['💾', t('g4.settings.infoBackup'), t('g4.settings.infoBackupVal')]
 ];
+export const STATIC_INFO_ROWS = staticInfoRows();

@@ -3,18 +3,20 @@ import { Btn } from '../common.jsx';
 import { PRICE_ICONS, initialPriceState, canSavePrice } from './settings-forms-model.js';
 import { C } from '../../modules/theme/index.js';
 import { Field, inp } from '../../modules/ui/atoms.jsx';
+import { t, useLang } from '../../modules/i18n/index.js';
 
 // Service price add/edit form (Settings). Exact port of the legacy runtime's
 // PriceForm (public/legacy/app-runtime.js).
 export default function PriceForm({ initial, onSave, onClose }) {
+  const lang = useLang();
   const [f, setF] = useState(() => initialPriceState(initial));
   const s = k => e => setF(v => ({ ...v, [k]: e.target.value }));
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <Field label="اسم الخدمة">
-        <input style={inp()} value={f.name} onChange={s('name')} placeholder="كشف روتيني، استشارة..." />
+      <Field label={t('g3.price.serviceName', lang)}>
+        <input style={inp()} value={f.name} onChange={s('name')} placeholder={t('g3.price.serviceNamePh', lang)} />
       </Field>
-      <Field label="السعر (ج.م)">
+      <Field label={t('g3.price.price', lang)}>
         <input
           style={inp({ textAlign: 'center', fontSize: 18, fontWeight: 700, color: C.gold })}
           type="number"
@@ -23,7 +25,7 @@ export default function PriceForm({ initial, onSave, onClose }) {
           placeholder="0"
         />
       </Field>
-      <Field label="الأيقونة">
+      <Field label={t('g3.price.icon', lang)}>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
           {PRICE_ICONS.map(ico => (
             <div
@@ -46,8 +48,8 @@ export default function PriceForm({ initial, onSave, onClose }) {
         </div>
       </Field>
       <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
-        <Btn outline full onClick={onClose}>إلغاء</Btn>
-        <Btn full onClick={() => canSavePrice(f) && onSave(f)}>حفظ</Btn>
+        <Btn outline full onClick={onClose}>{t('g3.common.cancel', lang)}</Btn>
+        <Btn full onClick={() => canSavePrice(f) && onSave(f)}>{t('g3.common.save', lang)}</Btn>
       </div>
     </div>
   );

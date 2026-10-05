@@ -18,6 +18,9 @@
 // Field names read from the Core payload are exactly those the existing code
 // already read (see docs/PATIENT360.md section "Verification still required").
 
+import { t, getLang } from '../i18n/index.js';
+import { tv } from '../i18n/tv.js';
+
 const str = v => (v == null ? '' : String(v));
 const arr = v => (Array.isArray(v) ? v.filter(x => x && typeof x === 'object') : []);
 const isNumericId = v => /^\d+$/.test(str(v));
@@ -371,25 +374,25 @@ function mkEvent(kind, rec, fields, colors) {
 export function buildPatientTimeline({ visits = [], requests = [], exams = [], rxList = [], images = [], coreFile = null, patient = null } = {}, colors) {
   const events = [];
   visits.forEach(v => events.push(mkEvent('visit', v, {
-    date: v.date, time: v.time, title: v.type || 'زيارة عيادة', detail: v.result || v.complaint || v.notes, doctor: v.doctor
+    date: v.date, time: v.time, title: tv(v.type) || t('g1.tl.clinicVisit'), detail: tv(v.result || v.complaint || v.notes), doctor: v.doctor
   }, colors)));
   requests.forEach(r => events.push(mkEvent('investigation', r, {
-    date: r.date, time: r.time, title: 'طلب فحوصات',
-    detail: 'المطلوب: ' + arr(r.requestedTests).map(t => str(t.name) + ' (' + (t.eye || 'OU') + ')').join('، ') + (r.notes ? ' · ' + r.notes : ''),
+    date: r.date, time: r.time, title: t('g1.tl.testRequest'),
+    detail: t('g1.tl.requested') + ': ' + arr(r.requestedTests).map(x => str(x.name) + ' (' + (x.eye || 'OU') + ')').join(getLang() === 'en' ? ', ' : '، ') + (r.notes ? ' · ' + tv(r.notes) : ''),
     doctor: r.doctor
   }, colors)));
   exams.forEach(e => events.push(mkEvent('examination', e, {
-    date: e.date, time: e.time, title: e.testType || e.type || 'فحص عيون',
-    detail: [e.diagnosis || e.chiefComplaint || e.notes, e.treatmentPlan ? 'العلاج: ' + e.treatmentPlan : '', e.followUp ? 'متابعة: ' + e.followUp : ''].filter(Boolean).join('\n'),
+    date: e.date, time: e.time, title: tv(e.testType || e.type) || t('g1.tl.eyeExam'),
+    detail: [tv(e.diagnosis || e.chiefComplaint || e.notes), e.treatmentPlan ? t('g1.tl.treatmentPrefix') + ': ' + tv(e.treatmentPlan) : '', e.followUp ? t('g1.tl.followUpPrefix') + ': ' + e.followUp : ''].filter(Boolean).join('\n'),
     doctor: e.doctor
   }, colors)));
   rxList.forEach(r => events.push(mkEvent('prescription', r, {
-    date: r.date, time: r.time, title: 'وصفة طبية',
-    detail: r.notes || medicinesToText(r.medications) || medicinesToText(r.medicines) || medicinesToText(r.drugs),
+    date: r.date, time: r.time, title: t('g1.tl.prescription'),
+    detail: tv(r.notes || medicinesToText(r.medications) || medicinesToText(r.medicines) || medicinesToText(r.drugs)),
     doctor: r.doctor
   }, colors)));
   images.forEach(i => events.push(mkEvent('imaging', i, {
-    date: i.date, time: i.time, title: i.type || 'صورة طبية',
+    date: i.date, time: i.time, title: tv(i.type) || t('g1.tl.medicalImage'),
     detail: `${i.eye && i.eye !== 'OU' ? i.eye + ' · ' : ''}${i.name || ''}${i.notes ? ' · ' + i.notes : ''}`
   }, colors)));
 
@@ -410,24 +413,24 @@ export function buildPatientTimeline({ visits = [], requests = [], exams = [], r
       const text = d.diagnosis || d.diagnosis_name || d.name;
       if (!present(text) || mirrored(d.visit_id, e => e.diagnosis, text)) return;
       events.push(mkEvent('diagnosis', { id: d.id, _coreVisitId: d.visit_id }, {
-        date: d.diagnosed_at || d.diagnosis_date || d.created_at, title: 'تشخيص',
+        date: d.diagnosed_at || d.diagnosis_date || d.created_at, title: t('g1.tl.diagnosis'),
         detail: [text, d.laterality, d.status, d.notes].filter(present).join(' · '), doctor: d.doctor_name
       }, colors));
     });
-    scoped(file.treatments, patient).forEach(t => {
+    scoped(file.treatments, patient).forEach(tr => {
       derived.add('treatment');
-      const text = t.treatment || t.treatment_name || t.name;
-      if (!present(text) || mirrored(t.visit_id, e => e.treatmentPlan, text)) return;
-      events.push(mkEvent('treatment', { id: t.id, _coreVisitId: t.visit_id }, {
-        date: t.started_at || t.treatment_date || t.created_at, title: 'علاج',
-        detail: [text, t.eye, t.instructions, t.notes].filter(present).join(' · '), doctor: t.doctor_name
+      const text = tr.treatment || tr.treatment_name || tr.name;
+      if (!present(text) || mirrored(tr.visit_id, e => e.treatmentPlan, text)) return;
+      events.push(mkEvent('treatment', { id: tr.id, _coreVisitId: tr.visit_id }, {
+        date: tr.started_at || tr.treatment_date || tr.created_at, title: t('g1.tl.treatment'),
+        detail: [text, tr.eye, tr.instructions, tr.notes].filter(present).join(' · '), doctor: tr.doctor_name
       }, colors));
     });
     scoped(file.followups, patient).forEach(f => {
       derived.add('followup');
       if (mirrored(f.visit_id, e => e.followUp, day(f.followup_date))) return;
       events.push(mkEvent('followup', { id: f.id, _coreVisitId: f.visit_id }, {
-        date: f.followup_date, title: 'متابعة',
+        date: f.followup_date, title: t('g1.tl.followUp'),
         detail: [f.reason, f.status, f.notes].filter(present).join(' · '), doctor: f.doctor_name
       }, colors));
     });

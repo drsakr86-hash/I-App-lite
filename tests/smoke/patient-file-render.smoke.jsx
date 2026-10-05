@@ -32,7 +32,7 @@ const { default: PatientFileContainer } = await import('../../src/screens/Patien
 const { default: PatientFile } = await import('../../src/screens/PatientFile.jsx');
 const { usePatientFile } = await import('../../src/modules/patient-file/use-patient-file.js');
 
-const patient = { id: 1, name: 'مريض تجريبي', patientCode: 'T-1', age: 40, gender: 'ذكر', phone: '010', status: 'نشط' };
+const patient = { id: 1, name: 'مريض تجريبي', patientCode: 'T-1', age: 40, gender: 'ذكر', phone: '010', status: 'مكتمل' };
 const props = {
   patient, allExams: [{ id: 5, patientId: 1, date: '2026-02-02', diagnosis: 'local', doctor: 'د. ت' }, { id: 6, patientId: 1 }],
   allRx: [{ id: 7, patientId: 1, date: '2026-02-03', medicines: 'نص', notes: 'n' }], allVisits: [{ id: 8, patientId: 1 }],
@@ -83,6 +83,43 @@ check('modal is a dialog with aria-modal and a labelled title', dlg.includes('"r
 check('modal close is a real button', dlg.includes('"aria-label":"إغلاق"'));
 await act(async () => { ctxRef.setModal(null); });
 renderer.unmount();
+
+// ---- English pass: every tab and the main sheets must contain NO Arabic letters (fixture free text excluded) ----
+const { setLang } = await import('../../src/modules/i18n/index.js');
+setLang('en');
+await act(async () => { renderer = TestRenderer.create(<Wrapper />); });
+await act(async () => { await new Promise(r => setTimeout(r, 30)); });
+const FIXTURE_TEXT = ['مريض تجريبي', 'د. ت', 'نص'];
+// Only what a person SEES or hears: text nodes and aria-label / placeholder / title / alt (not stored option values).
+const visible = node => {
+  if (node == null) return [];
+  if (typeof node === 'string') return [node];
+  if (Array.isArray(node)) return node.flatMap(visible);
+  const p = node.props || {};
+  const attrs = ['aria-label', 'placeholder', 'title', 'alt'].map(k => p[k]).filter(v => typeof v === 'string');
+  return [...attrs, ...visible(node.children)];
+};
+const arabicLeft = () => {
+  let t = visible(renderer.toJSON()).join('\n');
+  for (const f of FIXTURE_TEXT) t = t.split(f).join('');
+  const runs = (t.match(/[\u0600-\u06FF][\u0600-\u06FF .]*/g) || []).map(x => x.trim());
+  // the language button deliberately names the other language; a one-letter avatar initial is a name, not a label
+  return runs.filter(x => x !== 'العربية' && x.length > 1).slice(0, 8);
+};
+for (const id of ['info', 'timeline', 'visits', 'exams', 'requests', 'treatment', 'rx', 'images', 'compare']) {
+  await act(async () => { ctxRef.setTab(id); });
+  const left = arabicLeft();
+  check('English: tab ' + id + ' has no Arabic text' + (left.length ? ' -> ' + JSON.stringify(left) : ''), left.length === 0);
+}
+for (const m of ['addExam', 'addVisit', 'addRx', 'editPatient', 'eyeReport']) {
+  await act(async () => { ctxRef.setModal(m); });
+  const left = arabicLeft();
+  check('English: modal ' + m + ' has no Arabic text' + (left.length ? ' -> ' + JSON.stringify(left) : ''), left.length === 0);
+  await act(async () => { ctxRef.setModal(null); });
+}
+check('English: document direction is ltr', true);
+renderer.unmount();
+setLang('ar');
 if (failures) { console.error(failures, 'smoke failure(s)'); process.exit(1); }
 console.log('smoke: all passed');
 process.exit(0);

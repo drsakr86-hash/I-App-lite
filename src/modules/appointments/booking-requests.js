@@ -14,15 +14,17 @@
 //  * the status update is guarded with `status = pending`, so a request already
 //    handled elsewhere is reported instead of silently overwritten.
 
+import { t } from '../i18n/index.js';
 import { buildAcceptedAppointment, acceptAptMutation, mutateErrorMessage, isActiveApt, REQUEST_DOCTOR } from '../secretary-app/model.js';
 
+// Getters: each read returns the message in the CURRENT language.
 export const BOOKING_MESSAGES = {
-  accepted: 'تم قبول الطلب وإضافته إلى المواعيد',
-  acceptedUnmarked: 'تم إنشاء الموعد، لكن تعذر تحديث حالة الطلب. أعد المحاولة ولن يتكرر الموعد.',
-  alreadyHandled: 'تمت معالجة هذا الطلب من جهاز آخر',
-  rejected: 'تم رفض الطلب',
-  rejectFailed: 'لم يتم رفض الطلب، تحقق من الاتصال وحاول مرة أخرى',
-  loadFailed: 'تعذر تحميل طلبات الحجز'
+  get accepted() { return t('g5.req.accepted'); },
+  get acceptedUnmarked() { return t('g5.req.acceptedUnmarked'); },
+  get alreadyHandled() { return t('g5.req.alreadyHandled'); },
+  get rejected() { return t('g5.req.rejected'); },
+  get rejectFailed() { return t('g5.req.rejectFailed'); },
+  get loadFailed() { return t('g5.req.loadFailed'); }
 };
 
 const errText = e => (e && (e.message || e.hint || e.details)) || String(e || 'error');

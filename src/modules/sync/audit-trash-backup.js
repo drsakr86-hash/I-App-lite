@@ -20,6 +20,7 @@
 
 import { AUDIT_KEY, TRASH_KEY, BACKUP_KEY, AUDIT_MAX, TRASH_MAX, TRASH_DAYS, BACKUP_KEEP, BACKUP_KEYS } from './engine.js';
 import { sbGet, sbMutate } from './wiring.js';
+import { t } from '../i18n/index.js';
 
 // Local copy of the legacy runtime's newId -- a tiny pure id generator used
 // all over app-runtime.js (including by code well outside this batch's
@@ -112,7 +113,7 @@ export async function saveAutoBackup(reason) {
     id: newId(),
     at: Date.now(),
     by: actor.name,
-    reason: reason || 'تلقائي',
+    reason: reason || t('g4.backup.auto', 'ar'),
     size,
     data
   };

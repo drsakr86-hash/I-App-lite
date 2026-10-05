@@ -2,6 +2,7 @@ import React from 'react';
 import { C } from '../../modules/theme/index.js';
 import { describeChange } from '../../modules/patient-file/longitudinal.js';
 import { describeChangeLang } from '../../modules/patient-file/eye-report.js';
+import { tv } from '../../modules/i18n/tv.js';
 import { t, useLang } from '../../modules/i18n/index.js';
 import { translateTerm } from '../../modules/i18n/medical-terms.js';
 
@@ -79,20 +80,20 @@ export default function InfoSummary({ ctx }) {
       )}
 
       <div className="cs-grid">
-        <Cell label={t('sum.lastVisit', lang)}>{s.lastVisit ? <>{s.lastVisit.date}{s.lastVisit.type ? <span className="ds-sub"> · {s.lastVisit.type}</span> : null}</> : <Missing />}</Cell>
+        <Cell label={t('sum.lastVisit', lang)}>{s.lastVisit ? <>{s.lastVisit.date}{s.lastVisit.type ? <span className="ds-sub"> · {tv(s.lastVisit.type)}</span> : null}</> : <Missing />}</Cell>
         <Cell label={t('sum.lastExam', lang)}>{s.latestExamDate || <Missing />}</Cell>
         <Cell label={t('sum.nextVisit', lang)}>
           {fu ? (
             <>
               <span style={{ color: fu.overdue ? C.danger : C.text }}>{fu.date}</span>
               <span className="ds-sub" style={{ display: 'block' }}>
-                {fu.overdue ? t('sum.overdue', lang) : fu.daysUntil === 0 ? t('sum.today', lang) : t('sum.inDays', lang).replace('{n}', fu.daysUntil)}{fu.reason ? ' · ' + fu.reason : ''}
+                {fu.overdue ? t('sum.overdue', lang) : fu.daysUntil === 0 ? t('sum.today', lang) : t('sum.inDays', lang).replace('{n}', fu.daysUntil)}{fu.reason ? ' · ' + tv(fu.reason) : ''}
               </span>
             </>
           ) : <Missing />}
         </Cell>
         <Cell label={t('sum.pending', lang)}>
-          {s.pending.length ? <>{s.pending.length}<span className="ds-sub" style={{ display: 'block' }}>{s.pending.slice(0, 2).map(p => p.tests.join('، ')).join(' · ')}</span></> : <span className="cs-missing">{t('common.none', lang)}</span>}
+          {s.pending.length ? <>{s.pending.length}<span className="ds-sub" style={{ display: 'block' }}>{s.pending.slice(0, 2).map(p => p.tests.map(x => tv(x)).join(lang === 'en' ? ', ' : '، ')).join(' · ')}</span></> : <span className="cs-missing">{t('common.none', lang)}</span>}
         </Cell>
 
         <Cell label={t('sum.dx', lang)} wide>{hasDx ? (
@@ -114,10 +115,10 @@ export default function InfoSummary({ ctx }) {
         <Cell label={t('sum.treatment', lang)} wide>
           {trt ? (
             <>
-              {trt.plan && <div dir="auto">{trt.plan.text}<span className="ds-sub"> · {t('sum.planWord', lang)} {trt.plan.date}</span></div>}
+              {trt.plan && <div dir="auto">{tv(trt.plan.text)}<span className="ds-sub"> · {t('sum.planWord', lang)} {trt.plan.date}</span></div>}
               {injLines.map(l => <div key={l} dir="auto" className="ds-sub" style={{ fontSize: 12 }}>{l}</div>)}
-              {trt.rx && <div dir="auto" className="ds-sub" style={{ fontSize: 12 }}>{t('sum.lastRx', lang)} {trt.rx.date}: {trt.rx.text}</div>}
-              {!trt.plan && !injLines.length && !trt.rx && trt.core && <div dir="auto">{trt.core.text}</div>}
+              {trt.rx && <div dir="auto" className="ds-sub" style={{ fontSize: 12 }}>{t('sum.lastRx', lang)} {trt.rx.date}: {tv(trt.rx.text)}</div>}
+              {!trt.plan && !injLines.length && !trt.rx && trt.core && <div dir="auto">{tv(trt.core.text)}</div>}
             </>
           ) : <Missing />}
         </Cell>

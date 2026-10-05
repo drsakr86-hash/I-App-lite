@@ -6,6 +6,7 @@
 // object so a theme change is reflected immediately, same as the legacy
 // originals.
 import { C } from '../theme/index.js';
+import { getLang, dirOf } from '../i18n/index.js';
 
 // Status label -> color, used to tint a patient's status text.
 export const SC = {
@@ -25,7 +26,7 @@ export const inp = (ex = {}) => ({
   fontSize: 13,
   outline: 'none',
   boxSizing: 'border-box',
-  direction: 'rtl',
+  direction: dirOf(getLang()),
   fontFamily: 'inherit',
   ...ex
 });

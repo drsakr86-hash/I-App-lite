@@ -1,5 +1,7 @@
 // Pure helpers for the appointments list screen.
 
+import { t } from '../i18n/index.js';
+
 export const ALL_DOCTORS = 'الكل';
 
 export const isDone = a => a && a.waitStatus === 'done';
@@ -19,6 +21,6 @@ export function findPatientForApt(patients, a) {
 // Egyptian mobile numbers: drop the leading 0 and prefix the country digit.
 export function whatsappReminderUrl(a, clinicName) {
   if (!a || !a.phone) return null;
-  const text = 'تذكير بموعدك في ' + clinicName + ' يوم ' + (a.date || '') + ' الساعة ' + a.time;
+  const text = t('g5.apt.waText', { clinic: clinicName, date: a.date || '', time: a.time });
   return 'https://wa.me/2' + String(a.phone).replace(/^0/, '') + '?text=' + encodeURIComponent(text);
 }

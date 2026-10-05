@@ -130,17 +130,20 @@ function daysBetween(a, b) {
   return n(b) - n(a);
 }
 
+import { t } from '../i18n/index.js';
+
+// Labels resolve at read time so they follow the current language.
 export const GAP_LABEL = Object.freeze({
-  'no-reason': 'سبب الطلب غير مسجل',
-  'no-orderer': 'الطبيب الطالب غير مسجل',
-  'no-visit': 'غير مرتبط بزيارة',
-  'visit-not-in-file': 'الزيارة المرتبطة غير ظاهرة في الملف',
-  'no-images': 'لا توجد صور مرتبطة بالطلب',
-  'no-report': 'لا يوجد تقرير أو نتيجة مسجلة',
-  'core-sync-pending': 'لم يُزامَن مع السجل المركزي بعد'
+  get 'no-reason'() { return t('g1.gap.noReason'); },
+  get 'no-orderer'() { return t('g1.gap.noOrderer'); },
+  get 'no-visit'() { return t('g1.gap.noVisit'); },
+  get 'visit-not-in-file'() { return t('g1.gap.visitNotInFile'); },
+  get 'no-images'() { return t('g1.gap.noImages'); },
+  get 'no-report'() { return t('g1.gap.noReport'); },
+  get 'core-sync-pending'() { return t('g1.gap.coreSyncPending'); }
 });
 
 export const BASIS_LABEL = Object.freeze({
-  'legacy-order': 'رقم طلب التصوير المحلي',
-  'core-investigation-order': 'رقم الطلب في السجل المركزي'
+  get 'legacy-order'() { return t('g1.basis.legacy'); },
+  get 'core-investigation-order'() { return t('g1.basis.core'); }
 });

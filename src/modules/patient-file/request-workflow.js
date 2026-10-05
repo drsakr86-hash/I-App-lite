@@ -11,14 +11,16 @@
 //    never "saved" when a required step failed;
 //  * no automatic retry of any write.
 
+import { t } from '../i18n/index.js';
+
 const errText = e => (e && (e.message || e.hint || e.details)) || String(e || 'error');
 
 export const REQUEST_MESSAGES = {
-  saved: 'تم حفظ طلب الفحوصات وربطه بملف المريض',
-  'local-only': 'حُفظ الطلب في الملف على هذا الجهاز فقط، ولم يُسجَّل بعد في السجل المركزي. يمكنك إعادة المزامنة من قائمة الطلبات.',
-  partial: 'حُفظ جزء من الطلب فقط. راجع قائمة الطلبات وأعد المحاولة لإكمال الباقي.',
-  failed: 'لم يُحفظ الطلب. لم يتغير شيء في الملف، يمكنك المحاولة مرة أخرى.',
-  invalid: 'اختر فحصاً واحداً على الأقل'
+  get saved() { return t('g1.req.saved'); },
+  get 'local-only'() { return t('g1.req.localOnly'); },
+  get partial() { return t('g1.req.partial'); },
+  get failed() { return t('g1.req.failed'); },
+  get invalid() { return t('g1.req.invalid'); }
 };
 
 export function buildRequestRecords({ patient, tests, notes, doctorName, draftId, date, time, now }) {
@@ -138,7 +140,7 @@ export async function submitInvestigationRequest(deps, input) {
 export async function resyncInvestigationRequest(deps, rec, patient) {
   if (!rec || rec.coreInvestigationOrderId) return { status: 'noop', steps: [] };
   const sb = deps.client();
-  if (!sb || deps.offline()) return { status: 'offline', message: 'لا يوجد اتصال الآن، حاول لاحقاً', steps: [] };
+  if (!sb || deps.offline()) return { status: 'offline', message: t('g1.req.offline'), steps: [] };
   const steps = [];
   try {
     let visitId = rec.coreVisitId || null;
@@ -163,6 +165,6 @@ export async function resyncInvestigationRequest(deps, rec, patient) {
     return { status: 'synced', steps, patch };
   } catch (e) {
     steps.push({ name: 'core', ok: false, error: errText(e) });
-    return { status: 'failed', message: 'تعذرت المزامنة: ' + errText(e), steps };
+    return { status: 'failed', message: t('g1.req.syncFailed') + ': ' + errText(e), steps };
   }
 }

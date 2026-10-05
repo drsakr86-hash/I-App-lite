@@ -3,19 +3,22 @@ import { Btn } from '../../components/common.jsx';
 import { C } from '../../modules/theme/index.js';
 import { Tag } from '../../modules/ui/atoms.jsx';
 import InjectionsSection from '../../components/InjectionsSection.jsx';
+import { t, useLang } from '../../modules/i18n/index.js';
+import { tv } from '../../modules/i18n/tv.js';
 
 // Patient file — "visits" tab. Presentational port of the legacy PatientFile JSX;
 // all state and handlers come from the legacy function through ctx.
 export default function VisitsTab({ ctx }) {
   const { patient, setDelTarget, setModal, totalSpent, visits } = ctx;
+  const lang = useLang();
   return (
     <div>
       <InjectionsSection patient={patient}/>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-        <span style={{ color: C.text, fontWeight: 700, fontSize: 14 }}>سجل الزيارات ({visits.length})</span>
-        <Btn small onClick={() => setModal("addVisit")}>+ زيارة جديدة</Btn>
+        <span style={{ color: C.text, fontWeight: 700, fontSize: 14 }}>{t("g1.visits.title", lang)} ({visits.length})</span>
+        <Btn small onClick={() => setModal("addVisit")}>+ {t("g1.pf.newVisit", lang)}</Btn>
       </div>
-      {visits.length === 0 && (<div style={{ color: C.muted, textAlign: "center", padding: 40, fontSize: 13 }}>لا توجد زيارات مسجلة بعد</div>)}
+      {visits.length === 0 && (<div style={{ color: C.muted, textAlign: "center", padding: 40, fontSize: 13 }}>{t("g1.visits.none", lang)}</div>)}
       {visits.map(v => (
         <div
           key={v.id}
@@ -25,16 +28,16 @@ export default function VisitsTab({ ctx }) {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
             <div>
               <div style={{ color: C.accent, fontWeight: 700, fontSize: 13 }}>{v.date}</div>
-              <div style={{ color: C.muted, fontSize: 11 }}>{v.doctor}{" · "}{v.type}</div>
+              <div style={{ color: C.muted, fontSize: 11 }}>{tv(v.doctor)}{" · "}{tv(v.type)}</div>
             </div>
             <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-              <Tag label={v.paid ? "مدفوع" : "غير مدفوع"} color={v.paid ? C.success : C.danger}/>
+              <Tag label={v.paid ? t("g1.visits.paid", lang) : t("g1.visits.unpaid", lang)} color={v.paid ? C.success : C.danger}/>
             </div>
           </div>
           {v.complaint && (
             <div style={{ background: C.bg, borderRadius: 10, padding: 10, marginBottom: 8 }}>
-              <div style={{ color: C.muted, fontSize: 10, marginBottom: 3 }}>الشكوى</div>
-              <div style={{ color: C.text, fontSize: 12 }}>{v.complaint}</div>
+              <div style={{ color: C.muted, fontSize: 10, marginBottom: 3 }}>{t("g1.visits.complaint", lang)}</div>
+              <div style={{ color: C.text, fontSize: 12 }}>{tv(v.complaint)}</div>
             </div>
           )}
           {v.result && (
@@ -47,7 +50,7 @@ export default function VisitsTab({ ctx }) {
                 marginBottom: 8
               }}
             >
-              <div style={{ color: C.success, fontSize: 10, marginBottom: 3 }}>نتيجة الزيارة</div>
+              <div style={{ color: C.success, fontSize: 10, marginBottom: 3 }}>{t("g1.visits.result", lang)}</div>
               <div style={{ color: C.text, fontSize: 12 }}>{v.result}</div>
             </div>
           )}
@@ -56,7 +59,7 @@ export default function VisitsTab({ ctx }) {
               <span style={{ color: C.gold, fontWeight: 700, fontSize: 13 }}>
                 {"💰 "}
                 {Number(v.cost || 0).toLocaleString()}
-                {" ج.م"}
+                {" " + t("g1.unit.egp", lang)}
               </span>
               {v.nextVisit && (<span style={{ color: C.teal, fontSize: 11 }}>{"📅 "}{v.nextVisit}</span>)}
             </div>
@@ -64,6 +67,7 @@ export default function VisitsTab({ ctx }) {
               <div
                 role="button"
                 tabIndex={0}
+                aria-label={t("g1.common.edit", lang)}
                 onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.currentTarget.click(); } }}
                 onClick={() => setModal({
                   editVisit: v
@@ -82,6 +86,7 @@ export default function VisitsTab({ ctx }) {
               <div
                 role="button"
                 tabIndex={0}
+                aria-label={t("g1.common.delete", lang)}
                 onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.currentTarget.click(); } }}
                 onClick={() => setDelTarget({
                   type: "visit",
@@ -104,7 +109,7 @@ export default function VisitsTab({ ctx }) {
             <div
               style={{ color: C.muted, fontSize: 11, marginTop: 8, background: C.border, borderRadius: 8, padding: "6px 10px" }}
             >
-              {v.notes}
+              {tv(v.notes)}
             </div>
           )}
         </div>
@@ -121,8 +126,8 @@ export default function VisitsTab({ ctx }) {
             alignItems: "center"
           }}
         >
-          <span style={{ color: C.muted, fontSize: 13 }}>إجمالي المدفوع</span>
-          <span style={{ color: C.gold, fontWeight: 800, fontSize: 16 }}>{totalSpent.toLocaleString()}{" ج.م"}</span>
+          <span style={{ color: C.muted, fontSize: 13 }}>{t("g1.visits.totalPaid", lang)}</span>
+          <span style={{ color: C.gold, fontWeight: 800, fontSize: 16 }}>{totalSpent.toLocaleString()}{" " + t("g1.unit.egp", lang)}</span>
         </div>
       )}
     </div>

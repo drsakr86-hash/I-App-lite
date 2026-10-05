@@ -2,6 +2,8 @@
 // expression mirrors the legacy runtime's RxForm and its refraction option
 // lists exactly (public/legacy/app-runtime.js); legacy quirks are kept.
 
+import { t } from '../../modules/i18n/index.js';
+
 export const EYE_RIGHT = 'العين اليمنى';
 export const EYE_LEFT = 'العين اليسرى';
 export const EYE_BOTH = 'كلتا العينين';
@@ -71,7 +73,9 @@ export const initialRxState = (initial, autoPatient, today) => (initial ? { ...i
 export const initialRxStep = (autoPatient, initial) => (autoPatient && !initial ? 1 : 0);
 
 // Tab labels and the real step index each tab jumps to.
-export const rxStepLabels = autoPatient => (autoPatient ? RX_STEPS.slice(1) : RX_STEPS);
+// Step tab labels in the current language (call-time t(); the Arabic RX_STEPS stays canonical).
+const rxStepNames = () => [t('g2.rx.step.patient'), t('g2.rx.step.measures'), t('g2.rx.step.meds')];
+export const rxStepLabels = autoPatient => (autoPatient ? rxStepNames().slice(1) : rxStepNames());
 export const rxRealStep = (autoPatient, i) => (autoPatient ? i + 1 : i);
 
 export const needsRight = eye => eye === EYE_RIGHT || eye === EYE_BOTH;
@@ -101,7 +105,7 @@ export const axisStarShown = cyl => cyl && cyl !== '0.00';
 export const clearsAxisError = cyl => cyl === '0.00';
 
 // Which eye the red banner names.
-export const axisBannerEye = errors => (errors.axisR && errors.axisL ? 'كلتيهما' : errors.axisR ? 'اليمنى' : 'اليسرى');
+export const axisBannerEye = errors => (errors.axisR && errors.axisL ? t('g2.rx.both') : errors.axisR ? t('g2.rx.eyeR') : t('g2.rx.eyeL'));
 
 // Refraction cards: [label, side, needed].
-export const refractionSides = eye => [['اليمنى', 'R', needsRight(eye)], ['اليسرى', 'L', needsLeft(eye)]];
+export const refractionSides = eye => [[t('g2.rx.eyeR'), 'R', needsRight(eye)], [t('g2.rx.eyeL'), 'L', needsLeft(eye)]];

@@ -14,6 +14,7 @@ import ImageViewer from './patient-file/ImageViewer.jsx';
 import StatusBar from './patient-file/StatusBar.jsx';
 import EyeReportModal from './patient-file/EyeReportModal.jsx';
 import { t, useLang, dirOf } from '../modules/i18n/index.js';
+import { tv } from '../modules/i18n/tv.js';
 import { LangToggle } from '../components/common.jsx';
 import { Modal, Confirm } from '../components/common.jsx';
 import { PatientEditForm, RxForm, VisitForm, ExamForm } from '../components/forms/index.js';
@@ -89,11 +90,11 @@ export default function PatientFile({ ctx }) {
             <h1 style={{ color: C.text, fontWeight: 700, fontSize: 17, margin: 0 }}>{curPatient.name}</h1>
             <div style={{ color: C.muted, fontSize: 12, marginTop: 2 }}>
               <span className="ds-badge ds-badge--info" style={{ marginInlineEnd: 8 }}>{curPatient.patientCode || t("common.notRecorded", lang)}</span>
-              {ageLabel(curPatient.age)}{" · "}{curPatient.gender || t("common.notRecorded", lang)}{curPatient.phone ? " · " + curPatient.phone : ""}
+              {ageLabel(curPatient.age)}{" · "}{tv(curPatient.gender) || t("common.notRecorded", lang)}{curPatient.phone ? " · " + curPatient.phone : ""}
             </div>
           </div>
           <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
-            <Tag label={curPatient.status} color={SC[curPatient.status] || C.muted}/>
+            <Tag label={tv(curPatient.status)} color={SC[curPatient.status] || C.muted}/>
             <LangToggle />
             <button type="button" className="ds-btn" onClick={() => setModal("eyeReport")}>📄 {t("report.button", lang)}</button>
             <button type="button" className="ds-btn" onClick={() => setModal("editPatient")}>✏ {t("common.editFile", lang)}</button>
@@ -144,25 +145,25 @@ export default function PatientFile({ ctx }) {
             {tab === "rx" && <RxTab ctx={ctx} />}
             {tab === "images" && <ImagesTab ctx={ctx} />}
           </main>
-          <aside className="pf-side" aria-label="ملخص جانبي">
+          <aside className="pf-side" aria-label={t("g1.pf.sideAria", lang)}>
             {tab !== "info" && summary && (
               <div className="ds-card" style={{ marginBottom: 12 }}>
-                <h2 className="ds-h">الحالة الآن</h2>
-                <div className="ds-sub">التشخيص</div>
-                <div style={{ color: C.text, fontSize: 13, marginBottom: 6 }} dir="auto">{summary.diagnosis.primary ? summary.diagnosis.primary.text : "غير مسجل"}</div>
-                <div className="ds-sub">الموعد القادم</div>
-                <div style={{ color: C.text, fontSize: 13 }}>{summary.followUp ? summary.followUp.date + (summary.followUp.overdue ? " (متأخر)" : "") : "غير مسجل"}</div>
-                {summary.alerts.length > 0 && <div className="ds-alert ds-alert--warn" style={{ marginTop: 8 }}>{summary.alerts.length} تنبيه — راجع الملخص</div>}
+                <h2 className="ds-h">{t("g1.pf.statusNow", lang)}</h2>
+                <div className="ds-sub">{t("g1.pf.diagnosis", lang)}</div>
+                <div style={{ color: C.text, fontSize: 13, marginBottom: 6 }} dir="auto">{summary.diagnosis.primary ? tv(summary.diagnosis.primary.text) : t("common.notRecorded", lang)}</div>
+                <div className="ds-sub">{t("sum.nextVisit", lang)}</div>
+                <div style={{ color: C.text, fontSize: 13 }}>{summary.followUp ? summary.followUp.date + (summary.followUp.overdue ? " (" + t("sum.overdue", lang) + ")" : "") : t("common.notRecorded", lang)}</div>
+                {summary.alerts.length > 0 && <div className="ds-alert ds-alert--warn" style={{ marginTop: 8 }}>{t("g1.pf.alertsReview", lang, { n: summary.alerts.length })}</div>}
               </div>
             )}
             <div className="ds-card">
-              <h2 className="ds-h">آخر الأحداث</h2>
-              {recent.length === 0 ? <div className="ds-sub">لا توجد أحداث مسجلة</div> : (
+              <h2 className="ds-h">{t("g1.pf.recentEvents", lang)}</h2>
+              {recent.length === 0 ? <div className="ds-sub">{t("g1.pf.noEvents", lang)}</div> : (
                 <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 8 }}>
                   {recent.map(e => (
                     <li key={e.key} style={{ fontSize: 12, color: C.text }}>
-                      <span aria-hidden="true">{e.icon} </span>{e.title}
-                      <div className="ds-sub">{e.date || "بدون تاريخ"}</div>
+                      <span aria-hidden="true">{e.icon} </span>{tv(e.title)}
+                      <div className="ds-sub">{e.date || t("g1.cs.noDate", lang)}</div>
                     </li>
                   ))}
                 </ul>
@@ -174,12 +175,12 @@ export default function PatientFile({ ctx }) {
       {viewImg && <ImageViewer ctx={ctx} />}
       {modal === "eyeReport" && <EyeReportModal ctx={ctx} onClose={() => setModal(null)} />}
       {modal === "editPatient" && (
-        <Modal title="تعديل الملف الطبي" onClose={() => setModal(null)}><Dirty onDirty={ctx.markModalDirty}>
+        <Modal title={t("g1.pf.editFileTitle", lang)} onClose={() => setModal(null)}><Dirty onDirty={ctx.markModalDirty}>
           <PatientEditForm patient={curPatient} onSave={handlePatientSave} onClose={() => setModal(null)}/>
         </Dirty></Modal>
       )}
       {modal === "addRx" && (
-        <Modal title="وصفة جديدة" onClose={() => setModal(null)}><Dirty onDirty={ctx.markModalDirty}>
+        <Modal title={t("g1.pf.newRx", lang)} onClose={() => setModal(null)}><Dirty onDirty={ctx.markModalDirty}>
           <RxForm
             patients={[curPatient]}
             doctorNames={doctorNames}
@@ -189,7 +190,7 @@ export default function PatientFile({ ctx }) {
         </Dirty></Modal>
       )}
       {modal && modal.editRx && (
-        <Modal title="تعديل الوصفة" onClose={() => setModal(null)}><Dirty onDirty={ctx.markModalDirty}>
+        <Modal title={t("g1.pf.editRx", lang)} onClose={() => setModal(null)}><Dirty onDirty={ctx.markModalDirty}>
           <RxForm
             patients={[curPatient]}
             doctorNames={doctorNames}
@@ -200,7 +201,7 @@ export default function PatientFile({ ctx }) {
         </Dirty></Modal>
       )}
       {modal === "addVisit" && (
-        <Modal title="زيارة جديدة" onClose={() => setModal(null)}><Dirty onDirty={ctx.markModalDirty}>
+        <Modal title={t("g1.pf.newVisit", lang)} onClose={() => setModal(null)}><Dirty onDirty={ctx.markModalDirty}>
           <VisitForm
             doctorNames={doctorNames}
             prices={prices}
@@ -214,7 +215,7 @@ export default function PatientFile({ ctx }) {
         </Dirty></Modal>
       )}
       {modal && modal.editVisit && (
-        <Modal title="تعديل الزيارة" onClose={() => setModal(null)}><Dirty onDirty={ctx.markModalDirty}>
+        <Modal title={t("g1.pf.editVisit", lang)} onClose={() => setModal(null)}><Dirty onDirty={ctx.markModalDirty}>
           <VisitForm
             doctorNames={doctorNames}
             prices={prices}
@@ -229,7 +230,7 @@ export default function PatientFile({ ctx }) {
         </Dirty></Modal>
       )}
       {modal === "addExam" && (
-        <Modal title="فحص جديد" onClose={() => setModal(null)}><Dirty onDirty={ctx.markModalDirty}>
+        <Modal title={t("g1.pf.newExam", lang)} onClose={() => setModal(null)}><Dirty onDirty={ctx.markModalDirty}>
           <ExamForm
             doctorNames={doctorNames}
             patientId={curPatient.id}
@@ -242,7 +243,7 @@ export default function PatientFile({ ctx }) {
         </Dirty></Modal>
       )}
       {modal && modal.editExam && (
-        <Modal title="تعديل الفحص" onClose={() => setModal(null)}><Dirty onDirty={ctx.markModalDirty}>
+        <Modal title={t("g1.pf.editExam", lang)} onClose={() => setModal(null)}><Dirty onDirty={ctx.markModalDirty}>
           <ExamForm
             doctorNames={doctorNames}
             initial={modal.editExam}
@@ -266,7 +267,7 @@ export default function PatientFile({ ctx }) {
       )}
       {delTarget && (
         <Confirm
-          msg={`هل تريد حذف هذا ${delTarget.type === "visit" ? "السجل" : "الفحص"} نهائياً؟`}
+          msg={t(delTarget.type === "visit" ? "g1.pf.delRecord" : "g1.pf.delExam", lang)}
           onOk={onConfirmDelete}
           onNo={() => setDelTarget(null)}
         />

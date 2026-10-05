@@ -7,6 +7,10 @@ import { clinicLabel } from '../modules/constants/index.js';
 import { sbGet } from '../modules/sync/wiring.js';
 import { trashPut, logAudit } from '../modules/sync/index.js';
 import PendingRequests from './appointments/PendingRequests.jsx';
+import { t, useLang } from '../modules/i18n/index.js';
+import { tv } from '../modules/i18n/tv.js';
+
+const clinicName = c => tv(clinicLabel(c));
 
 const iconBox = (C, bg, extra = {}) => ({
   width: 32, height: 32, borderRadius: 10, background: bg,
@@ -15,6 +19,7 @@ const iconBox = (C, bg, extra = {}) => ({
 });
 
 export default function Appointments({ appointments, setAppointments, doctorNames = [], patients = [], onPatientClick, session }) {
+  const lang = useLang();
   const [filter, setFilter] = useState(ALL_DOCTORS);
   const [showDone, setShowDone] = useState(false);
   const [modal, setModal] = useState(null);
@@ -45,15 +50,15 @@ export default function Appointments({ appointments, setAppointments, doctorName
       <PendingRequests />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <span style={{ color: C.text, fontWeight: 700, fontSize: 16 }}>
-          المواعيد ({visible.length})
+          {t('g5.apt.title', lang, { n: visible.length })}
           {doneCount > 0 && (
             <span onClick={() => setShowDone(v => !v)}
-              style={{ marginRight: 10, color: C.muted, fontSize: 11, fontWeight: 600, cursor: 'pointer', textDecoration: 'underline' }}>
-              {showDone ? 'إخفاء المنتهية' : 'عرض المنتهية (' + doneCount + ')'}
+              style={{ marginInlineStart: 10, color: C.muted, fontSize: 11, fontWeight: 600, cursor: 'pointer', textDecoration: 'underline' }}>
+              {showDone ? t('g5.apt.hideDone', lang) : t('g5.apt.showDone', lang, { n: doneCount })}
             </span>
           )}
         </span>
-        <Btn small onClick={() => setModal('add')}>+ موعد جديد</Btn>
+        <Btn small onClick={() => setModal('add')}>{t('g5.apt.new', lang)}</Btn>
       </div>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, overflowX: 'auto', paddingBottom: 4 }}>
@@ -63,12 +68,12 @@ export default function Appointments({ appointments, setAppointments, doctorName
             border: `1px solid ${filter === d ? 'transparent' : C.border}`,
             borderRadius: 20, padding: '6px 14px', color: filter === d ? C.bg : C.muted,
             fontSize: 11, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'inherit'
-          }}>{d}</button>
+          }}>{d === ALL_DOCTORS ? t('g5.common.all', lang) : tv(d)}</button>
         ))}
       </div>
 
       {filtered.map(a => {
-        const wa = whatsappReminderUrl(a, clinicLabel(a.clinic));
+        const wa = whatsappReminderUrl(a, clinicName(a.clinic));
         return (
           <div key={a.id} style={{
             background: C.card, border: `1px solid ${a.fromPatient ? C.gold : C.border}`, borderRadius: 14,
@@ -83,30 +88,30 @@ export default function Appointments({ appointments, setAppointments, doctorName
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <div onClick={() => onPatientClick && onPatientClick(a.patient, findPatientForApt(patients, a))}
                   style={{ color: C.accent, fontWeight: 600, fontSize: 13, cursor: 'pointer', textDecoration: 'underline' }}>{a.patient}</div>
-                {a.fromPatient && <span style={{ background: C.gold + '22', color: C.gold, borderRadius: 6, padding: '1px 6px', fontSize: 9, fontWeight: 700 }}>طلب المريض</span>}
+                {a.fromPatient && <span style={{ background: C.gold + '22', color: C.gold, borderRadius: 6, padding: '1px 6px', fontSize: 9, fontWeight: 700 }}>{t('g5.apt.patientRequest', lang)}</span>}
               </div>
-              <div style={{ color: C.muted, fontSize: 11, marginTop: 2 }}>{a.type}</div>
+              <div style={{ color: C.muted, fontSize: 11, marginTop: 2 }}>{tv(a.type)}</div>
               {a.phone && <div style={{ color: C.accent, fontSize: 11, marginTop: 2 }}>📞 {a.phone}</div>}
               <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
-                <span style={{ background: C.border, borderRadius: 6, padding: '2px 8px', color: C.muted, fontSize: 10 }}>{a.doctor}</span>
-                <span style={{ background: C.teal + '22', borderRadius: 6, padding: '2px 8px', color: C.teal, fontSize: 10 }}>📍 {clinicLabel(a.clinic)}</span>
+                <span style={{ background: C.border, borderRadius: 6, padding: '2px 8px', color: C.muted, fontSize: 10 }}>{tv(a.doctor)}</span>
+                <span style={{ background: C.teal + '22', borderRadius: 6, padding: '2px 8px', color: C.teal, fontSize: 10 }}>📍 {clinicName(a.clinic)}</span>
               </div>
             </div>
             <div style={{ display: 'flex', gap: 6 }}>
-              <div onClick={() => toggleConfirm(a.id)}
+              <div role="button" title={t('g5.apt.confirmToggle', lang)} aria-label={t('g5.apt.confirmToggle', lang)} onClick={() => toggleConfirm(a.id)}
                 style={iconBox(C, a.confirmed ? C.success + '33' : C.card, { border: `1px solid ${a.confirmed ? C.success : C.border}` })}>
                 <span style={{ fontSize: 14, lineHeight: 1, color: a.confirmed ? C.success : C.muted }}>✓</span>
               </div>
               {wa && (
-                <a href={wa} target="_blank" rel="noreferrer" style={iconBox(C, '#25D36622', { textDecoration: 'none' })}>
+                <a href={wa} target="_blank" rel="noreferrer" title={t('g5.apt.whatsapp', lang)} aria-label={t('g5.apt.whatsapp', lang)} style={iconBox(C, '#25D36622', { textDecoration: 'none' })}>
                   <span style={{ fontSize: 14, lineHeight: 1 }}>📅</span>
                 </a>
               )}
-              <div onClick={() => setModal({ edit: a })} style={iconBox(C, C.accent + '22')}>
+              <div role="button" title={t('g5.apt.edit', lang)} aria-label={t('g5.apt.edit', lang)} onClick={() => setModal({ edit: a })} style={iconBox(C, C.accent + '22')}>
                 <span style={{ fontSize: 14, lineHeight: 1 }}>✏</span>
               </div>
               {session && session.role === 'admin' && (
-                <div onClick={() => setModal({ del: a.id })} style={iconBox(C, C.danger + '22')}>
+                <div role="button" title={t('g5.apt.delete', lang)} aria-label={t('g5.apt.delete', lang)} onClick={() => setModal({ del: a.id })} style={iconBox(C, C.danger + '22')}>
                   <span style={{ fontSize: 13, lineHeight: 1, color: C.danger }}>🗑</span>
                 </div>
               )}
@@ -115,20 +120,20 @@ export default function Appointments({ appointments, setAppointments, doctorName
         );
       })}
 
-      {filtered.length === 0 && <div style={{ color: C.muted, textAlign: 'center', padding: 30, fontSize: 13 }}>لا توجد مواعيد</div>}
+      {filtered.length === 0 && <div style={{ color: C.muted, textAlign: 'center', padding: 30, fontSize: 13 }}>{t('g5.apt.none', lang)}</div>}
 
       {modal === 'add' && (
-        <Modal title="موعد جديد" onClose={() => setModal(null)}>
+        <Modal title={t('g5.apt.modalNew', lang)} onClose={() => setModal(null)}>
           <AptForm doctorNames={doctorNames} appointments={appointments} onSave={f => { add(f); setModal(null); }} onClose={() => setModal(null)} />
         </Modal>
       )}
       {modal && modal.edit && (
-        <Modal title="تعديل الموعد" onClose={() => setModal(null)}>
+        <Modal title={t('g5.apt.modalEdit', lang)} onClose={() => setModal(null)}>
           <AptForm doctorNames={doctorNames} appointments={appointments} initial={modal.edit} onSave={f => { edit(f); setModal(null); }} onClose={() => setModal(null)} />
         </Modal>
       )}
       {modal && modal.del && (
-        <Confirm msg="حذف هذا الموعد؟" onOk={() => { del(modal.del); setModal(null); }} onNo={() => setModal(null)} />
+        <Confirm msg={t('g5.apt.deleteConfirm', lang)} onOk={() => { del(modal.del); setModal(null); }} onNo={() => setModal(null)} />
       )}
     </div>
   );

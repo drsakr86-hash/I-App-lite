@@ -1,3 +1,4 @@
+import { tv } from '../../modules/i18n/tv.js';
 import React, { useState, useMemo } from 'react';
 import { C } from '../../modules/theme/index.js';
 import { Modal } from '../../components/common.jsx';
@@ -31,7 +32,7 @@ export default function EyeReportModal({ ctx, onClose }) {
       printDoc(renderEyeReport(model, langs === 'both' ? ['ar', 'en'] : [langs]));
       setError('');
     } catch (e) {
-      setError(lang === 'en' ? 'Could not build the report.' : 'تعذّر إنشاء التقرير.');
+      setError(t('g1.report.buildFail', lang));
     }
   };
   const sel = { width: '100%', minHeight: 44, padding: '0 10px', borderRadius: 8, border: '1px solid ' + C.border, background: C.card, color: C.text, fontSize: 14 };
@@ -52,7 +53,7 @@ export default function EyeReportModal({ ctx, onClose }) {
           <label style={{ display: 'grid', gap: 6, color: C.text, fontSize: 13 }}>
             {t('report.exam', lang)}
             <select value={examId} onChange={e => setExamId(e.target.value)} style={sel} aria-label={t('report.exam', lang)}>
-              {list.map(e => <option key={e.id} value={String(e.id)}>{String(e.date).slice(0, 10)}{e.doctor ? ' — ' + e.doctor : ''}</option>)}
+              {list.map(e => <option key={e.id} value={String(e.id)}>{String(e.date).slice(0, 10)}{e.doctor ? ' — ' + tv(e.doctor) : ''}</option>)}
             </select>
           </label>
         )}

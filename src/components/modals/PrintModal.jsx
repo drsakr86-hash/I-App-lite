@@ -6,6 +6,8 @@ import {
 } from './print-modal-model.js';
 import { C } from '../../modules/theme/index.js';
 import { printDoc, getGlassesHTML, getRxHTML } from '../../modules/print/index.js';
+import { t, useLang } from '../../modules/i18n/index.js';
+import { tv } from '../../modules/i18n/tv.js';
 
 // "Choose what to print" sheet for a prescription (Prescriptions list and the
 // patient file). Exact port of the legacy runtime's PrintModal
@@ -13,14 +15,15 @@ import { printDoc, getGlassesHTML, getRxHTML } from '../../modules/print/index.j
 // getGlassesHTML/getRxHTML and printed with printDoc, called with exactly
 // the legacy arguments.
 export default function PrintModal({ rx, patient, onClose, primaryDoctor, clinic }) {
+  const lang = useLang();
   const docName = printDoctorName(primaryDoctor);
   const p = printPatient(patient);
   return (
-    <Modal title="🖨️ اختر نوع الطباعة" onClose={onClose}>
+    <Modal title={t('g3.print.title', lang)} onClose={onClose}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 10, padding: 12 }}>
           <div style={{ color: C.text, fontWeight: 700, fontSize: 13, marginBottom: 4 }}>{rx.patient}</div>
-          <div style={{ color: C.muted, fontSize: 11 }}>{rx.date}{' · '}{rx.eye}</div>
+          <div style={{ color: C.muted, fontSize: 11 }}>{rx.date}{' · '}{tv(rx.eye, lang)}</div>
         </div>
         <div
           onClick={() => {
@@ -31,8 +34,8 @@ export default function PrintModal({ rx, patient, onClose, primaryDoctor, clinic
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ fontSize: 28 }}>👓</div>
             <div>
-              <div style={{ color: C.accent, fontWeight: 700, fontSize: 14 }}>كشف النظارة</div>
-              <div style={{ color: C.muted, fontSize: 11, marginTop: 2 }}>جدول Right / Left — SPH · CYL · AX · ADD · IPD</div>
+              <div style={{ color: C.accent, fontWeight: 700, fontSize: 14 }}>{t('g3.print.glasses', lang)}</div>
+              <div style={{ color: C.muted, fontSize: 11, marginTop: 2 }}>{t('g3.print.glassesSub', lang)}</div>
             </div>
           </div>
           <div style={{ marginTop: 12, background: C.bg, borderRadius: 8, padding: 10, direction: 'ltr' }}>
@@ -55,7 +58,7 @@ export default function PrintModal({ rx, patient, onClose, primaryDoctor, clinic
               ])}
             </div>
           </div>
-          <div style={{ color: C.accent, fontWeight: 700, fontSize: 12, textAlign: 'center', marginTop: 10 }}>اضغط للطباعة →</div>
+          <div style={{ color: C.accent, fontWeight: 700, fontSize: 12, textAlign: 'center', marginTop: 10 }}>{t('g3.print.tap', lang)}</div>
         </div>
         <div
           onClick={() => {
@@ -66,8 +69,8 @@ export default function PrintModal({ rx, patient, onClose, primaryDoctor, clinic
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ fontSize: 28 }}>💊</div>
             <div>
-              <div style={{ color: C.gold, fontWeight: 700, fontSize: 14 }}>روشتة الأدوية</div>
-              <div style={{ color: C.muted, fontSize: 11, marginTop: 2 }}>قائمة الأدوية والجرعات</div>
+              <div style={{ color: C.gold, fontWeight: 700, fontSize: 14 }}>{t('g3.print.rx', lang)}</div>
+              <div style={{ color: C.muted, fontSize: 11, marginTop: 2 }}>{t('g3.print.rxSub', lang)}</div>
             </div>
           </div>
           {rx.medicines && (
@@ -89,17 +92,17 @@ export default function PrintModal({ rx, patient, onClose, primaryDoctor, clinic
                       flexShrink: 0
                     }}
                   >{i + 1}</span>
-                  <span>{m}</span>
+                  <span>{tv(m, lang)}</span>
                 </div>
               ))}
               {hasMoreMedicines(rx.medicines) && (
-                <div style={{ color: C.muted, fontSize: 10 }}>{'+'}{moreMedicinesCount(rx.medicines)}{' أدوية أخرى...'}</div>
+                <div style={{ color: C.muted, fontSize: 10 }}>{t('g3.print.moreMeds', lang, { n: moreMedicinesCount(rx.medicines) })}</div>
               )}
             </div>
           )}
-          <div style={{ color: C.gold, fontWeight: 700, fontSize: 12, textAlign: 'center', marginTop: 10 }}>اضغط للطباعة →</div>
+          <div style={{ color: C.gold, fontWeight: 700, fontSize: 12, textAlign: 'center', marginTop: 10 }}>{t('g3.print.tap', lang)}</div>
         </div>
-        <Btn outline full onClick={onClose}>إغلاق</Btn>
+        <Btn outline full onClick={onClose}>{t('common.close', lang)}</Btn>
       </div>
     </Modal>
   );

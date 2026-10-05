@@ -11,8 +11,10 @@
 // printable visit summary and is ready for the portal once the backend allows it.
 
 import { buildClinicalSummary } from './clinical-summary.js';
+import { t, getLang } from '../i18n/index.js';
+import { tv } from '../i18n/tv.js';
 
-const NOT_YET = 'لم يُسجَّل بعد';
+const sepList = () => (getLang() === 'en' ? ', ' : '، ');
 const str = v => (v == null ? '' : String(v).trim());
 
 export function medicineLines(rx) {
@@ -32,28 +34,28 @@ export function buildPatientFacingSummary(input = {}) {
 
   const returnWhen = s.followUp
     ? (s.followUp.overdue
-      ? { date: s.followUp.date, text: `موعد متابعتك كان في ${s.followUp.date} — يُرجى التواصل مع العيادة لتحديد موعد جديد.` }
-      : { date: s.followUp.date, text: `موعدك القادم: ${s.followUp.date}${s.followUp.reason ? ' — ' + s.followUp.reason : ''}.` })
-    : { date: null, text: 'لم يُحدَّد موعد المتابعة بعد — اسأل الاستقبال.' };
+      ? { date: s.followUp.date, text: t('g1.pf.overdue', { date: s.followUp.date }) }
+      : { date: s.followUp.date, text: t('g1.pf.nextVisit', { date: s.followUp.date }) + (s.followUp.reason ? ' — ' + tv(s.followUp.reason) : '') + '.' })
+    : { date: null, text: t('g1.pf.noFollowUp') };
 
   const treatment = [];
   if (s.treatment && s.treatment.plan) treatment.push(s.treatment.plan.text);
   if (s.treatment) for (const eye of ['od', 'os']) {
     const inj = s.treatment.injections[eye];
-    if (inj) treatment.push(`حقن العين ${eye === 'od' ? 'اليمنى' : 'اليسرى'}: آخر حقنة ${inj.date}`);
+    if (inj) treatment.push(t(eye === 'od' ? 'g1.pf.injOd' : 'g1.pf.injOs', { date: inj.date }));
   }
 
   const tests = s.pending.map(p => ({
-    name: p.tests.join('، '),
+    name: p.tests.map(x => tv(x)).join(sepList()),
     note: p.why || '',
-    text: `مطلوب منك: ${p.tests.join('، ')}${p.date ? ' (طُلب بتاريخ ' + p.date + ')' : ''}`
+    text: t('g1.pf.required') + ': ' + p.tests.map(x => tv(x)).join(sepList()) + (p.date ? ' (' + t('g1.pf.requestedOn', { date: p.date }) + ')' : '')
   }));
 
   const nextSteps = [];
-  if (tests.length) nextSteps.push('أجرِ الفحوصات المطلوبة قبل موعدك القادم.');
-  if (meds.length) nextSteps.push('استخدم الأدوية كما هو مكتوب بالوصفة.');
-  if (returnWhen.date && !(s.followUp && s.followUp.overdue)) nextSteps.push('احضر في موعد المتابعة.');
-  if (s.followUp && s.followUp.overdue) nextSteps.push('تواصل مع العيادة لتحديد موعد متابعة.');
+  if (tests.length) nextSteps.push(t('g1.pf.stepTests'));
+  if (meds.length) nextSteps.push(t('g1.pf.stepMeds'));
+  if (returnWhen.date && !(s.followUp && s.followUp.overdue)) nextSteps.push(t('g1.pf.stepAttend'));
+  if (s.followUp && s.followUp.overdue) nextSteps.push(t('g1.pf.stepContact'));
 
   return {
     name: s.identity.name,
@@ -64,7 +66,7 @@ export function buildPatientFacingSummary(input = {}) {
     tests,
     returnWhen,
     nextSteps,
-    emergency: 'إذا ظهر ألم شديد أو نقص مفاجئ في الرؤية أو احمرار شديد، توجّه للعيادة أو الطوارئ فورًا.',
-    notRecorded: NOT_YET
+    emergency: t('g1.pf.emergency'),
+    notRecorded: t('g1.pf.notYet')
   };
 }

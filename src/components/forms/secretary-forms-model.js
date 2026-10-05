@@ -10,6 +10,8 @@
 
 // ---- SecretaryAptForm ------------------------------------------------------
 
+import { t } from '../../modules/i18n/index.js';
+
 export const SECRETARY_APT_TYPES = ['فحص روتيني', 'متابعة', 'استشارة', 'قياس نظر', 'فحص شبكية', 'عملية'];
 export const SECRETARY_DEFAULT_CLINIC = 'دمنهور';
 export const PATIENT_PICKER_PLACEHOLDER = '— اختر مريض —';
@@ -71,8 +73,8 @@ export const secretaryAptConflict = (appointments, f) =>
 // Error shown on save, or null when the form may be saved. Order: patient
 // name first, then the conflict check. (f.patient must be a string.)
 export const secretaryAptError = (f, appointments) => {
-  if (!f.patient.trim()) return SECRETARY_NAME_ERROR;
-  if (secretaryAptConflict(appointments, f)) return SECRETARY_CONFLICT_ERROR;
+  if (!f.patient.trim()) return t('g3.sec.nameError');
+  if (secretaryAptConflict(appointments, f)) return t('g3.apt.conflict');
   return null;
 };
 

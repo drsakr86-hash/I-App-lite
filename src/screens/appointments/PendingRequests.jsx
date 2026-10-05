@@ -7,12 +7,15 @@ import { getSB } from '../../modules/data-access/index.js';
 import { sbMutate } from '../../modules/sync/wiring.js';
 import { logAudit } from '../../modules/sync/index.js';
 import { requestAuditDetail } from '../../modules/secretary-app/model.js';
+import { t, useLang } from '../../modules/i18n/index.js';
+import { tv } from '../../modules/i18n/tv.js';
 
 const POLL_MS = 15000;
 
 // Admin view of pending patient booking requests. Renders nothing when there
 // are none (and the table loaded fine), so it never clutters the screen.
 export default function PendingRequests() {
+  const lang = useLang();
   const [requests, setRequests] = useState([]);
   const [loadError, setLoadError] = useState(false);
   const [busy, setBusy] = useState(null);
@@ -51,7 +54,7 @@ export default function PendingRequests() {
 
   const reject = async r => {
     if (busy) return;
-    if (!window.confirm('رفض طلب ' + r.patient_name + '؟')) return;
+    if (!window.confirm(t('g5.req.rejectConfirm', lang, { name: r.patient_name }))) return;
     setBusy(r.id); setNote('');
     const res = await rejectBookingRequest(deps, r);
     setNote(res.message);
@@ -70,11 +73,11 @@ export default function PendingRequests() {
   });
 
   return (
-    <section aria-label="طلبات الحجز المعلقة" style={{
+    <section aria-label={t('g5.req.sectionLabel', lang)} style={{
       background: C.card, border: `1px solid ${C.gold}`, borderRadius: 14, padding: 14, marginBottom: 16
     }}>
       <div style={{ color: C.gold, fontWeight: 800, fontSize: 14, marginBottom: 8 }}>
-        طلبات حجز من المرضى بانتظار الرد{requests.length ? ` (${requests.length})` : ''}
+        {t('g5.req.heading', lang)}{requests.length ? ` (${requests.length})` : ''}
       </div>
       {loadError && <div role="alert" style={{ color: C.danger || '#f87171', fontSize: 12, marginBottom: 8 }}>{BOOKING_MESSAGES.loadFailed}</div>}
       {note && <div role="status" style={{ color: C.muted, fontSize: 12, marginBottom: 8 }}>{note}</div>}
@@ -82,13 +85,13 @@ export default function PendingRequests() {
         <div key={r.id} style={{ borderTop: `1px solid ${C.border}`, padding: '10px 0' }}>
           <div style={{ color: C.text, fontWeight: 700, fontSize: 13 }}>{r.patient_name}</div>
           <div style={{ color: C.muted, fontSize: 12, marginTop: 2 }}>
-            {r.date} · {r.time} · {clinicLabel(r.clinic)}{r.visit_type ? ' · ' + r.visit_type : ''}
+            {r.date} · {r.time} · {tv(clinicLabel(r.clinic))}{r.visit_type ? ' · ' + tv(r.visit_type) : ''}
           </div>
           <div style={{ color: C.muted, fontSize: 12 }} dir="ltr">{r.phone}</div>
           {r.note && <div style={{ color: C.muted, fontSize: 12, marginTop: 2 }}>{r.note}</div>}
           <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-            <button disabled={!!busy} onClick={() => accept(r)} style={btn(C.success || '#34d399', '#06201a')}>قبول</button>
-            <button disabled={!!busy} onClick={() => reject(r)} style={btn('transparent', C.muted)}>رفض</button>
+            <button disabled={!!busy} onClick={() => accept(r)} style={btn(C.success || '#34d399', '#06201a')}>{t('g5.req.accept', lang)}</button>
+            <button disabled={!!busy} onClick={() => reject(r)} style={btn('transparent', C.muted)}>{t('g5.req.reject', lang)}</button>
           </div>
         </div>
       ))}

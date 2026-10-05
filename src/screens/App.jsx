@@ -14,6 +14,7 @@ import FollowUpCentre from "../components/FollowUpCentre.jsx";
 import GlobalSearch from "../components/GlobalSearch.jsx";
 import { Toast } from "../components/common.jsx";
 import LazyFallback from "../components/LazyFallback.jsx";
+import { t, useLang, dirOf } from "../modules/i18n/index.js";
 import Dashboard from "./Dashboard.jsx";
 import PatientsContainer from "./PatientsContainer.jsx";
 import Appointments from "./Appointments.jsx";
@@ -32,6 +33,7 @@ const Settings = lazy(() => import("./Settings.jsx"));
 // wired to PatientsContainer (src/screens/PatientsContainer.jsx), which owns
 // the search state and onOpenFile callback PatientFile needs.
 export default function App() {
+  const lang = useLang();
 
   const [session, setSession] = useState(() => {
     try {
@@ -91,7 +93,7 @@ export default function App() {
     if (ok === false) {
       refreshPending();
     } else {
-      showToast("تم الحفظ والمزامنة");
+      showToast(t("g3.app.savedSynced"));
     }
   };
   const setPatients = withSync(setRawP);
@@ -178,11 +180,11 @@ export default function App() {
   const effectiveTab = tab === "accounting" && session.role !== "admin" ? "dashboard" : tab;
   if (!pR || !aR || !rR || !eR || !vR || !dR || !prR || !ctR || !clR || !exR || !reR) {
     return (
-      <div style={{ minHeight: "100vh", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center", direction: "rtl", fontFamily: "'Segoe UI','Tahoma',Arial,sans-serif" }}>
+      <div style={{ minHeight: "100vh", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center", direction: dirOf(lang), fontFamily: "'Segoe UI','Tahoma',Arial,sans-serif" }}>
         <div style={{ textAlign: "center" }}>
           <div style={{ fontSize: 40, marginBottom: 16 }}>👁</div>
           <div style={{ color: C.accent, fontSize: 16, fontWeight: 700 }}>I App</div>
-          <div style={{ color: C.muted, fontSize: 13, marginTop: 8 }}>جاري التحميل...</div>
+          <div style={{ color: C.muted, fontSize: 13, marginTop: 8 }}>{t("common.loading", lang)}</div>
         </div>
       </div>
     );
@@ -248,7 +250,7 @@ export default function App() {
   };
   return (
     <div style={{ minHeight: "100vh", background: "#000", display: "flex", justifyContent: "center", alignItems: "flex-start" }}>
-      <div style={{ width: "100%", maxWidth: 480, minHeight: "100vh", background: C.bg, direction: "rtl", fontFamily: "'Segoe UI','Tahoma',Arial,sans-serif", position: "relative", overflowX: "hidden" }}>
+      <div style={{ width: "100%", maxWidth: 480, minHeight: "100vh", background: C.bg, direction: dirOf(lang), fontFamily: "'Segoe UI','Tahoma',Arial,sans-serif", position: "relative", overflowX: "hidden" }}>
         <TopBar primary={primary} onSearch={() => setShowSearch(true)} syncing={syncing} session={session} onLogout={handleLogout} />
         <div style={{ overflowY: "auto", maxHeight: "calc(100vh - 128px)", animation: "slideUp 0.25s ease" }}>
           <Suspense fallback={<LazyFallback />}>{screens[effectiveTab]}</Suspense>

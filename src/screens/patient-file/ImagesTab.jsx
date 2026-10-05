@@ -1,11 +1,14 @@
 import React from 'react';
 import { C } from '../../modules/theme/index.js';
 import { Field, XRAY_ICON, inp } from '../../modules/ui/atoms.jsx';
+import { t, useLang } from '../../modules/i18n/index.js';
+import { tv } from '../../modules/i18n/tv.js';
 
 // Patient file — "images" tab. Presentational port of the legacy PatientFile JSX;
 // all state and handlers come from the legacy function through ctx.
 export default function ImagesTab({ ctx }) {
   const { aiAnalysis, analyzeImage, delImage, handleImgUpload, imageEye, imageFilter, imageOrderId, imageType, images, imagingOrders, editImgNotesLocal, setImageOrderId, imgError, imgLoading, setAiAnalysis, setImageEye, setImageFilter, setImageType, setImgError, setViewImg, updateImgNotes, uploadProgress, investigationLinks } = ctx;
+  const lang = useLang();
   const chainOfImage = img => (investigationLinks ? investigationLinks.chains.find(c => c.images.some(i => i.id === img.id)) : null);
   return (
     <div>
@@ -13,24 +16,24 @@ export default function ImagesTab({ ctx }) {
         style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: 10, marginBottom: 12 }}
       >
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-          <Field label="نوع الصورة">
+          <Field label={t("g1.img.type", lang)}>
             <select style={inp()} value={imageType} onChange={e => setImageType(e.target.value)}>
               {["OCT", "OCTA", "Fundus Photography", "FFA", "Optos UWF", "Visual Field", "Pentacam", "B-Scan", "UBM", "Other"].map(x => (<option key={x}>{x}</option>))}
             </select>
           </Field>
-          <Field label="العين">
+          <Field label={t("g1.cmp.eye", lang)}>
             <select style={inp()} value={imageEye} onChange={e => setImageEye(e.target.value)}>
-              <option value="OU">OU — كلتا العينين</option>
-              <option value="OD">OD — اليمنى</option>
-              <option value="OS">OS — اليسرى</option>
+              <option value="OU">OU — {t("g1.img.both", lang)}</option>
+              <option value="OD">OD — {t("g1.img.right", lang)}</option>
+              <option value="OS">OS — {t("g1.img.left", lang)}</option>
             </select>
           </Field>
         </div>
-        <Field label="ربط بطلب فحص (اختياري)">
+        <Field label={t("g1.img.linkOrder", lang)}>
           <select style={inp()} value={imageOrderId} onChange={e => setImageOrderId(e.target.value)}>
-            <option value="">— بدون ربط —</option>
+            <option value="">{t("g1.img.noLink", lang)}</option>
             {(imagingOrders || []).map(o => (
-              <option key={o.id} value={o.id}>{o.date} · {(o.tests || []).map(t => t.name).join(" + ") || o.id}</option>
+              <option key={o.id} value={o.id}>{o.date} · {(o.tests || []).map(tt => tv(tt.name)).join(" + ") || o.id}</option>
             ))}
           </select>
         </Field>
@@ -50,13 +53,13 @@ export default function ImagesTab({ ctx }) {
                 cursor: "pointer"
               }}
             >
-              {x}
+              {x === "الكل" ? t("g1.common.all", lang) : x}
             </button>
           ))}
         </div>
       </div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-        <span style={{ color: C.text, fontWeight: 700, fontSize: 14 }}>الإشعاعات والصور ({images.length})</span>
+        <span style={{ color: C.text, fontWeight: 700, fontSize: 14 }}>{t("g1.img.title", lang)} ({images.length})</span>
         <label
           style={{
             background: uploadProgress ? C.muted : `linear-gradient(135deg,${C.accent},${C.teal})`,
@@ -69,7 +72,7 @@ export default function ImagesTab({ ctx }) {
             pointerEvents: uploadProgress ? "none" : "auto"
           }}
         >
-          📎 رفع صورة
+          📎 {t("g1.img.upload", lang)}
           <input
             type="file"
             accept="image/*"
@@ -91,7 +94,7 @@ export default function ImagesTab({ ctx }) {
           }}
         >
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-            <span style={{ color: C.accent, fontSize: 12, fontWeight: 600 }}>⬆ جاري الرفع...</span>
+            <span style={{ color: C.accent, fontSize: 12, fontWeight: 600 }}>⬆ {t("g1.img.uploading", lang)}</span>
             <span style={{ color: C.muted, fontSize: 11 }}>{uploadProgress.name.slice(0, 25)}</span>
           </div>
           <div style={{ background: C.border, borderRadius: 99, height: 6, overflow: "hidden" }}>
@@ -121,20 +124,20 @@ export default function ImagesTab({ ctx }) {
           }}
         >
           <span style={{ color: C.danger, fontSize: 12 }}>{"⚠ "}{imgError}</span>
-          <span onClick={() => setImgError(null)} style={{ color: C.danger, cursor: "pointer", fontSize: 18 }}>×</span>
+          <span role="button" tabIndex={0} aria-label={t("g1.common.close", lang)} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setImgError(null); } }} onClick={() => setImgError(null)} style={{ color: C.danger, cursor: "pointer", fontSize: 18 }}>×</span>
         </div>
       )}
       {imgLoading && images.length === 0 && (
         <div style={{ textAlign: "center", padding: "40px 20px" }}>
           <div style={{ fontSize: 32, marginBottom: 10 }}>⏳</div>
-          <div style={{ color: C.muted, fontSize: 13 }}>جاري التحميل من السيرفر...</div>
+          <div style={{ color: C.muted, fontSize: 13 }}>{t("g1.img.loading", lang)}</div>
         </div>
       )}
       {!imgLoading && images.length === 0 && !uploadProgress && (
         <div style={{ textAlign: "center", padding: "40px 20px" }}>
-          <img src={XRAY_ICON} style={{ width: 72, height: 72, margin: "0 auto 12px", display: "block", opacity: 0.7 }}/>
-          <div style={{ color: C.muted, fontSize: 13, marginBottom: 6 }}>لا توجد إشعاعات مرفوعة بعد</div>
-          <div style={{ color: C.border, fontSize: 11 }}>اضغط "رفع صورة" لإضافة إشعاعات أو صور الفحص</div>
+          <img src={XRAY_ICON} alt="" style={{ width: 72, height: 72, margin: "0 auto 12px", display: "block", opacity: 0.7 }}/>
+          <div style={{ color: C.muted, fontSize: 13, marginBottom: 6 }}>{t("g1.img.none", lang)}</div>
+          <div style={{ color: C.border, fontSize: 11 }}>{t("g1.img.noneHint", lang)}</div>
         </div>
       )}
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -155,7 +158,7 @@ export default function ImagesTab({ ctx }) {
                   style={{
                     position: "absolute",
                     top: 8,
-                    left: 8,
+                    insetInlineEnd: 8,
                     background: "rgba(0,0,0,0.6)",
                     borderRadius: 8,
                     padding: "3px 10px",
@@ -163,13 +166,13 @@ export default function ImagesTab({ ctx }) {
                     fontSize: 10
                   }}
                 >
-                  🔍 عرض كامل
+                  🔍 {t("g1.img.fullView", lang)}
                 </div>
                 <div
                   style={{
                     position: "absolute",
                     top: 8,
-                    right: 8,
+                    insetInlineStart: 8,
                     background: C.accent + "cc",
                     borderRadius: 8,
                     padding: "3px 10px",
@@ -204,15 +207,15 @@ export default function ImagesTab({ ctx }) {
               </div>
               {(() => {
                 const ch = chainOfImage(img);
-                if (ch) return (<div style={{ color: C.muted, fontSize: 10, marginBottom: 6 }}>{"🔗 الطلب: "}{ch.tests.join("، ")}{ch.orderedDate ? " · " + ch.orderedDate : ""}{ch.visit ? " · زيارة " + ch.visit.date : ""}</div>);
-                if (img.orderId) return (<div style={{ color: C.muted, fontSize: 10, marginBottom: 6 }}>{"🔗 مرتبطة بالطلب "}{img.orderId}</div>);
-                return (<div style={{ color: C.gold, fontSize: 10, marginBottom: 6 }}>غير مرتبطة بطلب فحص</div>);
+                if (ch) return (<div style={{ color: C.muted, fontSize: 10, marginBottom: 6 }}>{"🔗 " + t("g1.img.order", lang) + ": "}{ch.tests.map(x => tv(x)).join(lang === "en" ? ", " : "، ")}{ch.orderedDate ? " · " + ch.orderedDate : ""}{ch.visit ? " · " + t("g1.evt.visit", lang) + " " + ch.visit.date : ""}</div>);
+                if (img.orderId) return (<div style={{ color: C.muted, fontSize: 10, marginBottom: 6 }}>{"🔗 " + t("g1.img.linkedTo", lang) + " "}{img.orderId}</div>);
+                return (<div style={{ color: C.gold, fontSize: 10, marginBottom: 6 }}>{t("g1.img.unlinked", lang)}</div>);
               })()}
               <textarea
                 value={img.notes || ""}
                 onChange={e => editImgNotesLocal(img.id, e.target.value)}
                 onBlur={e => updateImgNotes(img.id, e.target.value)}
-                placeholder="ملاحظات (نوع الفحص، النتيجة...)"
+                placeholder={t("g1.img.notesPh", lang)}
                 rows={2}
                 style={{ ...inp(), resize: "none", fontSize: 11, marginBottom: 8 }}
               />
@@ -232,7 +235,7 @@ export default function ImagesTab({ ctx }) {
                       textAlign: "center"
                     }}
                   >
-                    🔍 عرض
+                    🔍 {t("g1.img.view", lang)}
                   </div>
                 )}
                 {img.src && (
@@ -250,12 +253,12 @@ export default function ImagesTab({ ctx }) {
                       textAlign: "center"
                     }}
                   >
-                    {aiAnalysis[img.id]?.loading ? "⏳ جاري التحليل..." : "🤖 تحليل AI"}
+                    {aiAnalysis[img.id]?.loading ? "⏳ " + t("g1.img.analyzing", lang) : "🤖 " + t("g1.img.analyze", lang)}
                   </div>
                 )}
                 <div
                   onClick={() => {
-                    if (window.confirm("حذف الصورة من القائمة؟")) delImage(img.id);
+                    if (window.confirm(t("g1.img.delConfirm", lang))) delImage(img.id);
                   }}
                   style={{
                     flex: img.src ? 0 : 1,
@@ -268,7 +271,7 @@ export default function ImagesTab({ ctx }) {
                     textAlign: "center"
                   }}
                 >
-                  🗑 حذف
+                  🗑 {t("g1.common.delete", lang)}
                 </div>
               </div>
               {aiAnalysis[img.id]?.result && (
@@ -296,10 +299,10 @@ export default function ImagesTab({ ctx }) {
                     >
                       🤖
                     </div>
-                    <span style={{ color: C.purple, fontWeight: 700, fontSize: 12 }}>تحليل الذكاء الاصطناعي</span>
+                    <span style={{ color: C.purple, fontWeight: 700, fontSize: 12 }}>{t("g1.img.aiTitle", lang)}</span>
                     <span
                       style={{
-                        marginRight: "auto",
+                        marginInlineStart: "auto",
                         background: C.purple + "22",
                         color: C.purple,
                         borderRadius: 6,
@@ -308,7 +311,7 @@ export default function ImagesTab({ ctx }) {
                         fontWeight: 700
                       }}
                     >
-                      للمساعدة فقط
+                      {t("g1.img.aiAssist", lang)}
                     </span>
                   </div>
                   <div style={{ color: C.text, fontSize: 12, lineHeight: 1.7, whiteSpace: "pre-wrap" }}>
@@ -319,9 +322,9 @@ export default function ImagesTab({ ctx }) {
                       ...prev,
                       [img.id]: null
                     }))}
-                    style={{ marginTop: 8, color: C.muted, fontSize: 10, cursor: "pointer", textAlign: "left" }}
+                    style={{ marginTop: 8, color: C.muted, fontSize: 10, cursor: "pointer", textAlign: "end" }}
                   >
-                    ✕ إغلاق التحليل
+                    ✕ {t("g1.img.closeAnalysis", lang)}
                   </div>
                 </div>
               )}
@@ -357,8 +360,8 @@ export default function ImagesTab({ ctx }) {
             alignItems: "center"
           }}
         >
-          <span style={{ color: C.muted, fontSize: 11 }}>☁ محفوظة على Cloudinary</span>
-          <span style={{ color: C.accent, fontSize: 11, fontWeight: 700 }}>{images.length}{" صورة"}</span>
+          <span style={{ color: C.muted, fontSize: 11 }}>☁ {t("g1.img.cloud", lang)}</span>
+          <span style={{ color: C.accent, fontSize: 11, fontWeight: 700 }}>{images.length}{" " + t("g1.img.unitImage", lang)}</span>
         </div>
       )}
     </div>

@@ -4,12 +4,18 @@
 // alert/confirm, toasts — and only asks these helpers "which appointments are
 // shown?", "is this slot taken?" and "what should the new record look like?".
 // Every function mirrors the legacy SecretaryApp() expressions exactly.
+// User-facing messages go through t() at CALL time (never at module load) so they follow the current language.
+
+import { t } from '../i18n/index.js';
+import { tv } from '../i18n/tv.js';
 
 // ---- Constants (exact legacy strings) --------------------------------------
 
 export const DEFAULT_VISIT_TYPE = 'فحص روتيني';
 // Booking requests accepted from the front desk are always assigned to this doctor.
 export const REQUEST_DOCTOR = 'د. عبدالستار';
+// The *_MSG constants are the canonical Arabic texts (kept for tests/identity); the functions below return
+// the same message in the current language via t().
 export const REQUEST_CONFLICT_MSG = '⚠ يوجد موعد آخر لنفس الطبيب في هذا الوقت';
 export const SLOT_TAKEN_MSG = '⚠ تم حجز نفس الموعد لنفس الطبيب للتو من جهاز آخر';
 export const SAVE_FAILED_MSG = '❌ لم يتم الحفظ — تحقق من الاتصال وحاول مرة أخرى';
@@ -27,18 +33,18 @@ export const aptConflict = (list, f) =>
 
 // The alert text mutateApts shows for a failed save.
 export const mutateErrorMessage = error =>
-  error === 'offline' || error === 'conflict' ? SAVE_FAILED_MSG : error;
+  error === 'offline' || error === 'conflict' ? t('g5.sec.saveFailed') : error;
 
 // ---- List transforms used as sbMutate mutators -----------------------------
 
 // addApt mutator: abort on conflict, else append.
-export const addAptMutation = (list, f) => aptConflict(list, f) ? { abort: SLOT_TAKEN_MSG } : [...list, f];
+export const addAptMutation = (list, f) => aptConflict(list, f) ? { abort: t('g5.sec.slotTaken') } : [...list, f];
 
 // editApt mutator: abort on conflict, else replace by id.
-export const editAptMutation = (list, f) => aptConflict(list, f) ? { abort: SLOT_TAKEN_MSG } : list.map(a => a.id === f.id ? f : a);
+export const editAptMutation = (list, f) => aptConflict(list, f) ? { abort: t('g5.sec.slotTaken') } : list.map(a => a.id === f.id ? f : a);
 
 // acceptRequest mutator: abort on conflict (different message), else append.
-export const acceptAptMutation = (list, apt) => aptConflict(list, apt) ? { abort: REQUEST_CONFLICT_MSG } : [...list, apt];
+export const acceptAptMutation = (list, apt) => aptConflict(list, apt) ? { abort: t('g5.sec.requestConflict') } : [...list, apt];
 
 // updateApt mutator: merge into the existing row, or append if missing.
 export const mergeApt = (list, apt) =>
@@ -97,12 +103,13 @@ export function buildCollectionVisitRecord(apt, cost, paid, clinicLabel) {
 export const upsertVisit = (visits, rec) =>
   visits.some(v => v.id === rec.id) ? visits.map(v => v.id === rec.id ? rec : v) : [...visits, rec];
 
+// Audit-log entries are stored data (Arabic canonical), not UI text.
 export const collectAudit = (apt, cost, paid) => [
   paid ? 'تحصيل مبلغ' : 'تسجيل قيمة كشف',
   (apt.patient || '') + ' · ' + cost + ' ج.م'
 ];
 
-export const collectToast = (cost, paid) => paid ? '✓ تم تحصيل ' + cost + ' ج.م' : 'تم حفظ قيمة الكشف';
+export const collectToast = (cost, paid) => paid ? t('g5.sec.collectedToast', { cost }) : t('g5.sec.feeSavedToast');
 
 // Detail string for the "حذف موعد" audit entry (legacy precedence preserved).
 export const deleteAuditDetail = (rec, id) => rec && rec.date + ' ' + (rec.time || '') + ' · ' + (rec.patient || '') || id;
@@ -148,15 +155,15 @@ export function clinicStats(apts, clinics, today) {
 }
 
 export function typeStats(apts, types = STATS_VISIT_TYPES) {
-  return types.map(t => {
-    const cnt = apts.filter(a => a.type === t).length;
+  return types.map(ty => {
+    const cnt = apts.filter(a => a.type === ty).length;
     if (!cnt) return null;
-    return { type: t, cnt };
+    return { type: ty, cnt };
   });
 }
 
-export const requestsTabLabel = n => 'طلبات الحجز' + (n ? ' (' + n + ')' : '');
+export const requestsTabLabel = n => t('g5.sec.requestsTab') + (n ? ' (' + n + ')' : '');
 
 // WhatsApp link on each appointment card.
 export const waCardHref = (a, clinicLabel) =>
-  'https://wa.me/2' + a.phone.replace(/^0/, '') + '?text=' + encodeURIComponent('تذكير بموعدك في ' + clinicLabel(a.clinic) + ' يوم ' + a.date + ' الساعة ' + a.time);
+  'https://wa.me/2' + a.phone.replace(/^0/, '') + '?text=' + encodeURIComponent(t('g5.sec.waCardText', { clinic: tv(clinicLabel(a.clinic)), date: a.date, time: a.time }));

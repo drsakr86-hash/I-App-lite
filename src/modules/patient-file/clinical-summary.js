@@ -10,10 +10,12 @@
 
 import { vaOf, iopOf, metricOf, refractionOf, examOphth, plainText } from './ophth.js';
 import { buildLongitudinal, injectionEyes, normalizeInjections, injectionStats, THRESHOLDS, describeChange, daysBetween, METRIC_LABEL } from './longitudinal.js';
+import { t } from '../i18n/index.js';
+import { tv } from '../i18n/tv.js';
 import { buildInvestigationLinks, statusGroup } from './investigation-links.js';
 
 export const NOT_RECORDED = 'غير مسجل';
-export const show = v => (v == null || String(v).trim() === '' ? NOT_RECORDED : String(v));
+export const show = v => (v == null || String(v).trim() === '' ? t('common.notRecorded') : String(v));
 
 const str = v => (v == null ? '' : String(v));
 const present = v => v !== undefined && v !== null && String(v).trim() !== '';
@@ -98,7 +100,7 @@ function nextFollowUp({ exams, visits, coreFile, injections, appointments, today
   }
   for (const x of injections) {
     const d = day(x && x.nextDate);
-    if (validDay(d)) cands.push({ date: d, reason: 'حقنة قادمة (' + str(x.drug) + ')', source: 'injection', ref: x.date });
+    if (validDay(d)) cands.push({ date: d, reason: t('g1.cs.nextInjection') + ' (' + str(x.drug) + ')', source: 'injection', ref: x.date });
   }
   for (const a of appointments) {
     const d = day(a && a.date);
@@ -167,15 +169,15 @@ export function buildClinicalSummary({
 
   // ---- alerts: each one is a recorded fact, phrased neutrally -----------------------------------
   const alerts = [];
-  if (patient && present(patient.allergies)) alerts.push({ id: 'allergy', level: 'danger', text: 'حساسية: ' + str(patient.allergies).trim() });
+  if (patient && present(patient.allergies)) alerts.push({ id: 'allergy', level: 'danger', text: t('g1.cs.allergy') + ': ' + tv(str(patient.allergies).trim()) });
   for (const eye of ['od', 'os']) {
     const r = iop[eye];
-    if (r && r.value != null && r.value > THRESHOLDS.iopHigh) alerts.push({ id: 'iop-' + eye, level: 'warn', text: `IOP مرتفع ${eye.toUpperCase()}: ${r.raw} mmHg (${r.date || 'بدون تاريخ'})` });
+    if (r && r.value != null && r.value > THRESHOLDS.iopHigh) alerts.push({ id: 'iop-' + eye, level: 'warn', text: t('g1.cs.iopHigh', { eye: eye.toUpperCase(), raw: r.raw, date: r.date || t('g1.cs.noDate') }) });
   }
-  if (followUp && followUp.overdue) alerts.push({ id: 'followup-overdue', level: 'warn', text: `موعد متابعة متأخر (${followUp.date}) ولا توجد زيارة بعده` });
+  if (followUp && followUp.overdue) alerts.push({ id: 'followup-overdue', level: 'warn', text: t('g1.cs.followupOverdue', { date: followUp.date }) });
   const oldPending = pending.filter(p => p.days != null && p.days > 14);
-  if (oldPending.length) alerts.push({ id: 'pending-old', level: 'warn', text: `${oldPending.length} طلب فحص معلّق منذ أكثر من 14 يومًا` });
-  if (links.chains.some(c => c.gaps.includes('core-sync-pending'))) alerts.push({ id: 'core-sync', level: 'info', text: 'طلب فحص لم يُزامَن مع السجل المركزي بعد' });
+  if (oldPending.length) alerts.push({ id: 'pending-old', level: 'warn', text: t('g1.cs.pendingOld', { n: oldPending.length }) });
+  if (links.chains.some(c => c.gaps.includes('core-sync-pending'))) alerts.push({ id: 'core-sync', level: 'info', text: t('g1.cs.coreSync') });
   for (const c of trend.changes.filter(c => c.significant && c.favorable === false)) {
     alerts.push({ id: `trend-${c.metric}-${c.eye}`, level: 'warn', text: `${METRIC_LABEL[c.metric]} ${c.eye.toUpperCase()}: ${describeChange(c)}` });
   }

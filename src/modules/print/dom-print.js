@@ -3,6 +3,8 @@
 // (window.open, an invisible iframe, document.write) with no dependency on
 // any other legacy state, so they move as a self-contained trio.
 
+import { t } from '../i18n/index.js';
+
 export function whenPrintReady(doc, cb) {
   let done = false;
   const go = () => {
@@ -84,7 +86,7 @@ export function printViaIframe(html) {
       fw.focus();
       fw.print();
     } catch (e) {
-      alert('تعذر فتح نافذة الطباعة على هذا الجهاز');
+      alert(t('g7.print.printFailed'));
     }
     setTimeout(() => {
       try {

@@ -217,7 +217,7 @@ function pageHTML(m, lang) {
 
 // English wording for a change (describeChange itself is Arabic)
 export function describeChangeLang(c, lang) {
-  if (lang !== 'en') return describeChange(c);
+  if (lang !== 'en') return describeChange(c, 'ar');
   if (!c || c.status !== 'ok') return 'insufficient data';
   const unit = { va: 'logMAR', iop: 'mmHg', cmt: 'µm', cd: '', vfMd: 'dB' }[c.metric];
   const word = c.direction === 'flat' ? 'unchanged' : c.metric === 'va' ? (c.direction === 'up' ? 'vision declined' : 'vision improved') : c.direction === 'up' ? 'increased' : 'decreased';

@@ -1,5 +1,7 @@
 // Pure queue logic for the waiting room (no React, no DOM) so it can be tested.
 
+import { t } from "../i18n/index.js";
+
 export const DEFAULT_EXAM_MINUTES = 15;
 const MAX_EXAM_MS = 3 * 3600 * 1000;
 const ACTIVE = ["waiting", "called", "in"];
@@ -42,7 +44,7 @@ export function buildQueueView(apts, { today, priorityDoctor = "", doctorNames =
 }
 
 export const fmtWait = mins =>
-  mins < 60 ? mins + " د" : Math.floor(mins / 60) + "س " + (mins % 60) + "د";
+  mins < 60 ? t("g5.queue.waitMin", { n: mins }) : t("g5.queue.waitHrMin", { h: Math.floor(mins / 60), m: mins % 60 });
 
 // Estimated wait for the idx-th waiting patient.
 export function estimateWait(a, idx, { clock, inRoomCount, avgDurationMin }) {

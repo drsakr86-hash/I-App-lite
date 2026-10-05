@@ -2,6 +2,7 @@
 // Every value and expression mirrors the legacy runtime's RemindersModal
 // exactly (public/legacy/app-runtime.js).
 import { isActiveApt } from '../../modules/secretary-app/model.js';
+import { t } from '../../modules/i18n/index.js';
 
 // The day after `now` (a Date), as a Date; the component formats it with the
 // runtime's localISO. Recomputed on every render, like legacy.
@@ -16,5 +17,5 @@ export const tomorrowOf = now => {
 export const reminderRows = (apts, tomorrow) =>
   (apts || []).filter(a => a.date === tomorrow && isActiveApt(a)).sort((a, b) => String(a.time || '').localeCompare(String(b.time || '')));
 
-export const reminderButtonLabel = reminded => (reminded ? '✓ تم الإرسال — إعادة' : '💬 إرسال التذكير');
-export const reminderTypeLabel = type => type || 'فحص';
+export const reminderButtonLabel = reminded => (reminded ? t('g3.rem.resend') : t('g3.rem.send'));
+export const reminderTypeLabel = type => type || t('g3.rem.defaultType');

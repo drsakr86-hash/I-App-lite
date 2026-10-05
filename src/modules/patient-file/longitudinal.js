@@ -9,6 +9,7 @@
 // interpolated or invented; a metric with fewer than two dated, numeric points has no trend.
 
 import { vaToLogMar, toNumber, vaOf, iopOf, metricOf } from './ophth.js';
+import { t } from '../i18n/index.js';
 
 export const THRESHOLDS = Object.freeze({
   va: 0.2,        // logMAR (= 2 lines on a logMAR chart)
@@ -197,8 +198,10 @@ export function treatmentResponse(eye, series, injections) {
 }
 
 // ---- the whole view --------------------------------------------------------------------------------
-const METRICS = [['va', 'حدة الإبصار'], ['iop', 'ضغط العين'], ['cmt', 'سُمك البقعة (CMT)'], ['cd', 'نسبة C/D'], ['vfMd', 'المجال البصري (MD)']];
-export const METRIC_LABEL = Object.fromEntries(METRICS);
+const METRICS = [['va', 'g1.metric.va'], ['iop', 'g1.metric.iop'], ['cmt', 'g1.metric.cmt'], ['cd', 'g1.metric.cd'], ['vfMd', 'g1.metric.vfMd']];
+// Labels resolve at read time so they follow the current language.
+export const METRIC_LABEL = {};
+for (const [k, key] of METRICS) Object.defineProperty(METRIC_LABEL, k, { enumerable: true, get: () => t(key) });
 
 export function buildLongitudinal({ exams = [], injections = [], patientId = null } = {}) {
   const series = buildSeries(exams);
@@ -255,16 +258,17 @@ export function buildLongitudinal({ exams = [], injections = [], patientId = nul
 }
 
 // For tests and the UI: stable text for a change (no medical claims beyond the numbers).
-export function describeChange(c) {
-  if (!c || c.status !== 'ok') return 'بيانات غير كافية';
+export function describeChange(c, lang) {
+  if (!c || c.status !== 'ok') return t('g1.lg.insufficient', lang);
   const unit = { va: 'logMAR', iop: 'mmHg', cmt: 'µm', cd: '', vfMd: 'dB' }[c.metric];
   // For VA the stored number is logMAR (lower = better), so the wording follows the acuity itself.
-  const arrow = c.direction === 'flat' ? 'ثابت'
-    : c.metric === 'va' ? (c.direction === 'up' ? 'تراجعت الرؤية' : 'تحسنت الرؤية')
-    : c.direction === 'up' ? 'ارتفع' : 'انخفض';
-  const shown = c.metric === 'va' ? `${c.from.raw} ← ${c.to.raw}` : `${c.from.value} ← ${c.to.value}${unit ? ' ' + unit : ''}`;
+  const word = c.direction === 'flat' ? t('g1.lg.flat', lang)
+    : c.metric === 'va' ? (c.direction === 'up' ? t('g1.lg.visionDown', lang) : t('g1.lg.visionUp', lang))
+    : c.direction === 'up' ? t('g1.lg.up', lang) : t('g1.lg.down', lang);
+  const ar = t('g1.lg.arrow', lang);
+  const shown = c.metric === 'va' ? `${c.from.raw} ${ar} ${c.to.raw}` : `${c.from.value} ${ar} ${c.to.value}${unit ? ' ' + unit : ''}`;
   const extra = c.metric === 'cmt' && c.pct != null ? ` (${c.pct > 0 ? '+' : ''}${c.pct}%)` : '';
-  return `${arrow}: ${shown}${extra}`;
+  return `${word}: ${shown}${extra}`;
 }
 
 export { toNumber };

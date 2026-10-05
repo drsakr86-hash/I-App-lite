@@ -7,10 +7,10 @@ import UnifiedRouter from './UnifiedRouter.jsx';
 // Exact port of the legacy runtime's ThemeRoot (public/legacy/app-runtime.js).
 export default function ThemeRoot() {
   useTheme();
-  useLang(); // re-render the tree when the language changes
+  const lang = useLang(); // the tree is re-mounted on a language change so every screen re-renders in the new language
   return (
     <UnifiedErrorBoundary>
-      <UnifiedRouter />
+      <UnifiedRouter key={lang} />
     </UnifiedErrorBoundary>
   );
 }

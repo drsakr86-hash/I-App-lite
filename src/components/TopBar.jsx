@@ -8,8 +8,10 @@ import { C } from '../modules/theme/index.js';
 import { useSyncStatus, dirtyKeys, syncKeyLabel, flushAll } from '../modules/sync/index.js';
 import { ThemeToggle, LangToggle } from './common.jsx';
 import { topBarSyncView, sessionDisplayText } from './topbar-model.js';
+import { t, useLang } from '../modules/i18n/index.js';
 
 export default function TopBar({ backLabel, onBack, primary, onSearch, syncing, session, onLogout }) {
+  const lang = useLang();
   const ini = (primary && primary.initial) || 'ع';
   const st = useSyncStatus();
   const { stBusy, stLabel, pendingLabels, title } = topBarSyncView(st, syncing, dirtyKeys, syncKeyLabel);
@@ -34,7 +36,7 @@ export default function TopBar({ backLabel, onBack, primary, onSearch, syncing, 
             display: 'flex', alignItems: 'center', gap: 6,
             background: C.card, border: `1px solid ${C.border}`, borderRadius: 10,
             padding: '6px 12px', cursor: 'pointer', color: C.accent, fontSize: 13, fontWeight: 700
-          }}>← رجوع</div>
+          }}>{t('g3.topbar.back', lang)}</div>
         ) : (
           <div style={{
             width: 36, height: 36, borderRadius: 10,
@@ -62,7 +64,7 @@ export default function TopBar({ backLabel, onBack, primary, onSearch, syncing, 
                 width: 6, height: 6, borderRadius: '50%',
                 background: stColor, display: 'inline-block', boxShadow: `0 0 6px ${stColor}`
               }} />
-              {stBusy ? stLabel : session ? sessionDisplayText(session, primary) : 'متصل ومحدّث'}
+              {stBusy ? stLabel : session ? sessionDisplayText(session, primary) : t('g3.topbar.online', lang)}
             </div>
           )}
         </div>
@@ -71,7 +73,7 @@ export default function TopBar({ backLabel, onBack, primary, onSearch, syncing, 
         {!backLabel && <LangToggle />}
         {!backLabel && <ThemeToggle />}
         {!backLabel && onSearch && (
-          <div onClick={onSearch} title="بحث" style={{
+          <div onClick={onSearch} title={t('g3.topbar.search', lang)} aria-label={t('g3.topbar.search', lang)} style={{
             width: 34, height: 34, borderRadius: 10, background: C.card, border: `1px solid ${C.border}`,
             display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 15
           }}>🔍</div>
@@ -79,7 +81,8 @@ export default function TopBar({ backLabel, onBack, primary, onSearch, syncing, 
         {!backLabel && session && (
           <div
             onClick={() => window.dispatchEvent(new CustomEvent('iapp-open-settings'))}
-            title="الإعدادات"
+            title={t('g3.topbar.settings', lang)}
+            aria-label={t('g3.topbar.settings', lang)}
             style={{
               width: 34, height: 34, borderRadius: 10, background: C.card, border: `1px solid ${C.border}`,
               display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 16, color: C.accent
@@ -87,7 +90,7 @@ export default function TopBar({ backLabel, onBack, primary, onSearch, syncing, 
           >⚙️</div>
         )}
         {!backLabel && onLogout && (
-          <div onClick={onLogout} title="تسجيل الخروج" style={{
+          <div onClick={onLogout} title={t('g3.topbar.logout', lang)} aria-label={t('g3.topbar.logout', lang)} style={{
             width: 34, height: 34, borderRadius: 10, background: C.card, border: `1px solid ${C.border}`,
             display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 15, color: C.danger
           }}>⏻</div>

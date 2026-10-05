@@ -9,9 +9,12 @@ import { sbGet } from '../modules/sync/index.js';
 import { BACKUP_KEY, TRASH_KEY, AUDIT_KEY, TRASH_DAYS } from '../modules/sync/engine.js';
 import { logAudit, saveAutoBackup } from '../modules/sync/audit-trash-backup.js';
 import { localISO, ROLE_LABEL } from '../modules/constants/misc.js';
+import { t, useLang } from '../modules/i18n/index.js';
+import { tv } from '../modules/i18n/tv.js';
 import { findDuplicatePatients, mergePatients, restoreSnapshot, trashRestore, trashDrop } from '../modules/datatools/index.js';
 
 export default function DataTools({ isAdmin }) {
+  const lang = useLang();
   const [open, setOpen] = useState('');
   const [backups, setBackups] = useState(null);
   const [trash, setTrash] = useState(null);
@@ -26,12 +29,23 @@ export default function DataTools({ isAdmin }) {
   };
   const fmt = ts => {
     try {
-      return new Date(ts).toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' });
+      return new Date(ts).toLocaleString(lang === 'en' ? 'en-GB' : 'ar-EG', { dateStyle: 'short', timeStyle: 'short' });
     } catch {
       return '';
     }
   };
-  const mb = n => (n >= 1048576 ? (n / 1048576).toFixed(1) + ' م.ب' : Math.round(n / 1024) + ' ك.ب');
+  const tr = (key, vars) => t(key, lang, vars);
+  // Trash labels / audit details are stored in Arabic ("مريض مدمج: name", "... · N مجموعة بيانات"); show them in the current language.
+  const trashLabel = label => {
+    const s = String(label || '');
+    const i = s.indexOf(': ');
+    return i > 0 ? tv(s.slice(0, i)) + s.slice(i) : tv(s);
+  };
+  const auditDetail = d => trashLabel(String(d)
+    .replace(/ مجموعة بيانات$/, ' ' + tr('g4.audit.datasetsSuffix'))
+    .replace(/^نسخة /, tr('g4.audit.backupWord') + ' ')
+    .replace(/ ج\.م/g, ' ' + t('g4.common.currency', lang)));
+  const mb = n => (n >= 1048576 ? (n / 1048576).toFixed(1) + ' ' + t('g4.dt.mb', lang) : Math.round(n / 1024) + ' ' + t('g4.dt.kb', lang));
   const load = async which => {
     setOpen(o => (o === which ? '' : which));
     if (open === which) return;
@@ -54,7 +68,7 @@ export default function DataTools({ isAdmin }) {
         setDups(findDuplicatePatients(Array.isArray(v) ? v : []));
       }
     } catch (e) {
-      note('تعذر تحميل البيانات — تحقق من الاتصال', true);
+      note(t('g4.dt.loadFail', lang), true);
     }
     setBusy('');
   };
@@ -62,7 +76,7 @@ export default function DataTools({ isAdmin }) {
     const file = e.target.files && e.target.files[0];
     e.target.value = '';
     if (!file) return;
-    if (!window.confirm('سيتم استبدال البيانات الحالية بمحتوى الملف على كل الأجهزة. سيتم حفظ نسخة من البيانات الحالية أولاً. هل تريد المتابعة؟')) return;
+    if (!window.confirm(t('g4.dt.importConfirm', lang))) return;
     setBusy('import');
     try {
       const text = await file.text();
@@ -70,26 +84,26 @@ export default function DataTools({ isAdmin }) {
       const res = await restoreSnapshot(data, file.name);
       setBusy('');
       if (!res.ok) {
-        note(res.error || 'تعذرت الاستعادة', true);
+        note(res.error || t('g4.dt.restoreFail', lang), true);
         return;
       }
-      alert('✅ تمت الاستعادة (' + res.count + ' مجموعة بيانات). سيتم إعادة تشغيل البرنامج.');
+      alert(t('g4.dt.importOk', lang, { n: res.count }));
       location.reload();
     } catch (err) {
       setBusy('');
-      note('الملف غير صالح: ' + (err.message || err), true);
+      note(t('g4.dt.invalidFile', lang, { msg: err.message || err }), true);
     }
   };
   const restoreBackup = async b => {
-    if (!window.confirm('استعادة نسخة ' + fmt(b.at) + '؟ سيتم استبدال البيانات الحالية على كل الأجهزة.')) return;
+    if (!window.confirm(t('g4.dt.restoreBackupConfirm', lang, { date: fmt(b.at) }))) return;
     setBusy('restore');
-    const res = await restoreSnapshot(b.data, 'نسخة ' + fmt(b.at));
+    const res = await restoreSnapshot(b.data, t('g4.dt.restoreLabel', 'ar', { date: fmt(b.at) }));
     setBusy('');
     if (!res.ok) {
-      note(res.error || 'تعذرت الاستعادة', true);
+      note(res.error || t('g4.dt.restoreFail', lang), true);
       return;
     }
-    alert('✅ تمت الاستعادة. سيتم إعادة تشغيل البرنامج.');
+    alert(t('g4.dt.restoreOk', lang));
     location.reload();
   };
   const downloadBackup = b => {
@@ -103,33 +117,33 @@ export default function DataTools({ isAdmin }) {
       document.body.removeChild(a);
       setTimeout(() => URL.revokeObjectURL(url), 3000);
     } catch (e) {
-      note('تعذر التحميل', true);
+      note(t('g4.dt.downloadFail', lang), true);
     }
   };
   const makeBackup = async () => {
     setBusy('make');
-    const ok = await saveAutoBackup('يدوي');
+    const ok = await saveAutoBackup(t('g4.backup.manual', 'ar'));
     setBusy('');
-    note(ok ? '✅ تم حفظ نسخة جديدة' : 'تعذر حفظ النسخة', !ok);
+    note(ok ? t('g4.dt.backupSaved', lang) : t('g4.dt.backupFail', lang), !ok);
     if (ok) {
       const v = await sbGet(BACKUP_KEY);
       setBackups(Array.isArray(v) ? v : []);
     }
   };
-  const doRestoreTrash = async t => {
-    setBusy('t' + t.id);
-    const ok = await trashRestore(t);
+  const doRestoreTrash = async en => {
+    setBusy('t' + en.id);
+    const ok = await trashRestore(en);
     setBusy('');
     if (ok) {
-      setTrash(list => (list || []).filter(x => x.id !== t.id));
-      note('✅ تمت الاستعادة');
-    } else note('تعذرت الاستعادة', true);
+      setTrash(list => (list || []).filter(x => x.id !== en.id));
+      note(t('g4.dt.trashRestored', lang));
+    } else note(t('g4.dt.restoreFail', lang), true);
   };
-  const doDropTrash = async t => {
-    if (!window.confirm('حذف نهائي؟ لا يمكن التراجع بعد ذلك.')) return;
-    await trashDrop(t.id);
-    setTrash(list => (list || []).filter(x => x.id !== t.id));
-    logAudit('حذف نهائي من سلة المحذوفات', t.label || t.storeKey);
+  const doDropTrash = async en => {
+    if (!window.confirm(t('g4.dt.dropConfirm', lang))) return;
+    await trashDrop(en.id);
+    setTrash(list => (list || []).filter(x => x.id !== en.id));
+    logAudit(t('g4.audit.trashDrop', 'ar'), en.label || en.storeKey);
   };
   const Row = ({ icon, title, sub, badge, which }) => (
     <div
@@ -182,7 +196,7 @@ export default function DataTools({ isAdmin }) {
         padding: '4px 10px',
         fontSize: 11,
         cursor: 'pointer',
-        marginLeft: 6
+        marginInlineStart: 6
       }}
     >
       {children}
@@ -221,64 +235,64 @@ export default function DataTools({ isAdmin }) {
       >
         <div style={{ width: 34, height: 34, borderRadius: 10, background: C.gold + '33', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>♻️</div>
         <div style={{ flex: 1 }}>
-          <div style={{ color: C.text, fontSize: 13 }}>استعادة نسخة احتياطية من ملف</div>
-          <div style={{ color: C.muted, fontSize: 11 }}>{busy === 'import' ? 'جاري الاستعادة...' : 'اختر ملف JSON سبق تصديره'}</div>
+          <div style={{ color: C.text, fontSize: 13 }}>{t('g4.dt.importTitle', lang)}</div>
+          <div style={{ color: C.muted, fontSize: 11 }}>{busy === 'import' ? t('g4.dt.importing', lang) : t('g4.dt.importSub', lang)}</div>
         </div>
         <div style={{ color: C.gold, fontSize: 12 }}>⬆</div>
         <input type="file" accept="application/json,.json" style={{ display: 'none' }} onChange={importFile} />
       </label>
-      <Row icon="🗂" title="النسخ الاحتياطية التلقائية" sub="نسخة يومية تُحفظ تلقائياً — تُحفظ آخر 5 نسخ" which="backups" />
+      <Row icon="🗂" title={t('g4.dt.backupsTitle', lang)} sub={t('g4.dt.backupsSub', lang)} which="backups" />
       {open === 'backups' && (
         <div style={box}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-            <span style={{ color: C.muted, fontSize: 11 }}>{(backups || []).length} نسخة</span>
+            <span style={{ color: C.muted, fontSize: 11 }}>{t('g4.dt.backupCount', lang, { n: (backups || []).length })}</span>
             <span
               onClick={makeBackup}
               style={{ color: C.teal, fontSize: 11, cursor: 'pointer', background: C.teal + '22', borderRadius: 8, padding: '4px 10px' }}
             >
-              {busy === 'make' ? '⏳' : '+ نسخة الآن'}
+              {busy === 'make' ? '⏳' : t('g4.dt.makeNow', lang)}
             </span>
           </div>
           {(backups || []).length === 0 && (
-            <div style={{ color: C.muted, fontSize: 12, textAlign: 'center', padding: '10px 0' }}>لا توجد نسخ بعد</div>
+            <div style={{ color: C.muted, fontSize: 12, textAlign: 'center', padding: '10px 0' }}>{t('g4.dt.noBackups', lang)}</div>
           )}
           {(backups || []).map(b => (
             <div key={b.id} style={{ ...line, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               <div style={{ flex: 1, minWidth: 150 }}>
                 <div style={{ color: C.text, fontSize: 12 }}>{fmt(b.at)}</div>
-                <div style={{ color: C.muted, fontSize: 10 }}>{b.reason || 'تلقائي'} · {mb(b.size || 0)} · {b.by || '—'}</div>
+                <div style={{ color: C.muted, fontSize: 10 }}>{tv(b.reason || t('g4.backup.auto', 'ar'))} · {mb(b.size || 0)} · {b.by || '—'}</div>
               </div>
-              {btn(C.teal, () => downloadBackup(b), '⬇ تحميل')}
-              {btn(C.gold, () => restoreBackup(b), busy === 'restore' ? '⏳' : '♻️ استعادة')}
+              {btn(C.teal, () => downloadBackup(b), t('g4.dt.download', lang))}
+              {btn(C.gold, () => restoreBackup(b), busy === 'restore' ? '⏳' : t('g4.dt.restore', lang))}
             </div>
           ))}
         </div>
       )}
-      <Row icon="🗑" title="سلة المحذوفات" sub={'يمكن استرجاع المحذوف خلال ' + TRASH_DAYS + ' يوماً'} which="trash" />
+      <Row icon="🗑" title={t('g4.dt.trashTitle', lang)} sub={t('g4.dt.trashSub', lang, { n: TRASH_DAYS })} which="trash" />
       {open === 'trash' && (
         <div style={box}>
           {(trash || []).length === 0 && (
-            <div style={{ color: C.muted, fontSize: 12, textAlign: 'center', padding: '10px 0' }}>السلة فارغة</div>
+            <div style={{ color: C.muted, fontSize: 12, textAlign: 'center', padding: '10px 0' }}>{t('g4.dt.trashEmpty', lang)}</div>
           )}
-          {(trash || []).map(t => (
-            <div key={t.id} style={{ ...line, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          {(trash || []).map(en => (
+            <div key={en.id} style={{ ...line, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               <div style={{ flex: 1, minWidth: 150 }}>
-                <div style={{ color: C.text, fontSize: 12 }}>{t.label || t.storeKey}</div>
+                <div style={{ color: C.text, fontSize: 12 }}>{trashLabel(en.label) || en.storeKey}</div>
                 <div style={{ color: C.muted, fontSize: 10 }}>
-                  {fmt(t.deletedAt)} · حذفه {t.by || '—'}{t.record && t.record._imageDropped ? ' · بدون الصورة' : ''}
+                  {fmt(en.deletedAt)} · {tr('g4.dt.deletedBy', { name: en.by || '—' })}{en.record && en.record._imageDropped ? tr('g4.dt.noImage') : ''}
                 </div>
               </div>
-              {btn(C.success, () => doRestoreTrash(t), busy === 't' + t.id ? '⏳' : '↩ استرجاع')}
-              {btn(C.danger, () => doDropTrash(t), '✕ نهائي')}
+              {btn(C.success, () => doRestoreTrash(en), busy === 't' + en.id ? '⏳' : tr('g4.dt.undo'))}
+              {btn(C.danger, () => doDropTrash(en), tr('g4.dt.permanent'))}
             </div>
           ))}
         </div>
       )}
-      <Row icon="👯" title="ملفات مكررة" sub="مرضى بنفس الرقم أو نفس الاسم — يمكن دمجهم في ملف واحد" which="dups" />
+      <Row icon="👯" title={t('g4.dt.dupsTitle', lang)} sub={t('g4.dt.dupsSub', lang)} which="dups" />
       {open === 'dups' && (
         <div style={box}>
           {(dups || []).length === 0 && (
-            <div style={{ color: C.muted, fontSize: 12, textAlign: 'center', padding: '10px 0' }}>لا توجد ملفات مكررة 👌</div>
+            <div style={{ color: C.muted, fontSize: 12, textAlign: 'center', padding: '10px 0' }}>{t('g4.dt.noDups', lang)}</div>
           )}
           {(dups || []).map((g, i) => (
             <div key={i} style={{ ...line }}>
@@ -286,35 +300,35 @@ export default function DataTools({ isAdmin }) {
               {g.map((p, idx) => (
                 <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
                   <span style={{ color: C.muted, fontSize: 11, flex: 1, minWidth: 140 }}>
-                    {p.patientCode || '—'} · {p.phone || 'بدون رقم'} · {p.name}{idx === 0 ? ' (الأساسي)' : ''}
+                    {p.patientCode || '—'} · {p.phone || t('g4.dt.noPhone', lang)} · {p.name}{idx === 0 ? t('g4.dt.primaryTag', lang) : ''}
                   </span>
                   {idx > 0 && btn(C.gold, async () => {
-                    if (!window.confirm('دمج ملف ' + (p.patientCode || '') + ' داخل ' + (g[0].patientCode || '') + '؟ كل الزيارات والروشتات هتنتقل للملف الأساسي.')) return;
+                    if (!window.confirm(t('g4.dt.mergeConfirm', lang, { from: p.patientCode || '', to: g[0].patientCode || '' }))) return;
                     setBusy('m' + p.id);
                     const ok = await mergePatients(g[0], p);
                     setBusy('');
                     if (ok) {
                       setDups(list => list.map(x => x.filter(y => y.id !== p.id)).filter(x => x.length > 1));
-                      note('✅ تم الدمج');
-                    } else note('تعذر الدمج', true);
-                  }, busy === 'm' + p.id ? '⏳' : '⇦ دمج في الأساسي')}
+                      note(t('g4.dt.merged', lang));
+                    } else note(t('g4.dt.mergeFail', lang), true);
+                  }, busy === 'm' + p.id ? '⏳' : t('g4.dt.mergeBtn', lang))}
                 </div>
               ))}
             </div>
           ))}
         </div>
       )}
-      <Row icon="📜" title="سجل العمليات" sub="من قام بأي تعديل ومتى" which="audit" />
+      <Row icon="📜" title={t('g4.dt.auditTitle', lang)} sub={t('g4.dt.auditSub', lang)} which="audit" />
       {open === 'audit' && (
         <div style={box}>
           {(audit || []).length === 0 && (
-            <div style={{ color: C.muted, fontSize: 12, textAlign: 'center', padding: '10px 0' }}>لا توجد عمليات مسجلة بعد</div>
+            <div style={{ color: C.muted, fontSize: 12, textAlign: 'center', padding: '10px 0' }}>{t('g4.dt.noAudit', lang)}</div>
           )}
           {(audit || []).slice(0, 200).map(a => (
             <div key={a.id} style={line}>
-              <div style={{ color: C.text, fontSize: 12 }}>{a.action}{a.details ? ' — ' + a.details : ''}</div>
+              <div style={{ color: C.text, fontSize: 12 }}>{tv(a.action)}{a.details ? ' — ' + auditDetail(a.details) : ''}</div>
               <div style={{ color: C.muted, fontSize: 10 }}>
-                {fmt(a.ts)} · {a.by || '—'}{a.role ? ' (' + (ROLE_LABEL[a.role] || a.role) + ')' : ''}
+                {fmt(a.ts)} · {a.by || '—'}{a.role ? ' (' + tv(ROLE_LABEL[a.role] || a.role) + ')' : ''}
               </div>
             </div>
           ))}

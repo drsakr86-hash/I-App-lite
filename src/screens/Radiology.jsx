@@ -5,6 +5,8 @@ import {
   filterVisibleTests, filterPatientResults, buildRequestedTests, buildExamRecord
 } from '../modules/radiology/model.js';
 import { Btn } from '../components/common.jsx';
+import { t, useLang, dirOf } from '../modules/i18n/index.js';
+import { tv } from '../modules/i18n/tv.js';
 import { C } from '../modules/theme/index.js';
 import { Field, inp } from '../modules/ui/atoms.jsx';
 import { sbGet } from '../modules/sync/wiring.js';
@@ -12,6 +14,7 @@ import { localISO } from '../modules/constants/misc.js';
 import { getRadiologyHTML, printDoc } from '../modules/print/index.js';
 
 export default function Radiology({ patients, customTests, setCustomTests, setExams, primary, clinic }) {
+  const lang = useLang();
   const CAT_COLORS = {
     'شبكية': C.accent,
     'جلوكوما': C.teal,
@@ -55,11 +58,11 @@ export default function Radiology({ patients, customTests, setCustomTests, setEx
 
   const saveRequest = async () => {
     if (selectedIds.length === 0) {
-      alert('اختر فحصاً واحداً على الأقل');
+      alert(t('g6.rad.pickOne', lang));
       return;
     }
     if (!selectedPatient) {
-      alert('اختر المريض أولاً لحفظ طلب الفحوصات');
+      alert(t('g6.rad.pickPatient', lang));
       return;
     }
     const tests = buildRequestedTests(allTests, selected);
@@ -91,18 +94,18 @@ export default function Radiology({ patients, customTests, setCustomTests, setEx
     <div style={{ padding: '16px 16px 90px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <div>
-          <div style={{ color: C.text, fontWeight: 700, fontSize: 16 }}>🔬 Investigations &amp; Imaging</div>
-          <div style={{ color: C.muted, fontSize: 11, marginTop: 2 }}>{selectedIds.length} فحص محدد</div>
+          <div style={{ color: C.text, fontWeight: 700, fontSize: 16 }}>{t('g6.rad.title', lang)}</div>
+          <div style={{ color: C.muted, fontSize: 11, marginTop: 2 }}>{t('g6.rad.selectedCount', lang, { n: selectedIds.length })}</div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <Btn small color={C.purple} onClick={() => setAddModal(true)}>+ إضافة</Btn>
-          <Btn small color={C.accent} onClick={saveRequest}>💾 حفظ الطلب</Btn>
-          <Btn small color={C.success} onClick={doPrint}>🖨️ طباعة</Btn>
+          <Btn small color={C.purple} onClick={() => setAddModal(true)}>{t('g6.rad.add', lang)}</Btn>
+          <Btn small color={C.accent} onClick={saveRequest}>{t('g6.rad.saveRequest', lang)}</Btn>
+          <Btn small color={C.success} onClick={doPrint}>{t('g6.rad.print', lang)}</Btn>
         </div>
       </div>
 
       <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: 12, marginBottom: 14, position: 'relative' }}>
-        <div style={{ color: C.muted, fontSize: 11, marginBottom: 6 }}>المريض (اختياري للطباعة)</div>
+        <div style={{ color: C.muted, fontSize: 11, marginBottom: 6 }}>{t('g6.rad.patientOptional', lang)}</div>
         {selectedPatient ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <div style={{ flex: 1, background: C.accent + '22', border: `1px solid ${C.accent}`, borderRadius: 8, padding: '8px 12px' }}>
@@ -118,12 +121,12 @@ export default function Radiology({ patients, customTests, setCustomTests, setEx
               onChange={e => { setPatientSearch(e.target.value); setShowPatientList(true); }}
               onFocus={() => setShowPatientList(true)}
               onBlur={() => setTimeout(() => setShowPatientList(false), 200)}
-              placeholder="ابحث بالاسم أو رقم الملف..."
-              style={{ ...inp(), paddingRight: 36 }}
+              placeholder={t('g6.rad.searchPatientPh', lang)}
+              style={{ ...inp(), paddingInlineEnd: 36 }}
             />
-            <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', color: C.accent, fontSize: 14 }}>🔍</span>
+            <span style={{ position: 'absolute', insetInlineEnd: 10, top: '50%', transform: 'translateY(-50%)', color: C.accent, fontSize: 14 }}>🔍</span>
             {showPatientList && (
-              <div style={{ position: 'absolute', top: '100%', right: 0, left: 0, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 10, zIndex: 200, maxHeight: 180, overflowY: 'auto', marginTop: 4 }}>
+              <div style={{ position: 'absolute', top: '100%', insetInlineStart: 0, insetInlineEnd: 0, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 10, zIndex: 200, maxHeight: 180, overflowY: 'auto', marginTop: 4 }}>
                 {patientResults.map(p => (
                   <div
                     key={p.id}
@@ -135,7 +138,7 @@ export default function Radiology({ patients, customTests, setCustomTests, setEx
                   </div>
                 ))}
                 {patientResults.length === 0 && (
-                  <div style={{ color: C.muted, fontSize: 12, padding: '10px 14px', textAlign: 'center' }}>لا توجد نتائج</div>
+                  <div style={{ color: C.muted, fontSize: 12, padding: '10px 14px', textAlign: 'center' }}>{t('g6.rad.noResults', lang)}</div>
                 )}
               </div>
             )}
@@ -156,8 +159,8 @@ export default function Radiology({ patients, customTests, setCustomTests, setEx
         <input
           value={search}
           onChange={e => setSearch(e.target.value)}
-          placeholder="ابحث عن فحص..."
-          style={{ background: 'none', border: 'none', outline: 'none', color: C.text, fontSize: 13, flex: 1, direction: 'rtl', fontFamily: 'inherit' }}
+          placeholder={t('g6.rad.searchTestPh', lang)}
+          style={{ background: 'none', border: 'none', outline: 'none', color: C.text, fontSize: 13, flex: 1, direction: dirOf(lang), fontFamily: 'inherit' }}
         />
       </div>
 
@@ -178,7 +181,7 @@ export default function Radiology({ patients, customTests, setCustomTests, setEx
               whiteSpace: 'nowrap',
               fontFamily: 'inherit'
             }}
-          >{cat}</button>
+          >{cat === 'الكل' ? t('g6.rad.all', lang) : tv(cat)}</button>
         ))}
       </div>
 
@@ -192,13 +195,13 @@ export default function Radiology({ patients, customTests, setCustomTests, setEx
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <div style={{ width: 10, height: 10, borderRadius: '50%', background: catColor }} />
-                <span style={{ color: catColor, fontWeight: 700, fontSize: 13 }}>{cat}</span>
+                <span style={{ color: catColor, fontWeight: 700, fontSize: 13 }}>{tv(cat)}</span>
                 <span style={{ color: C.muted, fontSize: 11 }}>({testsInCat.filter(t => isSelected(selected, t.id)).length}/{testsInCat.length})</span>
               </div>
               <div
                 onClick={() => selectAll(cat)}
                 style={{ color: catColor, fontSize: 11, cursor: 'pointer', background: catColor + '22', borderRadius: 8, padding: '3px 10px', fontWeight: 600 }}
-              >{allCatSel ? 'إلغاء الكل' : 'تحديد الكل'}</div>
+              >{allCatSel ? t('g6.rad.deselectAll', lang) : t('g6.rad.selectAll', lang)}</div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {testsInCat.map(t => {
@@ -232,7 +235,7 @@ export default function Radiology({ patients, customTests, setCustomTests, setEx
                     </div>
                     <div style={{ flex: 1, cursor: 'pointer' }} onClick={() => toggle(t.id)}>
                       <div style={{ color: C.text, fontWeight: 700, fontSize: 14 }}>{t.name}</div>
-                      <div style={{ color: C.muted, fontSize: 11, marginTop: 2 }}>{t.name_ar}</div>
+                      <div style={{ color: C.muted, fontSize: 11, marginTop: 2 }} dir="auto">{lang === 'ar' ? t.name_ar : tv(t.name_ar)}</div>
                     </div>
                     {sel && (
                       <div
@@ -258,24 +261,24 @@ export default function Radiology({ patients, customTests, setCustomTests, setEx
       })}
 
       <div style={{ marginTop: 4 }}>
-        <div style={{ color: C.muted, fontSize: 11, marginBottom: 6 }}>ملاحظات للطلب</div>
+        <div style={{ color: C.muted, fontSize: 11, marginBottom: 6 }}>{t('g6.rad.orderNotes', lang)}</div>
         <textarea
           value={notes}
           onChange={e => setNotes(e.target.value)}
           rows={3}
-          placeholder="تعليمات خاصة، صيام، ..."
+          placeholder={t('g6.rad.notesPh', lang)}
           style={{ ...inp(), resize: 'none' }}
         />
       </div>
 
       {selectedIds.length > 0 && (
         <div style={{
-          position: 'fixed', bottom: 70, left: 0, right: 0, maxWidth: 480, margin: '0 auto',
+          position: 'fixed', bottom: 70, insetInlineStart: 0, insetInlineEnd: 0, maxWidth: 480, margin: '0 auto',
           background: C.surface, borderTop: `1px solid ${C.border}`, padding: '10px 16px', zIndex: 150,
           display: 'flex', alignItems: 'center', justifyContent: 'space-between'
         }}>
           <div>
-            <div style={{ color: C.text, fontWeight: 700, fontSize: 13 }}>{selectedIds.length} فحص محدد</div>
+            <div style={{ color: C.text, fontWeight: 700, fontSize: 13 }}>{t('g6.rad.selectedCount', lang, { n: selectedIds.length })}</div>
             <div style={{ color: C.muted, fontSize: 10, marginTop: 2 }}>
               {selectedIds.map(id => {
                 const t = allTests.find(t => t.id === id);
@@ -283,7 +286,7 @@ export default function Radiology({ patients, customTests, setCustomTests, setEx
               }).filter(Boolean).join('  ')}
             </div>
           </div>
-          <Btn small onClick={() => setSelected({})}>مسح</Btn>
+          <Btn small onClick={() => setSelected({})}>{t('g6.rad.clear', lang)}</Btn>
         </div>
       )}
 
@@ -292,7 +295,7 @@ export default function Radiology({ patients, customTests, setCustomTests, setEx
           position: 'fixed', top: 80, left: '50%', transform: 'translateX(-50%)',
           background: C.success, color: C.bg, borderRadius: 12, padding: '10px 20px',
           fontWeight: 700, fontSize: 13, zIndex: 500
-        }}>✓ تم فتح نافذة الطباعة</div>
+        }}>{t('g6.rad.printOpened', lang)}</div>
       )}
 
       {addModal && (
@@ -305,29 +308,29 @@ export default function Radiology({ patients, customTests, setCustomTests, setEx
             style={{ background: C.surface, borderRadius: '20px 20px 0 0', padding: '20px 16px 40px', width: '100%', maxWidth: 480, border: `1px solid ${C.border}` }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <span style={{ color: C.text, fontWeight: 700, fontSize: 15 }}>إضافة فحص مخصص</span>
+              <span style={{ color: C.text, fontWeight: 700, fontSize: 15 }}>{t('g6.rad.addCustomTitle', lang)}</span>
               <span onClick={() => setAddModal(false)} style={{ color: C.muted, fontSize: 26, cursor: 'pointer' }}>×</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <Field label="اسم الفحص (إنجليزي / اختصار)">
+              <Field label={t('g6.rad.testNameLabel', lang)}>
                 <input
                   style={inp()}
                   value={newTest.name}
                   onChange={e => setNewTest(v => ({ ...v, name: e.target.value }))}
-                  placeholder="مثال: HRT"
+                  placeholder={t('g6.rad.testNamePh', lang)}
                 />
               </Field>
-              <Field label="الاسم بالعربي">
+              <Field label={t('g6.rad.nameArLabel', lang)}>
                 <input
                   style={inp()}
                   value={newTest.name_ar}
                   onChange={e => setNewTest(v => ({ ...v, name_ar: e.target.value }))}
-                  placeholder="مثال: تصوير القرص البصري"
+                  placeholder={t('g6.rad.nameArPh', lang)}
                 />
               </Field>
               <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
-                <Btn outline full onClick={() => setAddModal(false)}>إلغاء</Btn>
-                <Btn full onClick={addCustom}>✓ إضافة وتحديد</Btn>
+                <Btn outline full onClick={() => setAddModal(false)}>{t('g6.common.cancel', lang)}</Btn>
+                <Btn full onClick={addCustom}>{t('g6.rad.addAndSelect', lang)}</Btn>
               </div>
             </div>
           </div>

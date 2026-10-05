@@ -73,7 +73,7 @@ export function Modal({ title, onClose, children }) {
           <span id={titleId} style={{ color: C.text, fontWeight: 700, fontSize: 15 }}>{title}</span>
           <button
             type="button"
-            aria-label="إغلاق"
+            aria-label={t('common.close')}
             onClick={onClose}
             style={{ color: C.muted, fontSize: 26, cursor: 'pointer', lineHeight: 1, background: 'transparent', border: 'none', minWidth: 44, minHeight: 44 }}
           >×</button>
@@ -87,11 +87,11 @@ export function Modal({ title, onClose, children }) {
 // Backdrop click and "×" both call onNo (it is the Modal's onClose).
 export function Confirm({ msg, onOk, onNo }) {
   return (
-    <Modal title="تأكيد" onClose={onNo}>
+    <Modal title={t('g3.common.confirm')} onClose={onNo}>
       <p style={{ color: C.muted, fontSize: 13, marginBottom: 20 }}>{msg}</p>
       <div style={{ display: 'flex', gap: 10 }}>
-        <Btn outline full onClick={onNo}>إلغاء</Btn>
-        <Btn danger full onClick={onOk}>تأكيد</Btn>
+        <Btn outline full onClick={onNo}>{t('g3.common.cancel')}</Btn>
+        <Btn danger full onClick={onOk}>{t('g3.common.confirm')}</Btn>
       </div>
     </Modal>
   );
@@ -111,7 +111,7 @@ export function Toast({ msg, onDone }) {
       style={{
         position: 'fixed',
         bottom: 80,
-        left: '50%',
+        left: '50%', // centring trick with translateX(-50%): intentionally physical
         transform: 'translateX(-50%)',
         background: warn ? C.gold : C.success,
         color: C.bg,
@@ -135,7 +135,7 @@ export function LangToggle() {
     <button
       type="button"
       onClick={() => setLang(lang === 'en' ? 'ar' : 'en')}
-      aria-label={lang === 'en' ? 'التبديل إلى العربية' : 'Switch to English'}
+      aria-label={lang === 'en' ? t('g3.common.switchToAr', lang) : t('g3.common.switchToEn', lang)}
       title={t('lang.toggle', lang)}
       style={{
         minWidth: 44, height: 34, padding: '0 8px', borderRadius: 10, background: C.card, border: `1px solid ${C.border}`,
@@ -148,11 +148,12 @@ export function LangToggle() {
 // Uses the legacy theme store, so toggling here re-themes the whole app
 // (ThemeRoot subscribes to the same store) and persists to iapp_theme.
 export function ThemeToggle() {
-  const t = useTheme();
+  const theme = useTheme();
+  useLang();
   return (
     <div
-      onClick={() => setTheme(nextTheme(t))}
-      title={themeToggleTitle(t)}
+      onClick={() => setTheme(nextTheme(theme))}
+      title={themeToggleTitle(theme)}
       style={{
         width: 34,
         height: 34,
@@ -166,6 +167,6 @@ export function ThemeToggle() {
         fontSize: 15,
         flexShrink: 0
       }}
-    >{themeToggleIcon(t)}</div>
+    >{themeToggleIcon(theme)}</div>
   );
 }

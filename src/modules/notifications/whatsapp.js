@@ -4,6 +4,8 @@
 // redefining any of it.
 
 import { clinicLabel } from '../constants/clinics.js';
+import { t } from '../i18n/index.js';
+import { tv } from '../i18n/tv.js';
 
 // normPhone (the generic phone-digit normalizer) is used all over
 // app-runtime.js well outside this batch's scope (patient search, patient
@@ -26,7 +28,7 @@ function waNumber(phone) {
 export function waOpen(phone, text) {
   const n = waNumber(phone);
   if (!n) {
-    alert('لا يوجد رقم هاتف صحيح لهذا المريض');
+    alert(t('g5.wa.noPhone'));
     return false;
   }
   window.open('https://wa.me/' + n + '?text=' + encodeURIComponent(text), '_blank');
@@ -34,12 +36,11 @@ export function waOpen(phone, text) {
 }
 
 const firstName = n => String(n || '').trim().split(/\s+/)[0] || '';
-const CLINIC_BRAND = 'عيادة د. عبدالستار صقر';
 
 export function waReminderText(a) {
-  return 'أهلاً ' + firstName(a.patient) + ' 🌿\n' + 'تذكير بموعدك في ' + CLINIC_BRAND + '\n' + '📅 ' + (a.date || '') + '   ⏰ ' + (a.time || '') + '\n' + '📍 ' + clinicLabel(a.clinic) + '\n\n' + 'برجاء الرد بالتأكيد، أو التواصل معنا لتعديل الموعد.';
+  return t('g5.wa.reminder', { name: firstName(a.patient), brand: t('g5.wa.brand'), date: a.date || '', time: a.time || '', clinic: tv(clinicLabel(a.clinic)) });
 }
 
 export function waFollowUpText(name, when, reason) {
-  return 'أهلاً ' + firstName(name) + ' 🌿\n' + (reason || 'موعد المتابعة الخاص بك') + ' كان محدداً بتاريخ ' + (when || '') + '\n' + 'برجاء التواصل معنا لتحديد موعد جديد في ' + CLINIC_BRAND + '.';
+  return t('g5.wa.followUp', { name: firstName(name), reason: reason || t('g5.wa.defaultReason'), when: when || '', brand: t('g5.wa.brand') });
 }

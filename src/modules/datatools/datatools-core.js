@@ -15,6 +15,7 @@ import { sbGet, sbSet, sbMutate } from '../sync/wiring.js';
 import { trashPut, logAudit, saveAutoBackup } from '../sync/audit-trash-backup.js';
 import { GUARD_KEY, localISO } from '../constants/misc.js';
 import { BACKUP_KEY, TRASH_KEY, AUDIT_KEY } from '../sync/engine.js';
+import { t } from '../i18n/index.js';
 
 const normPhone = s => String(s || '').replace(/\D/g, '').replace(/^(20|0020)/, '0');
 const normArabic = s => String(s || '').trim().replace(/[ً-ْـ]/g, '').replace(/[أإآ]/g, 'ا').replace(/ى/g, 'ي').replace(/ة/g, 'ه').replace(/\s+/g, ' ').toLowerCase();
@@ -40,9 +41,9 @@ export async function mergePatients(keep, drop) {
     if (!touched) continue;
     await sbMutate(key, list => list.map(r => r && r.patientId === drop.id ? { ...r, patientId: keep.id, patient: keep.name } : r));
   }
-  await trashPut('iapp_patients', drop, 'مريض مدمج: ' + (drop.name || ''));
+  await trashPut('iapp_patients', drop, t('g4.audit.mergedPatient', 'ar') + ': ' + (drop.name || ''));
   const res = await sbMutate('iapp_patients', list => list.filter(p => p.id !== drop.id));
-  await logAudit('دمج ملفين', (drop.patientCode || drop.id) + ' ← ' + (keep.patientCode || keep.id) + ' · ' + (keep.name || ''));
+  await logAudit(t('g4.audit.mergeFiles', 'ar'), (drop.patientCode || drop.id) + ' ← ' + (keep.patientCode || keep.id) + ' · ' + (keep.name || ''));
   return res.ok;
 }
 
@@ -55,7 +56,7 @@ export async function trashRestore(entry) {
     localStorage.setItem(entry.storeKey, JSON.stringify(put.data));
   } catch { /* storage unavailable (private mode / quota): non-fatal */ }
   await sbMutate(TRASH_KEY, list => list.filter(t => t.id !== entry.id));
-  await logAudit('استعادة من سلة المحذوفات', entry.label || entry.storeKey);
+  await logAudit(t('g4.audit.trashRestore', 'ar'), entry.label || entry.storeKey);
   return true;
 }
 
@@ -69,7 +70,7 @@ export async function maybeDailyBackup() {
     if (list === undefined) return;
     const arr = Array.isArray(list) ? list : [];
     if (arr.some(b => localISO(new Date(b.at)) === localISO())) return;
-    await saveAutoBackup('نسخة يومية تلقائية');
+    await saveAutoBackup(t('g4.backup.daily', 'ar'));
   } catch (e) {
     console.warn('daily backup failed', e);
   }
@@ -79,9 +80,9 @@ export async function restoreSnapshot(data, label) {
   const keys = Object.keys(data || {}).filter(k => k.indexOf('iapp_') === 0 && !['iapp_session', 'iapp_unified_session', GUARD_KEY, BACKUP_KEY, TRASH_KEY, AUDIT_KEY].includes(k));
   if (!keys.length) return {
     ok: false,
-    error: 'الملف لا يحتوي على بيانات I App'
+    error: t('g4.dt.noDataInFile')
   };
-  await saveAutoBackup('قبل الاستعادة');
+  await saveAutoBackup(t('g4.backup.beforeRestore', 'ar'));
   let done = 0;
   for (const k of keys) {
     const v = data[k];
@@ -92,7 +93,7 @@ export async function restoreSnapshot(data, label) {
     } catch { /* storage unavailable (private mode / quota): non-fatal */ }
     if (ok) done++;
   }
-  await logAudit('استعادة نسخة احتياطية', (label || '') + ' · ' + done + ' مجموعة بيانات');
+  await logAudit(t('g4.audit.restoreBackup', 'ar'), (label || '') + ' · ' + done + ' ' + t('g4.audit.datasetsSuffix', 'ar'));
   return {
     ok: true,
     count: done

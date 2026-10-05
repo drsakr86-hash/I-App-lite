@@ -1,9 +1,10 @@
 import React from 'react';
+import { t, getLang, dirOf } from '../modules/i18n/index.js';
 
 // Loading placeholder for code-split screens (React.lazy). role="status" so it is announced.
-export default function LazyFallback({ label = 'جاري التحميل…' }) {
+export default function LazyFallback({ label = t('common.loading') }) {
   return (
-    <div role="status" aria-live="polite" style={{ padding: 16, direction: 'rtl' }}>
+    <div role="status" aria-live="polite" style={{ padding: 16, direction: dirOf(getLang()) }}>
       <div className="ds-skel" style={{ height: 18, width: '40%', marginBottom: 12 }} />
       <div className="ds-skel" style={{ height: 90, marginBottom: 10 }} />
       <div className="ds-skel" style={{ height: 90 }} />

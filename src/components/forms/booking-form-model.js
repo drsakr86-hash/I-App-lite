@@ -9,6 +9,8 @@
 // Submitting the booking (validation, insert, duplicate handling) is
 // PatientApp's doBook — unchanged — not the form's.
 
+import { t } from '../../modules/i18n/index.js';
+
 // Supabase view read for the taken-slot counts, and how many bookings fill a slot.
 export const SLOTS_VIEW = 'iapp_slots_taken';
 export const SLOT_CAPACITY = 1;
@@ -105,8 +107,8 @@ export const shouldReturnToTimeStep = (step, time) => step >= 5 && !time;
 // Guest "your info" step: alert text for the first problem, or null to go
 // on. The phone length counts raw characters (spaces included) — legacy.
 export const guestInfoError = bookForm => {
-  if (!bookForm.newName?.trim()) return GUEST_NAME_ALERT;
-  if (!bookForm.newPhone?.trim() || bookForm.newPhone.length < 10) return GUEST_PHONE_ALERT;
+  if (!bookForm.newName?.trim()) return t('g3.booking.nameAlert');
+  if (!bookForm.newPhone?.trim() || bookForm.newPhone.length < 10) return t('g3.booking.phoneAlert');
   return null;
 };
 
@@ -120,4 +122,4 @@ export const bookingSummaryRows = (bookForm, isGuest) =>
     ...(isGuest ? [['👤', bookForm.newName], ['📞', bookForm.newPhone]] : [])
   ].filter(([, v]) => v);
 
-export const bookButtonLabel = booking => (booking ? '⏳ جاري الإرسال...' : '📅 تأكيد الحجز');
+export const bookButtonLabel = booking => (booking ? t('g3.booking.sending') : t('g3.booking.confirmBtn'));

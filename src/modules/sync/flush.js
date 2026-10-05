@@ -1,3 +1,5 @@
+import { t } from '../i18n/index.js';
+
 // Offline-first flush of ONE dirty key: read remote, merge with the local copy,
 // write back, and clear the dirty flag only if nothing changed meanwhile.
 // All side effects are injected so the logic is testable without a browser.
@@ -28,24 +30,24 @@ export function createFlusher(deps) {
 
       let local;
       try { local = JSON.parse(storage.get(key)); }
-      catch (e) { setError(key, 'بيانات محلية غير صالحة'); break; }
+      catch (e) { setError(key, t('g4.sync.errInvalidLocal')); break; }
 
       const authed = await ensureAuthed();
       if (!authed.ok) {
         ok = false;
-        setError(key, authed.reason === 'network' ? 'تعذر الاتصال بالخادم' : 'الجلسة منتهية — سجّل الدخول من جديد');
+        setError(key, authed.reason === 'network' ? t('g4.sync.errNetwork') : t('g4.sync.errSession'));
         break;
       }
 
       const remote = await readRemote(key);
-      if (remote === undefined) { ok = false; setError(key, 'تعذر قراءة البيانات من الخادم'); break; }
+      if (remote === undefined) { ok = false; setError(key, t('g4.sync.errRead')); break; }
 
       let base = null;
       try { const b = storage.get(basePrefix + key); base = b ? JSON.parse(b) : null; } catch { /* ignore */ }
 
       const merged = remote === null ? local : merge(base, local, remote);
       const saved = await writeRemote(key, merged);
-      if (!saved) { ok = false; setError(key, 'تعذر حفظ البيانات على الخادم'); break; }
+      if (!saved) { ok = false; setError(key, t('g4.sync.errWrite')); break; }
 
       const mergedStr = JSON.stringify(merged);
       if (storage.get(dirtyPrefix + key) === stamp) {

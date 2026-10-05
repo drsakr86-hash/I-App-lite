@@ -11,8 +11,11 @@ import { localISO } from '../modules/constants/misc.js';
 import { waOpen, waFollowUpText } from '../modules/notifications/index.js';
 import { INJ_KEY, dueInjections, overdueFollowUps, followUpKey, hiddenMap, hiddenState, SNOOZE_DAYS } from '../modules/followups/index.js';
 import { loadHidden, hideFollowUp, unhideFollowUp } from '../modules/followups/hide.js';
+import { t, useLang } from '../modules/i18n/index.js';
+import { tv } from '../modules/i18n/tv.js';
 
 export default function FollowUpCentre({ visits, patients, onClose, onPatientClick }) {
+  const lang = useLang();
   const [injections, setInjections] = useState([]);
   const [hidden, setHidden] = useState([]);
   const [busy, setBusy] = useState('');
@@ -34,13 +37,13 @@ export default function FollowUpCentre({ visits, patients, onClose, onPatientCli
 
   // Never retried automatically: on failure the card stays and a message is shown.
   const hide = async (type, v) => {
-    if (type === 'dismissed' && !window.confirm('عدم تذكيرك بحالة ' + v.patientName + ' مرة أخرى؟ (تقدر ترجعها من تبويب «مخفية»)')) return;
+    if (type === 'dismissed' && !window.confirm(t('g5.fu.dismissConfirm', lang, { name: v.patientName }))) return;
     const k = followUpKey(v.patientId, v.nextVisit);
     setBusy(k); setErr('');
     const rec = await hideFollowUp(type, v);
     setBusy('');
     if (rec) setHidden(h => [...h.filter(x => x.key !== rec.key), rec]);
-    else setErr('تعذر الحفظ، حاول مرة أخرى.');
+    else setErr(t('g5.fu.saveFail', lang));
   };
   const unhide = async v => {
     const k = followUpKey(v.patientId, v.nextVisit);
@@ -48,7 +51,7 @@ export default function FollowUpCentre({ visits, patients, onClose, onPatientCli
     const ok = await unhideFollowUp(v);
     setBusy('');
     if (ok) setHidden(h => h.filter(x => x.key !== k));
-    else setErr('تعذر الحفظ، حاول مرة أخرى.');
+    else setErr(t('g5.fu.saveFail', lang));
   };
   const hideBtn = (tone, extra = {}) => ({
     background: tone + '18', border: '1px solid ' + tone + '44', borderRadius: 9, padding: '7px 10px',
@@ -103,17 +106,17 @@ export default function FollowUpCentre({ visits, patients, onClose, onPatientCli
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <div style={{ color: C.gold, fontWeight: 800, fontSize: 15 }}>🔔 المتابعات</div>
-          <span onClick={onClose} style={{ color: C.muted, fontSize: 24, cursor: 'pointer' }}>×</span>
+          <div style={{ color: C.gold, fontWeight: 800, fontSize: 15 }}>{t('g5.fu.title', lang)}</div>
+          <span role="button" aria-label={t('g5.fu.close', lang)} onClick={onClose} style={{ color: C.muted, fontSize: 24, cursor: 'pointer' }}>×</span>
         </div>
         <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-          {tabBtn('late', 'متأخرة', late.length)}
-          {tabBtn('inj', 'حقن مستحقة', due.length)}
-          {hiddenRows.length > 0 && tabBtn('hidden', 'مخفية', hiddenRows.length)}
+          {tabBtn('late', t('g5.fu.tabLate', lang), late.length)}
+          {tabBtn('inj', t('g5.fu.tabInj', lang), due.length)}
+          {hiddenRows.length > 0 && tabBtn('hidden', t('g5.fu.tabHidden', lang), hiddenRows.length)}
         </div>
         {err && <div style={{ color: C.danger, fontSize: 12, textAlign: 'center', marginBottom: 8 }}>{err}</div>}
         {rows.length === 0 && (
-          <div style={{ color: C.muted, fontSize: 13, textAlign: 'center', padding: '26px 0' }}>لا يوجد شيء هنا 👌</div>
+          <div style={{ color: C.muted, fontSize: 13, textAlign: 'center', padding: '26px 0' }}>{t('g5.fu.empty', lang)}</div>
         )}
         {tab === 'late' && late.map(v => (
           <div
@@ -138,12 +141,12 @@ export default function FollowUpCentre({ visits, patients, onClose, onPatientCli
               >
                 {v.patientName}
               </span>
-              <span style={{ color: v.late > 60 ? C.danger : C.gold, fontSize: 11, fontWeight: 700 }}>متأخر {v.late} يوم</span>
+              <span style={{ color: v.late > 60 ? C.danger : C.gold, fontSize: 11, fontWeight: 700 }}>{t('g5.fu.lateDays', lang, { n: v.late })}</span>
             </div>
-            <div style={{ color: C.muted, fontSize: 11, marginTop: 3 }}>📅 كان مفروض: {v.nextVisit} · آخر زيارة {v.date}</div>
+            <div style={{ color: C.muted, fontSize: 11, marginTop: 3 }}>{t('g5.fu.shouldHave', lang, { next: v.nextVisit, last: v.date })}</div>
             <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
               <button
-                onClick={() => waOpen(v.patientPhone, waFollowUpText(v.patientName, v.nextVisit, 'موعد المتابعة'))}
+                onClick={() => waOpen(v.patientPhone, waFollowUpText(v.patientName, v.nextVisit, t('g5.fu.waReasonFollow', lang)))}
                 style={{
                   flex: 1,
                   background: '#25D36622',
@@ -157,7 +160,7 @@ export default function FollowUpCentre({ visits, patients, onClose, onPatientCli
                   fontFamily: 'inherit'
                 }}
               >
-                💬 تذكير واتساب
+                {t('g5.fu.waRemind', lang)}
               </button>
               {v.patientPhone && (
                 <a
@@ -173,16 +176,16 @@ export default function FollowUpCentre({ visits, patients, onClose, onPatientCli
                     textDecoration: 'none'
                   }}
                 >
-                  📞 اتصال
+                  {t('g5.fu.call', lang)}
                 </a>
               )}
             </div>
             <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
               <button disabled={busy === followUpKey(v.patientId, v.nextVisit)} onClick={() => hide('snoozed', v)} style={hideBtn(C.gold, { flex: 1 })}>
-                ✔ تم التذكير (إخفاء {SNOOZE_DAYS} أيام)
+                {t('g5.fu.snooze', lang, { n: SNOOZE_DAYS })}
               </button>
               <button disabled={busy === followUpKey(v.patientId, v.nextVisit)} onClick={() => hide('dismissed', v)} style={hideBtn(C.danger, { flex: 1 })}>
-                🚫 لا أتوقع حضوره
+                {t('g5.fu.dismiss', lang)}
               </button>
             </div>
           </div>
@@ -193,9 +196,9 @@ export default function FollowUpCentre({ visits, patients, onClose, onPatientCli
             <div key={v.id} style={{ background: C.card, border: '1px solid ' + C.border, borderRadius: 12, padding: '11px 13px', marginBottom: 8, opacity: 0.85 }}>
               <div style={{ color: C.text, fontWeight: 700, fontSize: 13 }}>{v.patientName}</div>
               <div style={{ color: C.muted, fontSize: 11, marginTop: 3 }}>
-                كان مفروض: {v.nextVisit} · {r.type === 'dismissed' ? 'لن يتم تذكيرك به' : 'مخفي حتى ' + r.until}
+                {t('g5.fu.hiddenLine', lang, { next: v.nextVisit, state: r.type === 'dismissed' ? t('g5.fu.dismissedState', lang) : t('g5.fu.hiddenUntil', lang, { until: r.until }) })}
               </div>
-              <button disabled={busy === followUpKey(v.patientId, v.nextVisit)} onClick={() => unhide(v)} style={hideBtn(C.accent, { marginTop: 8 })}>↩ إرجاع للمتابعات</button>
+              <button disabled={busy === followUpKey(v.patientId, v.nextVisit)} onClick={() => unhide(v)} style={hideBtn(C.accent, { marginTop: 8 })}>{t('g5.fu.restore', lang)}</button>
             </div>
           );
         })}
@@ -216,15 +219,15 @@ export default function FollowUpCentre({ visits, patients, onClose, onPatientCli
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
                 <span style={{ color: C.text, fontWeight: 700, fontSize: 13 }}>{x.patient || p.name || '—'}</span>
                 <span style={{ color: days < 0 ? C.danger : C.teal, fontSize: 11, fontWeight: 700 }}>
-                  {days < 0 ? 'متأخرة ' + -days + ' يوم' : days === 0 ? 'اليوم' : 'بعد ' + days + ' يوم'}
+                  {days < 0 ? t('g5.fu.injLate', lang, { n: -days }) : days === 0 ? t('g5.fu.injToday', lang) : t('g5.fu.injIn', lang, { n: days })}
                 </span>
               </div>
               <div style={{ color: C.muted, fontSize: 11, marginTop: 3 }}>
-                💉 {x.drug} · {x.eye} · الجرعة رقم {x.doseNo || '—'} · آخر حقنة {x.date}
+                {t('g5.fu.injLine', lang, { drug: x.drug, eye: tv(x.eye), dose: x.doseNo || '—', date: x.date })}
               </div>
               <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
                 <button
-                  onClick={() => waOpen(x.phone || p.phone, waFollowUpText(x.patient || p.name, x.nextDate, 'موعد الحقنة داخل العين'))}
+                  onClick={() => waOpen(x.phone || p.phone, waFollowUpText(x.patient || p.name, x.nextDate, t('g5.fu.waReasonInj', lang)))}
                   style={{
                     flex: 1,
                     background: '#25D36622',
@@ -238,7 +241,7 @@ export default function FollowUpCentre({ visits, patients, onClose, onPatientCli
                     fontFamily: 'inherit'
                   }}
                 >
-                  💬 تذكير واتساب
+                  {t('g5.fu.waRemind', lang)}
                 </button>
               </div>
             </div>

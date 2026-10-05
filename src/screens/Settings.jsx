@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import {
   addUserError, buildNewUserRecord, editUserError, buildEditedUserRecord, replaceUser,
   canDeleteUser, userAuditDetail, withAdded, withUpdated, withoutId, withPrimaryDoctor,
-  primaryDoctor, passwordFormError, buildDatabaseSummaryRows, STATIC_INFO_ROWS,
-  LAST_ADMIN_DELETE_ALERT
+  primaryDoctor, passwordFormError, buildDatabaseSummaryRows, staticInfoRows,
+  lastAdminDeleteAlert
 } from '../modules/settings/model.js';
 import { Modal, Confirm, Btn } from '../components/common.jsx';
 import { DoctorForm, PriceForm, UserForm } from '../components/forms/index.js';
@@ -12,6 +12,8 @@ import { Field, inp } from '../modules/ui/atoms.jsx';
 import { logAudit, saveAutoBackup } from '../modules/sync/index.js';
 import { getSB } from '../modules/data-access/index.js';
 import { localISO, newId, emailKey, ROLE_LABEL, MIN_PW_LEN, GUARD_KEY } from '../modules/constants/index.js';
+import { t, useLang } from '../modules/i18n/index.js';
+import { tv } from '../modules/i18n/tv.js';
 import DataTools from '../components/DataTools.jsx';
 import { getUsers } from '../modules/auth/staff-login.js';
 
@@ -19,7 +21,8 @@ export default function Settings({
   patients, appointments, prescriptions, exams, visits, doctors, setDoctors, prices, setPrices,
   clinic, setClinic, onReset, users, setUsers, session, onLogout
 }) {
-
+  const lang = useLang();
+  const cur = t('g4.common.currency', lang);
   const [confirm, setConfirm] = useState(false);
   const [modal, setModal] = useState(null);
   const [delDoc, setDelDoc] = useState(null);
@@ -36,6 +39,7 @@ export default function Settings({
   const primary = primaryDoctor(doctors);
   const isAdmin = session && session.role === 'admin';
   const summaryRows = buildDatabaseSummaryRows({ patients, appointments, visits, prescriptions, exams });
+  const infoRows = staticInfoRows();
 
   const addDoc = f => setDoctors(withAdded(doctors, f, Date.now()));
   const editDoc = f => setDoctors(withUpdated(doctors, f));
@@ -59,7 +63,7 @@ export default function Settings({
     setUsers([...getUsers(), rec]);
     setUserErr('');
     setUserModal(null);
-    logAudit('إضافة مستخدم', userAuditDetail(mail, rec.role, ROLE_LABEL));
+    logAudit(t('g4.audit.addUser', 'ar'), userAuditDetail(mail, rec.role, ROLE_LABEL));
   };
   const editUser = async f => {
     const cur = getUsers();
@@ -74,15 +78,15 @@ export default function Settings({
     setUsers(replaceUser(getUsers(), f.id, rec));
     setUserErr('');
     setUserModal(null);
-    logAudit('تعديل مستخدم', userAuditDetail(mail, rec.role, ROLE_LABEL));
+    logAudit(t('g4.audit.editUser', 'ar'), userAuditDetail(mail, rec.role, ROLE_LABEL));
   };
   const delUserFn = id => {
-    logAudit('حذف مستخدم', String(id));
+    logAudit(t('g4.audit.deleteUser', 'ar'), String(id));
     const cur = getUsers();
     const decision = canDeleteUser(cur, id, session.id);
     if (decision.action === 'ignore') return;
     if (decision.action === 'blocked') {
-      alert(LAST_ADMIN_DELETE_ALERT);
+      alert(lastAdminDeleteAlert());
       return;
     }
     setUsers(decision.next);
@@ -97,21 +101,21 @@ export default function Settings({
     const email = session.email || '';
     const sb = getSB();
     if (!sb || !email) {
-      setPwMsg({ err: '❌ تعذر الاتصال بالخادم' });
+      setPwMsg({ err: t('g4.settings.pwNoServer') });
       return;
     }
     const chk = await sb.auth.signInWithPassword({ email, password: pwForm.old });
     if (chk.error) {
-      setPwMsg({ err: '❌ كلمة المرور الحالية غير صحيحة' });
+      setPwMsg({ err: t('g4.settings.pwWrongOld') });
       return;
     }
     const upd = await sb.auth.updateUser({ password: pwForm.new1 });
     if (upd.error) {
-      setPwMsg({ err: '❌ ' + (upd.error.message || 'تعذر تغيير كلمة المرور') });
+      setPwMsg({ err: '❌ ' + (upd.error.message || t('g4.settings.pwChangeFail')) });
       return;
     }
-    setPwMsg({ ok: '✅ تم تغيير كلمة المرور بنجاح' });
-    logAudit('تغيير كلمة المرور الشخصية', '');
+    setPwMsg({ ok: t('g4.settings.pwOk') });
+    logAudit(t('g4.audit.changeOwnPw', 'ar'), '');
     setPwForm({ old: '', new1: '', new2: '' });
     setTimeout(() => {
       setPwModal(false);
@@ -143,7 +147,7 @@ export default function Settings({
       document.body.removeChild(link);
       setTimeout(() => URL.revokeObjectURL(url), 3000);
     } catch (e) {
-      alert('فشل التصدير: ' + e.message);
+      alert(t('g4.settings.exportFail', { msg: e.message }));
     }
   };
 
@@ -163,7 +167,7 @@ export default function Settings({
     };
     img.onerror = () => {
       URL.revokeObjectURL(url);
-      alert('تعذر قراءة الصورة');
+      alert(t('g4.settings.imgReadFail'));
     };
     img.src = url;
     e.target.value = '';
@@ -181,61 +185,61 @@ export default function Settings({
 
   return (
     <div style={{ padding: '16px 16px 90px' }}>
-      <div style={{ color: C.text, fontWeight: 700, fontSize: 16, marginBottom: 16 }}>الإعدادات</div>
+      <div style={{ color: C.text, fontWeight: 700, fontSize: 16, marginBottom: 16 }}>{t('g4.settings.title', lang)}</div>
 
       <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: 14, marginBottom: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <div style={{ color: C.text, fontWeight: 700, fontSize: 13 }}>🏥 بيانات العيادة</div>
+          <div style={{ color: C.text, fontWeight: 700, fontSize: 13 }}>{t('g4.settings.clinicData', lang)}</div>
           <div
             onClick={() => { setClinicForm({ ...clinic }); setEditClinic(true); }}
             style={{ color: C.accent, fontSize: 11, cursor: 'pointer', background: C.accent + '22', borderRadius: 8, padding: '4px 10px' }}
-          >✏ تعديل</div>
+          >{t('g4.common.edit', lang)}</div>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ color: C.muted, fontSize: 12 }}>📍 العنوان</span>
-            <span style={{ color: C.text, fontSize: 12, fontWeight: 600 }}>{clinic.address || 'لم يُضف بعد'}</span>
+            <span style={{ color: C.muted, fontSize: 12 }}>{t('g4.settings.address', lang)}</span>
+            <span style={{ color: C.text, fontSize: 12, fontWeight: 600 }}>{tv(clinic.address) || t('g4.settings.notAdded', lang)}</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ color: C.muted, fontSize: 12 }}>📞 رقم التواصل</span>
-            <span style={{ color: C.text, fontSize: 12, fontWeight: 600 }}>{clinic.phone || 'لم يُضف بعد'}</span>
+            <span style={{ color: C.muted, fontSize: 12 }}>{t('g4.settings.phone', lang)}</span>
+            <span style={{ color: C.text, fontSize: 12, fontWeight: 600 }}>{tv(clinic.phone) || t('g4.settings.notAdded', lang)}</span>
           </div>
         </div>
       </div>
 
       <div style={{ background: `linear-gradient(135deg,${C.accent}22,${C.teal}11)`, border: `1px solid ${C.accent}33`, borderRadius: 16, padding: '16px 14px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
         <div style={{ width: 54, height: 54, borderRadius: '50%', background: `linear-gradient(135deg,${C.accent},${C.teal})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 800, color: C.bg }}>
-          {primary.initial || 'د'}
+          {primary.initial || t('g4.settings.defaultInitial', lang)}
         </div>
         <div style={{ flex: 1 }}>
-          <div style={{ color: C.text, fontWeight: 700, fontSize: 15 }}>{primary.name || 'د. عبدالستار صقر'}</div>
-          <div style={{ color: C.muted, fontSize: 11 }}>{primary.title || 'طبيب عيون · رئيس القسم'}</div>
+          <div style={{ color: C.text, fontWeight: 700, fontSize: 15 }}>{tv(primary.name) || t('g4.settings.defaultDocName', lang)}</div>
+          <div style={{ color: C.muted, fontSize: 11 }}>{tv(primary.title) || t('g4.settings.defaultDocTitle', lang)}</div>
         </div>
         <div
           onClick={() => setModal({ edit: primary })}
           style={{ color: C.accent, fontSize: 11, cursor: 'pointer', background: C.accent + '22', borderRadius: 8, padding: '5px 10px' }}
-        >✏ تعديل</div>
+        >{t('g4.common.edit', lang)}</div>
       </div>
 
       <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: 14, marginBottom: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-          <div style={{ color: C.text, fontWeight: 700, fontSize: 13 }}>👨‍⚕️ فريق الأطباء ({doctors.length})</div>
-          <Btn small onClick={() => setModal('add')}>+ إضافة طبيب</Btn>
+          <div style={{ color: C.text, fontWeight: 700, fontSize: 13 }}>{t('g4.settings.doctorsTeam', lang, { n: doctors.length })}</div>
+          <Btn small onClick={() => setModal('add')}>{t('g4.settings.addDoctor', lang)}</Btn>
         </div>
         {doctors.map(d => (
           <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0', borderBottom: `1px solid ${C.border}33` }}>
             <div style={{ width: 38, height: 38, borderRadius: '50%', background: d.isPrimary ? `linear-gradient(135deg,${C.accent},${C.teal})` : C.border, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 800, color: d.isPrimary ? C.bg : C.muted }}>
-              {d.initial || 'د'}
+              {d.initial || t('g4.settings.defaultInitial', lang)}
             </div>
             <div style={{ flex: 1 }}>
-              <div style={{ color: C.text, fontSize: 13, fontWeight: 600 }}>{d.name}</div>
-              <div style={{ color: C.muted, fontSize: 11 }}>{d.title}</div>
+              <div style={{ color: C.text, fontSize: 13, fontWeight: 600 }}>{tv(d.name)}</div>
+              <div style={{ color: C.muted, fontSize: 11 }}>{tv(d.title)}</div>
             </div>
             <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
               {d.isPrimary ? (
-                <span style={{ background: C.gold + '22', color: C.gold, borderRadius: 8, padding: '2px 8px', fontSize: 10, fontWeight: 700 }}>رئيسي</span>
+                <span style={{ background: C.gold + '22', color: C.gold, borderRadius: 8, padding: '2px 8px', fontSize: 10, fontWeight: 700 }}>{t('g4.settings.primaryBadge', lang)}</span>
               ) : (
-                <div onClick={() => setPrimary(d.id)} style={{ background: C.muted + '22', borderRadius: 8, padding: '3px 8px', color: C.muted, fontSize: 10, cursor: 'pointer' }}>تعيين رئيسي</div>
+                <div onClick={() => setPrimary(d.id)} style={{ background: C.muted + '22', borderRadius: 8, padding: '3px 8px', color: C.muted, fontSize: 10, cursor: 'pointer' }}>{t('g4.settings.setPrimary', lang)}</div>
               )}
               <div onClick={() => setModal({ edit: d })} style={{ background: C.accent + '22', borderRadius: 8, padding: '5px 8px', color: C.accent, fontSize: 11, cursor: 'pointer' }}>✏</div>
               {!d.isPrimary && isAdmin && (
@@ -248,8 +252,8 @@ export default function Settings({
 
       <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: 14, marginBottom: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-          <div style={{ color: C.text, fontWeight: 700, fontSize: 13 }}>💰 أسعار الخدمات</div>
-          <Btn small color={C.gold} onClick={() => setPriceModal('add')}>+ إضافة خدمة</Btn>
+          <div style={{ color: C.text, fontWeight: 700, fontSize: 13 }}>{t('g4.settings.prices', lang)}</div>
+          <Btn small color={C.gold} onClick={() => setPriceModal('add')}>{t('g4.settings.addService', lang)}</Btn>
         </div>
         {prices.map(p => (
           <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0', borderBottom: `1px solid ${C.border}22` }}>
@@ -257,20 +261,20 @@ export default function Settings({
               {p.icon || '💊'}
             </div>
             <div style={{ flex: 1 }}>
-              <div style={{ color: C.text, fontSize: 13, fontWeight: 600 }}>{p.name}</div>
+              <div style={{ color: C.text, fontSize: 13, fontWeight: 600 }}>{tv(p.name)}</div>
             </div>
-            <div style={{ color: C.gold, fontWeight: 800, fontSize: 14, marginLeft: 8 }}>{Number(p.price).toLocaleString()} ج.م</div>
+            <div style={{ color: C.gold, fontWeight: 800, fontSize: 14, marginInlineStart: 8 }}>{Number(p.price).toLocaleString()} {cur}</div>
             <div onClick={() => setPriceModal({ edit: p })} style={{ background: C.accent + '22', borderRadius: 8, padding: '5px 8px', color: C.accent, fontSize: 11, cursor: 'pointer' }}>✏</div>
             <div onClick={() => setPriceModal({ del: p.id })} style={{ background: C.danger + '22', borderRadius: 8, padding: '5px 8px', color: C.danger, fontSize: 11, cursor: 'pointer' }}>🗑</div>
           </div>
         ))}
         {prices.length === 0 && (
-          <div style={{ color: C.muted, fontSize: 12, textAlign: 'center', padding: 16 }}>لا توجد أسعار مضافة</div>
+          <div style={{ color: C.muted, fontSize: 12, textAlign: 'center', padding: 16 }}>{t('g4.settings.noPrices', lang)}</div>
         )}
       </div>
 
       <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: 14, marginBottom: 16 }}>
-        <div style={{ color: C.muted, fontSize: 11, fontWeight: 700, marginBottom: 12 }}>ملخص قاعدة البيانات</div>
+        <div style={{ color: C.muted, fontSize: 11, fontWeight: 700, marginBottom: 12 }}>{t('g4.settings.dbSummary', lang)}</div>
         {summaryRows.map(([lbl, val]) => (
           <div key={lbl} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
             <span style={{ color: C.muted, fontSize: 13 }}>{lbl}</span>
@@ -279,7 +283,7 @@ export default function Settings({
         ))}
       </div>
 
-      {STATIC_INFO_ROWS.map(([icon, lbl, sub], i) => (
+      {infoRows.map(([icon, lbl, sub], i) => (
         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 14px', background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, marginBottom: 8 }}>
           <div style={rowIcon(C.border)}>{icon}</div>
           <div>
@@ -292,8 +296,8 @@ export default function Settings({
       {isAdmin && (
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: 14, marginBottom: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-            <div style={{ color: C.text, fontWeight: 700, fontSize: 13 }}>🔐 حسابات المستخدمين ({users.length})</div>
-            <Btn small color={C.purple} onClick={() => { setUserErr(''); setUserModal('add'); }}>+ إضافة مستخدم</Btn>
+            <div style={{ color: C.text, fontWeight: 700, fontSize: 13 }}>{t('g4.settings.users', lang, { n: users.length })}</div>
+            <Btn small color={C.purple} onClick={() => { setUserErr(''); setUserModal('add'); }}>{t('g4.settings.addUser', lang)}</Btn>
           </div>
           {users.map(u => (
             <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0', borderBottom: `1px solid ${C.border}33` }}>
@@ -302,10 +306,10 @@ export default function Settings({
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ color: C.text, fontSize: 13, fontWeight: 600 }}>
-                  {u.name}{' '}{u.id === session.id && <span style={{ color: C.muted, fontSize: 10 }}>(أنت)</span>}
+                  {u.name}{' '}{u.id === session.id && <span style={{ color: C.muted, fontSize: 10 }}>{t('g4.settings.you', lang)}</span>}
                 </div>
                 <div style={{ color: C.muted, fontSize: 11, direction: 'ltr', display: 'inline-block' }}>
-                  {u.email || u.username}{' · '}{ROLE_LABEL[u.role] || u.role}
+                  {u.email || u.username}{' · '}{tv(ROLE_LABEL[u.role] || u.role)}
                 </div>
               </div>
               <div
@@ -323,17 +327,17 @@ export default function Settings({
       <div onClick={() => setPwModal(true)} style={rowCard}>
         <div style={rowIcon(C.purple + '33')}>🔒</div>
         <div style={{ flex: 1 }}>
-          <div style={{ color: C.text, fontSize: 13 }}>تغيير كلمة المرور</div>
-          <div style={{ color: C.muted, fontSize: 11 }}>لحسابك الحالي: {session && session.username}</div>
+          <div style={{ color: C.text, fontSize: 13 }}>{t('g4.settings.changePw', lang)}</div>
+          <div style={{ color: C.muted, fontSize: 11 }}>{t('g4.settings.forAccount', lang, { name: session && session.username })}</div>
         </div>
-        <div style={{ color: C.purple, fontSize: 12 }}>←</div>
+        <div style={{ color: C.purple, fontSize: 12 }}>{t('g4.settings.arrow', lang)}</div>
       </div>
 
       <div onClick={handleExportBackup} style={rowCard}>
         <div style={rowIcon(C.teal + '33')}>💾</div>
         <div style={{ flex: 1 }}>
-          <div style={{ color: C.text, fontSize: 13 }}>تصدير نسخة احتياطية</div>
-          <div style={{ color: C.muted, fontSize: 11 }}>حفظ كل بيانات العيادة كملف JSON</div>
+          <div style={{ color: C.text, fontSize: 13 }}>{t('g4.settings.exportBackup', lang)}</div>
+          <div style={{ color: C.muted, fontSize: 11 }}>{t('g4.settings.exportBackupSub', lang)}</div>
         </div>
         <div style={{ color: C.teal, fontSize: 12 }}>⬇</div>
       </div>
@@ -344,7 +348,7 @@ export default function Settings({
         <div onClick={onLogout} style={rowCard}>
           <div style={rowIcon(C.danger + '33')}>⏻</div>
           <div style={{ flex: 1 }}>
-            <div style={{ color: C.text, fontSize: 13 }}>تسجيل الخروج</div>
+            <div style={{ color: C.text, fontSize: 13 }}>{t('g4.settings.logout', lang)}</div>
           </div>
         </div>
       )}
@@ -355,107 +359,107 @@ export default function Settings({
           style={{ background: C.danger + '11', border: `1px solid ${C.danger}33`, borderRadius: 14, padding: '13px 14px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', marginTop: 12 }}
         >
           <span style={{ fontSize: 18 }}>🔄</span>
-          <span style={{ color: C.danger, fontWeight: 600, fontSize: 13 }}>إعادة تعيين البيانات الأولية</span>
+          <span style={{ color: C.danger, fontWeight: 600, fontSize: 13 }}>{t('g4.settings.resetData', lang)}</span>
         </div>
       )}
 
       {editClinic && (
-        <Modal title="تعديل بيانات العيادة" onClose={() => setEditClinic(false)}>
+        <Modal title={t('g4.settings.editClinicTitle', lang)} onClose={() => setEditClinic(false)}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <Field label="عنوان العيادة">
+            <Field label={t('g4.settings.clinicAddressLabel', lang)}>
               <input
                 style={inp()}
                 value={clinicForm.address || ''}
                 onChange={e => setClinicForm(f => ({ ...f, address: e.target.value }))}
-                placeholder="مثال: القاهرة - مصر الجديدة - شارع..."
+                placeholder={t('g4.settings.addressPh', lang)}
               />
             </Field>
-            <Field label="رقم التواصل / الهاتف">
+            <Field label={t('g4.settings.phoneLabel', lang)}>
               <input
                 style={inp()}
                 value={clinicForm.phone || ''}
                 onChange={e => setClinicForm(f => ({ ...f, phone: e.target.value }))}
-                placeholder="مثال: 01234567890"
+                placeholder={t('g4.settings.phonePh', lang)}
               />
             </Field>
-            <Field label="شعار العيادة (يظهر في الروشتة والعلامة المائية)">
+            <Field label={t('g4.settings.logoLabel', lang)}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 {clinicForm.logo && (
                   <img src={clinicForm.logo} alt="" style={{ width: 52, height: 52, borderRadius: '50%', objectFit: 'cover', background: '#fff' }} />
                 )}
                 <label style={{ flex: 1, textAlign: 'center', background: C.accent + '22', color: C.accent, border: `1px dashed ${C.accent}66`, borderRadius: 10, padding: '10px 8px', fontSize: 12, cursor: 'pointer' }}>
-                  {clinicForm.logo ? 'تغيير الشعار' : 'رفع صورة الشعار'}
+                  {clinicForm.logo ? t('g4.settings.logoChange', lang) : t('g4.settings.logoUpload', lang)}
                   <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleLogoFile} />
                 </label>
                 {clinicForm.logo && (
-                  <span onClick={() => setClinicForm(f => ({ ...f, logo: '' }))} style={{ color: C.danger, fontSize: 11, cursor: 'pointer' }}>حذف</span>
+                  <span onClick={() => setClinicForm(f => ({ ...f, logo: '' }))} style={{ color: C.danger, fontSize: 11, cursor: 'pointer' }}>{t('g4.settings.logoRemove', lang)}</span>
                 )}
               </div>
             </Field>
             <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
-              <Btn outline full onClick={() => setEditClinic(false)}>إلغاء</Btn>
-              <Btn full onClick={() => { setClinic({ ...clinic, ...clinicForm }); setEditClinic(false); }}>✓ حفظ</Btn>
+              <Btn outline full onClick={() => setEditClinic(false)}>{t('g4.common.cancel', lang)}</Btn>
+              <Btn full onClick={() => { setClinic({ ...clinic, ...clinicForm }); setEditClinic(false); }}>{t('g4.common.save', lang)}</Btn>
             </div>
           </div>
         </Modal>
       )}
 
       {modal === 'add' && (
-        <Modal title="إضافة طبيب جديد" onClose={() => setModal(null)}>
+        <Modal title={t('g4.settings.addDoctorTitle', lang)} onClose={() => setModal(null)}>
           <DoctorForm onSave={f => { addDoc(f); setModal(null); }} onClose={() => setModal(null)} />
         </Modal>
       )}
       {modal && modal.edit && (
-        <Modal title="تعديل بيانات الطبيب" onClose={() => setModal(null)}>
+        <Modal title={t('g4.settings.editDoctorTitle', lang)} onClose={() => setModal(null)}>
           <DoctorForm initial={modal.edit} onSave={f => { editDoc(f); setModal(null); }} onClose={() => setModal(null)} />
         </Modal>
       )}
       {delDoc && (
-        <Confirm msg="حذف هذا الطبيب من القائمة؟" onOk={() => { delDocFn(delDoc); setDelDoc(null); }} onNo={() => setDelDoc(null)} />
+        <Confirm msg={t('g4.settings.delDoctorConfirm', lang)} onOk={() => { delDocFn(delDoc); setDelDoc(null); }} onNo={() => setDelDoc(null)} />
       )}
 
       {priceModal === 'add' && (
-        <Modal title="إضافة خدمة جديدة" onClose={() => setPriceModal(null)}>
+        <Modal title={t('g4.settings.addServiceTitle', lang)} onClose={() => setPriceModal(null)}>
           <PriceForm onSave={f => { addPrice(f); setPriceModal(null); }} onClose={() => setPriceModal(null)} />
         </Modal>
       )}
       {priceModal && priceModal.edit && (
-        <Modal title="تعديل سعر الخدمة" onClose={() => setPriceModal(null)}>
+        <Modal title={t('g4.settings.editPriceTitle', lang)} onClose={() => setPriceModal(null)}>
           <PriceForm initial={priceModal.edit} onSave={f => { editPrice(f); setPriceModal(null); }} onClose={() => setPriceModal(null)} />
         </Modal>
       )}
       {priceModal && priceModal.del && (
-        <Confirm msg="حذف هذه الخدمة من قائمة الأسعار؟" onOk={() => { delPrice(priceModal.del); setPriceModal(null); }} onNo={() => setPriceModal(null)} />
+        <Confirm msg={t('g4.settings.delPriceConfirm', lang)} onOk={() => { delPrice(priceModal.del); setPriceModal(null); }} onNo={() => setPriceModal(null)} />
       )}
 
       {userModal === 'add' && (
-        <Modal title="إضافة مستخدم جديد" onClose={() => setUserModal(null)}>
+        <Modal title={t('g4.settings.addUserTitle', lang)} onClose={() => setUserModal(null)}>
           <UserForm error={userErr} onSave={addUser} onClose={() => setUserModal(null)} />
         </Modal>
       )}
       {userModal && userModal.edit && (
-        <Modal title="تعديل بيانات المستخدم" onClose={() => setUserModal(null)}>
+        <Modal title={t('g4.settings.editUserTitle', lang)} onClose={() => setUserModal(null)}>
           <UserForm initial={userModal.edit} error={userErr} onSave={editUser} onClose={() => setUserModal(null)} />
         </Modal>
       )}
       {delUser && (
         <Confirm
-          msg="حذف هذا المستخدم؟ لن يستطيع تسجيل الدخول بعد الحذف."
+          msg={t('g4.settings.delUserConfirm', lang)}
           onOk={() => { delUserFn(delUser); setDelUser(null); }}
           onNo={() => setDelUser(null)}
         />
       )}
 
       {pwModal && (
-        <Modal title="🔒 تغيير كلمة المرور" onClose={closePw}>
+        <Modal title={t('g4.settings.pwTitle', lang)} onClose={closePw}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <Field label="كلمة المرور الحالية">
+            <Field label={t('g4.settings.pwOld', lang)}>
               <input style={pwInput} type="password" value={pwForm.old} onChange={e => setPwForm(f => ({ ...f, old: e.target.value }))} />
             </Field>
-            <Field label="كلمة المرور الجديدة">
+            <Field label={t('g4.settings.pwNew', lang)}>
               <input style={pwInput} type="password" value={pwForm.new1} onChange={e => setPwForm(f => ({ ...f, new1: e.target.value }))} />
             </Field>
-            <Field label="تأكيد كلمة المرور الجديدة">
+            <Field label={t('g4.settings.pwConfirm', lang)}>
               <input style={pwInput} type="password" value={pwForm.new2} onChange={e => setPwForm(f => ({ ...f, new2: e.target.value }))} />
             </Field>
             {pwMsg && (
@@ -464,8 +468,8 @@ export default function Settings({
               </div>
             )}
             <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
-              <Btn outline full onClick={closePw}>إلغاء</Btn>
-              <Btn full color={C.purple} onClick={handleChangePassword}>✓ تغيير كلمة المرور</Btn>
+              <Btn outline full onClick={closePw}>{t('g4.common.cancel', lang)}</Btn>
+              <Btn full color={C.purple} onClick={handleChangePassword}>{t('g4.settings.pwSubmit', lang)}</Btn>
             </div>
           </div>
         </Modal>
@@ -473,10 +477,10 @@ export default function Settings({
 
       {confirm && (
         <Confirm
-          msg="سيتم حذف جميع البيانات. هل أنت متأكد؟"
+          msg={t('g4.settings.resetConfirm', lang)}
           onOk={async () => {
-            await saveAutoBackup('قبل حذف كل البيانات');
-            await logAudit('حذف كل البيانات', '');
+            await saveAutoBackup(t('g4.backup.beforeDeleteAll', 'ar'));
+            await logAudit(t('g4.audit.deleteAll', 'ar'), '');
             onReset();
             setConfirm(false);
           }}

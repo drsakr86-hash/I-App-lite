@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
 import {
-  LOGIN_EMPTY_ERROR, LOGIN_REMEMBER_DEFAULT, loginFieldsMissing, passwordInputType, showPassIcon,
+  LOGIN_EMPTY_ERROR, LOGIN_REMEMBER_DEFAULT, loginErrorText, loginFieldsMissing, passwordInputType, showPassIcon,
   loginButtonLabel, loginButtonOpacity
 } from './login-form-model.js';
 import { C } from '../../modules/theme/index.js';
 import { Field, inp } from '../../modules/ui/atoms.jsx';
 import { authenticateStaff } from '../../modules/auth/staff-login.js';
+import { t, useLang, dirOf } from '../../modules/i18n/index.js';
 
 // Staff login form (used by the secretary app). Exact port of the legacy
 // runtime's LoginScreen (public/legacy/app-runtime.js). The credential check
 // is authenticateStaff, called with the same arguments and result handling.
 export default function LoginScreen({ onLogin }) {
+  const lang = useLang();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
@@ -20,7 +22,7 @@ export default function LoginScreen({ onLogin }) {
   const submit = e => {
     if (e && e.preventDefault) e.preventDefault();
     if (loginFieldsMissing(username, password)) {
-      setError(LOGIN_EMPTY_ERROR);
+      setError(LOGIN_EMPTY_ERROR); // raw Arabic canonical text; translated at render by loginErrorText
       return;
     }
     if (loading) return;
@@ -42,7 +44,7 @@ export default function LoginScreen({ onLogin }) {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        direction: 'rtl',
+        direction: dirOf(lang),
         fontFamily: "'Segoe UI','Tahoma',Arial,sans-serif",
         padding: '24px 20px'
       }}
@@ -62,13 +64,13 @@ export default function LoginScreen({ onLogin }) {
         }}
       >👁</div>
       <div style={{ color: C.accent, fontWeight: 800, fontSize: 22, marginBottom: 4 }}>I App</div>
-      <div style={{ color: C.muted, fontSize: 12, marginBottom: 32, textAlign: 'center' }}>عيادة د. عبدالستار صقر — تسجيل الدخول</div>
+      <div style={{ color: C.muted, fontSize: 12, marginBottom: 32, textAlign: 'center' }}>{t('g3.login.subtitle', lang)}</div>
       <form onSubmit={submit} style={{ width: '100%', maxWidth: 300, display: 'flex', flexDirection: 'column', gap: 14 }}>
-        <Field label="البريد الإلكتروني">
+        <Field label={t('g3.login.email', lang)}>
           <input
             autoFocus
             type="email"
-            style={{ ...inp(), direction: 'ltr', textAlign: 'left' }}
+            style={{ ...inp(), direction: 'ltr', textAlign: 'start' }}
             value={username}
             onChange={e => {
               setUsername(e.target.value);
@@ -77,10 +79,10 @@ export default function LoginScreen({ onLogin }) {
             placeholder="admin@sakr.clinic"
           />
         </Field>
-        <Field label="كلمة المرور">
+        <Field label={t('g3.login.password', lang)}>
           <div style={{ position: 'relative' }}>
             <input
-              style={{ ...inp(), paddingLeft: 38 }}
+              style={{ ...inp(), paddingInlineEnd: 38 }}
               type={passwordInputType(showPass)}
               value={password}
               onChange={e => {
@@ -91,9 +93,11 @@ export default function LoginScreen({ onLogin }) {
             />
             <span
               onClick={() => setShowPass(s => !s)}
+              role="button"
+              aria-label={t('g3.login.togglePass', lang)}
               style={{
                 position: 'absolute',
-                left: 12,
+                insetInlineEnd: 12,
                 top: '50%',
                 transform: 'translateY(-50%)',
                 cursor: 'pointer',
@@ -119,7 +123,7 @@ export default function LoginScreen({ onLogin }) {
               fontWeight: 700
             }}
           >{remember ? '✓' : ''}</div>
-          <span style={{ color: C.muted, fontSize: 12 }}>تذكرني على هذا الجهاز</span>
+          <span style={{ color: C.muted, fontSize: 12 }}>{t('g3.login.remember', lang)}</span>
         </div>
         {error && (
           <div
@@ -132,7 +136,7 @@ export default function LoginScreen({ onLogin }) {
               fontSize: 12,
               textAlign: 'center'
             }}
-          >{error}</div>
+          >{loginErrorText(error)}</div>
         )}
         <button
           type="submit"

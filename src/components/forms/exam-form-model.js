@@ -2,8 +2,11 @@
 // and expression mirrors the legacy runtime's ExamForm exactly
 // (public/legacy/app-runtime.js); legacy quirks are kept on purpose.
 import { DEFAULT_DOCTOR, OTHER_COMPLAINT } from './visit-form-model.js';
+import { t } from '../../modules/i18n/index.js';
 
 export const EXAM_STEPS = ['البيانات', 'الفحص السريري', 'التشخيص والعلاج'];
+// Step tab labels in the current language (called at render time; the Arabic EXAM_STEPS stays canonical).
+export const examStepLabels = () => [t('g2.exam.step.data'), t('g2.exam.step.clinical'), t('g2.exam.step.dx')];
 export const EXAM_LAST_STEP = EXAM_STEPS.length - 1;
 export const EXAM_COMPLAINTS = [
   'ضعف النظر', 'التهاب العين', 'صداع', 'تغيير النظارة', 'صعوبة في القراءة', 'مياه بيضاء', 'شبورة بالعين',

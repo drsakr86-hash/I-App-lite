@@ -1,3 +1,5 @@
+import { t } from '../i18n/index.js';
+import { tv } from '../i18n/tv.js';
 // Pure derivation of the sync-status badge (label + color key + flags) from
 // the SyncStore state. Extracted from the legacy useSyncStatus() hook with
 // zero behavior change: same conditions, same order, same Arabic strings.
@@ -12,20 +14,20 @@ export function syncStatusView(s) {
   const pending = s.pending || 0;
   let label, colorKey;
   if (s.authError && !offline) {
-    label = pending > 0 ? `⚠️ الجلسة منتهية — سجّل الخروج ثم الدخول لمزامنة ${pending} عناصر` : "⚠️ الجلسة منتهية — سجّل الدخول من جديد";
+    label = pending > 0 ? t("g4.sync.sessionExpiredPending", { n: pending }) : t("g4.sync.sessionExpired");
     colorKey = "danger";
   } else if (offline) {
-    label = pending > 0 ? `بدون اتصال · ${pending} عناصر معلّقة` : "بدون اتصال";
+    label = pending > 0 ? t("g4.sync.offlinePending", { n: pending }) : t("g4.sync.offline");
     colorKey = "danger";
   } else if (s.syncing) {
-    label = "جاري المزامنة...";
+    label = t("g4.sync.syncing");
     colorKey = "gold";
   } else if (pending > 0) {
     const _errs = Object.values(errors);
-    label = `في انتظار المزامنة · ${pending} عناصر بيانات` + (_errs.length ? ` — ${_errs[0]}` : "");
+    label = t("g4.sync.waiting", { n: pending }) + (_errs.length ? ` — ${tv(_errs[0])}` : "");
     colorKey = "gold";
   } else {
-    label = "متصل ومحدّث";
+    label = t("g4.sync.upToDate");
     colorKey = "success";
   }
   return {

@@ -8,7 +8,7 @@ import {
 } from '../../modules/patient-file/ophth.js';
 import { VA_OPTIONS } from './exam-form-model.js';
 import { useLang, t } from '../../modules/i18n/index.js';
-import { translateTerm } from '../../modules/i18n/medical-terms.js';
+import { tv } from '../../modules/i18n/tv.js';
 
 const OTHER = '__other__';
 
@@ -34,18 +34,18 @@ function Pick({ value, onChange, options, label, ltr }) {
           onChange(e.target.value);
         }}
       >
-        <option value="">{lang === 'en' ? '— Select —' : '— اختر —'}</option>
-        {options.map(o => <option key={o} value={o}>{translateTerm(o, lang)}</option>)}
-        <option value={OTHER}>{lang === 'en' ? 'Other…' : 'أخرى…'}</option>
+        <option value="">{t('g2.common.select', lang)}</option>
+        {options.map(o => <option key={o} value={o}>{tv(o)}</option>)}
+        <option value={OTHER}>{t('g2.ophth.other', lang)}</option>
       </select>
       {showText && (
         <input
           className="ds-field"
           style={inp()}
           dir="auto"
-          aria-label={label + ' (كتابة حرة)'}
+          aria-label={label + ' (' + t('g2.ophth.freeText', lang) + ')'}
           value={v}
-          placeholder={lang === 'en' ? 'Type here…' : 'اكتب هنا…'}
+          placeholder={t('g2.ophth.typeHere', lang)}
           onChange={e => onChange(e.target.value)}
         />
       )}
@@ -75,6 +75,7 @@ function Eye({ label, children }) {
 }
 
 function PairInputs({ o, onChange, group, part, label, placeholder, unit, inputMode, options }) {
+  const lang = useLang();
   const val = eye => (part ? o[group][part][eye] : o[group][eye]);
   const path = eye => (part ? [group, part, eye] : [group, eye]);
   return (
@@ -104,13 +105,14 @@ function Group({ title, children, open }) {
 
 // Step 2 of the exam form (examination findings)
 export function OphthFindings({ value, onChange }) {
+  const lang = useLang();
   const o = normalizeOphth(value);
   return (
-    <Group title="➕ تفاصيل منظّمة للفحص (اختياري)">
-      <div className="ds-sub">اختر من القوائم، أو «أخرى…» للكتابة الحرة. اترك أي حقل فارغًا إذا لم يُقَس.</div>
+    <Group title={t('g2.ophth.findingsTitle', lang)}>
+      <div className="ds-sub">{t('g2.ophth.findingsHint', lang)}</div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
         {['od', 'os'].map(eye => (
-          <Eye key={'u' + eye} label={`UCVA ${eye.toUpperCase()} (بدون نظارة)`}>
+          <Eye key={'u' + eye} label={t('g2.ophth.ucva', lang, { eye: eye.toUpperCase() })}>
             <Pick ltr label={`UCVA ${eye.toUpperCase()}`} options={VA_OPTIONS} value={o.va[eye].ucva} onChange={val => onChange(setPath(o, ['va', eye, 'ucva'], val))} />
           </Eye>
         ))}
@@ -120,9 +122,9 @@ export function OphthFindings({ value, onChange }) {
           </Eye>
         ))}
       </div>
-      <Eye label="طريقة قياس IOP">
+      <Eye label={t('g2.ophth.iopMethod', lang)}>
         <select className="ds-field" style={inp()} value={o.iop.method} onChange={e => onChange(setPath(o, ['iop', 'method'], e.target.value))}>
-          <option value="">— غير محدد —</option>
+          <option value="">{t('g2.ophth.unspecified', lang)}</option>
           {IOP_METHODS.map(m => <option key={m}>{m}</option>)}
         </select>
       </Eye>
@@ -135,10 +137,10 @@ export function OphthFindings({ value, onChange }) {
           ))}
         </div>
       ))}
-      <div className="ds-h" style={{ marginTop: 4 }}>القطعة الأمامية</div>
-      {ANTERIOR_PARTS.map(([k, l]) => <PairInputs key={k} o={o} onChange={onChange} group="anterior" part={k} label={l} options={ANTERIOR_OPTIONS[k]} />)}
-      <div className="ds-h" style={{ marginTop: 4 }}>القطعة الخلفية</div>
-      {POSTERIOR_PARTS.map(([k, l]) => <PairInputs key={k} o={o} onChange={onChange} group="posterior" part={k} label={l} options={POSTERIOR_OPTIONS[k]} />)}
+      <div className="ds-h" style={{ marginTop: 4 }}>{t('g2.exam.anterior', lang)}</div>
+      {ANTERIOR_PARTS.map(([k, l]) => <PairInputs key={k} o={o} onChange={onChange} group="anterior" part={k} label={tv(l)} options={ANTERIOR_OPTIONS[k]} />)}
+      <div className="ds-h" style={{ marginTop: 4 }}>{t('g2.exam.posterior', lang)}</div>
+      {POSTERIOR_PARTS.map(([k, l]) => <PairInputs key={k} o={o} onChange={onChange} group="posterior" part={k} label={tv(l)} options={POSTERIOR_OPTIONS[k]} />)}
       <PairInputs o={o} onChange={onChange} group="cd" label="C/D" options={CD_OPTIONS} />
       <PairInputs o={o} onChange={onChange} group="cmt" label="CMT" unit="µm" inputMode="decimal" />
       <PairInputs o={o} onChange={onChange} group="vfMd" label="MD" unit="dB" inputMode="decimal" />
@@ -148,19 +150,20 @@ export function OphthFindings({ value, onChange }) {
 
 // Step 3 (diagnosis / plan)
 export function OphthPlan({ value, onChange }) {
+  const lang = useLang();
   const o = normalizeOphth(value);
   return (
-    <Group title="➕ تشخيص لكل عين وتفاصيل الخطة (اختياري)">
-      {[['od', 'تشخيص العين اليمنى OD'], ['os', 'تشخيص العين اليسرى OS'], ['ou', 'تشخيص العينين OU']].map(([k, l]) => (
+    <Group title={t('g2.ophth.planTitle', lang)}>
+      {[['od', t('g2.ophth.dxOd', lang)], ['os', t('g2.ophth.dxOs', lang)], ['ou', t('g2.ophth.dxOu', lang)]].map(([k, l]) => (
         <Eye key={k} label={l}>
           <Pick label={l} options={DX_OPTIONS} value={o.dx[k]} onChange={v => onChange(setPath(o, ['dx', k], v))} />
         </Eye>
       ))}
-      <Eye label="فحوصات مطلوبة">
-        <Pick label="فحوصات مطلوبة" options={INVESTIGATION_OPTIONS} value={o.plan.investigation} onChange={v => onChange(setPath(o, ['plan', 'investigation'], v))} />
+      <Eye label={t('g2.ophth.investigations', lang)}>
+        <Pick label={t('g2.ophth.investigations', lang)} options={INVESTIGATION_OPTIONS} value={o.plan.investigation} onChange={v => onChange(setPath(o, ['plan', 'investigation'], v))} />
       </Eye>
-      <Eye label="سبب المتابعة">
-        <Pick label="سبب المتابعة" options={FOLLOWUP_REASON_OPTIONS} value={o.plan.followUpReason} onChange={v => onChange(setPath(o, ['plan', 'followUpReason'], v))} />
+      <Eye label={t('g2.ophth.followUpReason', lang)}>
+        <Pick label={t('g2.ophth.followUpReason', lang)} options={FOLLOWUP_REASON_OPTIONS} value={o.plan.followUpReason} onChange={v => onChange(setPath(o, ['plan', 'followUpReason'], v))} />
       </Eye>
     </Group>
   );

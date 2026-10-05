@@ -1,25 +1,28 @@
 import React, { useState } from 'react';
 import {
-  SECRETARY_APT_TYPES, SECRETARY_DEFAULT_CLINIC, PATIENT_PICKER_PLACEHOLDER, initialSecretaryAptState, initialSecretaryAptMode, initialCostTouched,
+  SECRETARY_APT_TYPES, SECRETARY_DEFAULT_CLINIC, initialSecretaryAptState, initialSecretaryAptMode, initialCostTouched,
   matchSecretaryPrice, withSecretaryAptType, withNewPatientMode, withExistingPatientMode, findPickedPatient,
   withPickedPatient, toggleSecretaryPaid, secretaryAptError, buildSecretaryAptPayload
 } from './secretary-forms-model.js';
 import { C } from '../../modules/theme/index.js';
 import { inp } from '../../modules/ui/atoms.jsx';
 import { localISO, clinicLabel, CLINICS_LIST } from '../../modules/constants/index.js';
+import { t, useLang } from '../../modules/i18n/index.js';
+import { tv } from '../../modules/i18n/tv.js';
 
 // Front-desk appointment add/edit form (secretary app). Exact port of the
 // legacy runtime's SecretaryAptForm (public/legacy/app-runtime.js).
 export default function SecretaryAptForm({ initial, patients, appointments = [], prices = [], onSave, onClose }) {
+  const lang = useLang();
   const [mode, setMode] = useState(() => initialSecretaryAptMode(initial));
   const [f, setF] = useState(() => initialSecretaryAptState(initial, localISO()));
   const [costTouched, setCostTouched] = useState(() => initialCostTouched(initial));
   const [err, setErr] = useState('');
   const s = k => e => setF(v => ({ ...v, [k]: e.target.value }));
   const setType = e => {
-    const t = e.target.value;
-    const m = matchSecretaryPrice(prices, t);
-    setF(v => withSecretaryAptType(v, t, m, costTouched));
+    const type = e.target.value;
+    const m = matchSecretaryPrice(prices, type);
+    setF(v => withSecretaryAptType(v, type, m, costTouched));
   };
   const label = { color: C.muted, fontSize: 11, display: 'block', marginBottom: 4 };
   const save = () => {
@@ -50,7 +53,7 @@ export default function SecretaryAptForm({ initial, patients, appointments = [],
             fontSize: 12,
             fontWeight: 700
           }}
-        >👤 مريض جديد</div>
+        >{t('g3.sec.newPatient', lang)}</div>
         <div
           onClick={() => {
             setMode('existing');
@@ -67,22 +70,22 @@ export default function SecretaryAptForm({ initial, patients, appointments = [],
             fontSize: 12,
             fontWeight: 700
           }}
-        >📋 مريض مسجل</div>
+        >{t('g3.sec.registeredPatient', lang)}</div>
       </div>
       {mode === 'new' ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div>
-            <label style={label}>اسم المريض</label>
-            <input style={inp()} value={f.patient} onChange={s('patient')} placeholder="اسم المريض الجديد" />
+            <label style={label}>{t('g3.apt.patientName', lang)}</label>
+            <input style={inp()} value={f.patient} onChange={s('patient')} placeholder={t('g3.sec.newPatientPh', lang)} />
           </div>
           <div>
-            <label style={label}>الهاتف</label>
+            <label style={label}>{t('g3.sec.phone', lang)}</label>
             <input style={inp()} value={f.phone || ''} onChange={s('phone')} placeholder="01xxxxxxxxx" type="tel" />
           </div>
         </div>
       ) : (
         <div>
-          <label style={label}>اختر مريض مسجل</label>
+          <label style={label}>{t('g3.sec.pickRegistered', lang)}</label>
           <select
             style={inp()}
             value={f.patientId || ''}
@@ -91,40 +94,40 @@ export default function SecretaryAptForm({ initial, patients, appointments = [],
               if (p) setF(v => withPickedPatient(v, p));
             }}
           >
-            <option value="">{PATIENT_PICKER_PLACEHOLDER}</option>
+            <option value="">{t('g3.sec.pickerPlaceholder', lang)}</option>
             {patients.map(p => <option key={p.id} value={p.id}>{p.name}{' - '}{p.patientCode}</option>)}
           </select>
         </div>
       )}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
         <div>
-          <label style={label}>التاريخ</label>
+          <label style={label}>{t('common.date', lang)}</label>
           <input style={inp()} type="date" value={f.date} onChange={s('date')} />
         </div>
         <div>
-          <label style={label}>الوقت</label>
+          <label style={label}>{t('g3.apt.time', lang)}</label>
           <input style={inp()} type="time" value={f.time} onChange={s('time')} />
         </div>
       </div>
       <div>
-        <label style={label}>العيادة</label>
+        <label style={label}>{t('g3.apt.clinic', lang)}</label>
         <select style={inp()} value={f.clinic || SECRETARY_DEFAULT_CLINIC} onChange={s('clinic')}>
-          {CLINICS_LIST.map(c => <option key={c} value={c}>{clinicLabel(c)}</option>)}
+          {CLINICS_LIST.map(c => <option key={c} value={c}>{tv(clinicLabel(c), lang)}</option>)}
         </select>
       </div>
       <div>
-        <label style={label}>نوع الموعد</label>
+        <label style={label}>{t('g3.sec.aptType', lang)}</label>
         <select style={inp()} value={f.type} onChange={setType}>
-          {SECRETARY_APT_TYPES.map(t => <option key={t}>{t}</option>)}
+          {SECRETARY_APT_TYPES.map(type => <option key={type} value={type}>{tv(type, lang)}</option>)}
         </select>
       </div>
       <div>
-        <label style={label}>الطبيب</label>
-        <input style={inp()} value={f.doctor} onChange={s('doctor')} />
+        <label style={label}>{t('g3.apt.doctor', lang)}</label>
+        <input style={inp()} value={tv(f.doctor, lang)} onChange={s('doctor')} />
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
         <div>
-          <label style={label}>قيمة الكشف (ج.م)</label>
+          <label style={label}>{t('g3.collect.cost', lang)}</label>
           <input
             style={inp()}
             type="number"
@@ -165,11 +168,11 @@ export default function SecretaryAptForm({ initial, patients, appointments = [],
               fontWeight: 700
             }}
           >{f.paid ? '✓' : ''}</div>
-          <span style={{ color: f.paid ? C.success : C.muted, fontSize: 12, fontWeight: 600 }}>تم التحصيل</span>
+          <span style={{ color: f.paid ? C.success : C.muted, fontSize: 12, fontWeight: 600 }}>{t('g3.sec.collected', lang)}</span>
         </div>
       </div>
       <div>
-        <label style={label}>ملاحظات</label>
+        <label style={label}>{t('g3.expense.notes', lang)}</label>
         <textarea style={{ ...inp(), minHeight: 55, resize: 'none' }} value={f.notes || ''} onChange={s('notes')} />
       </div>
       {err && (
@@ -200,7 +203,7 @@ export default function SecretaryAptForm({ initial, patients, appointments = [],
             cursor: 'pointer',
             fontFamily: 'inherit'
           }}
-        >إلغاء</button>
+        >{t('g3.common.cancel', lang)}</button>
         <button
           onClick={save}
           style={{
@@ -215,7 +218,7 @@ export default function SecretaryAptForm({ initial, patients, appointments = [],
             cursor: 'pointer',
             fontFamily: 'inherit'
           }}
-        >✓ حفظ الموعد</button>
+        >{t('g3.sec.saveApt', lang)}</button>
       </div>
     </div>
   );

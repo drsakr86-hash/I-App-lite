@@ -4,6 +4,7 @@
 // Anything NOT in this table (free text typed by the doctor) is never machine-translated:
 // translateTerm returns it unchanged and the report marks such text as "free text".
 
+import { EXTRA_PAIRS } from './terms/index.js';
 import { ANTERIOR_OPTIONS, POSTERIOR_OPTIONS, DX_OPTIONS, INVESTIGATION_OPTIONS, FOLLOWUP_REASON_OPTIONS } from '../patient-file/ophth.js';
 
 const PAIRS = [
@@ -49,7 +50,13 @@ const PAIRS = [
   ['مراجعة نتيجة فحص', 'Review of test result'], ['متابعة سكري', 'Diabetic follow-up'], ['بعد عملية', 'Post-operative review'], ['متابعة روتينية', 'Routine follow-up'], ['قياس نظارة', 'Glasses prescription']
 ];
 
-export const AR_TO_EN = Object.freeze(Object.fromEntries(PAIRS));
+export const AR_TO_EN = Object.freeze(Object.fromEntries([...PAIRS, ...EXTRA_PAIRS]));
+// English -> Arabic (case-insensitive) so data saved in English still shows in Arabic when Arabic is chosen.
+const EN_TO_AR = (() => {
+  const m = {};
+  for (const [ar, en] of [...PAIRS, ...EXTRA_PAIRS]) { const k = String(en).toLowerCase(); if (!(k in m)) m[k] = ar; }
+  return m;
+})();
 
 // Every option the form offers must have an English form (guarded by a test).
 export const ALL_OFFERED_OPTIONS = [
@@ -63,9 +70,17 @@ export function isKnownTerm(text) {
   return Object.prototype.hasOwnProperty.call(AR_TO_EN, clean(text));
 }
 
-// lang 'ar' -> unchanged. lang 'en' -> English form when the app offers one, else unchanged.
+// lang 'en' -> English form when the app offers one; lang 'ar' -> Arabic form of a known English value. Unknown free text is unchanged.
 export function translateTerm(text, lang) {
   const s = clean(text);
-  if (lang !== 'en' || !s) return s;
-  return isKnownTerm(s) ? AR_TO_EN[s] : s;
+  if (!s) return s;
+  if (lang === 'en') {
+    if (isKnownTerm(s)) return AR_TO_EN[s];
+  } else {
+    const k = s.toLowerCase();
+    if (Object.prototype.hasOwnProperty.call(EN_TO_AR, k)) return EN_TO_AR[k];
+  }
+  // Multi-line values (medicine lists, treatment plans): translate each line on its own; unknown lines stay as typed.
+  if (s.indexOf('\n') > -1) return s.split('\n').map(line => translateTerm(line, lang)).join('\n');
+  return s;
 }

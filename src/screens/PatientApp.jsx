@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
   POLL_INTERVAL_MS, RATING_POPUP_DELAY_MS, RATING_DONE_DELAY_MS,
-  BOOK_DUPLICATE_MSG, BOOK_FAILED_MSG, RATING_STARS,
+  RATING_STARS,
   initialTab, patientTabs, blankBookForm, myAppointments, ownRecords,
   upcomingAppointments, pastAppointments, isAptSoon as aptSoon, findUnratedVisit, shouldAutoPromptRating,
   bookFormError, buildBookingRow, isDuplicateBookingError, clearBookTime, bookDoneSummary,
@@ -15,12 +15,15 @@ import { inp } from "../modules/ui/atoms.jsx";
 import { sbGet, sbSet, sbMutate } from "../modules/sync/wiring.js";
 import { getSB } from "../modules/data-access/index.js";
 import { localISO, BOOKING_TABLE, PATIENT_CLINICS, CLINIC_CODE, clinicDisplay } from "../modules/constants/index.js";
+import { t, useLang, dirOf } from "../modules/i18n/index.js";
+import { tv } from "../modules/i18n/tv.js";
 
 // "⭐ قيّم زيارتك" modal body (only used inside PatientApp).
 // QUIRK: "لاحقاً" calls the same onDone as a successful submit, so skipping
 // also marks the visit rated; the submit has no double-click guard and does a
 // read-modify-write of iapp_ratings via sbGet/sbSet (not sbMutate).
 function RatingPrompt({ visit, patient, onDone }) {
+  const lang = useLang();
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
   const [sent, setSent] = useState(false);
@@ -34,15 +37,15 @@ function RatingPrompt({ visit, patient, onDone }) {
   if (sent) return (
     <div style={{ textAlign: "center", padding: "30px 20px" }}>
       <div style={{ fontSize: 48, marginBottom: 12 }}>🌟</div>
-      <div style={{ color: C.success, fontWeight: 800, fontSize: 18 }}>شكراً على تقييمك!</div>
+      <div style={{ color: C.success, fontWeight: 800, fontSize: 18 }}>{t('g6.pa.thanksRating', lang)}</div>
     </div>
   );
   const can = canSubmitRating(rating);
   return (
     <div>
       <div style={{ textAlign: "center", marginBottom: 20 }}>
-        <div style={{ color: C.text, fontWeight: 700, fontSize: 15, marginBottom: 6 }}>كيف كانت تجربتك؟</div>
-        <div style={{ color: C.muted, fontSize: 12 }}>{"زيارة "}{visit.date}</div>
+        <div style={{ color: C.text, fontWeight: 700, fontSize: 15, marginBottom: 6 }}>{t('g6.pa.howWasIt', lang)}</div>
+        <div style={{ color: C.muted, fontSize: 12 }}>{t('g6.pa.visitOn', lang)}{visit.date}</div>
       </div>
       <div style={{ display: "flex", justifyContent: "center", gap: 12, marginBottom: 20 }}>
         {RATING_STARS.map(n => (
@@ -63,7 +66,7 @@ function RatingPrompt({ visit, patient, onDone }) {
         style={{ ...inp(), minHeight: 70, resize: "none", marginBottom: 14 }}
         value={comment}
         onChange={e => setComment(e.target.value)}
-        placeholder="أي ملاحظات أو اقتراحات؟ (اختياري)"
+        placeholder={t('g6.pa.ratingPh', lang)}
       />
       <div style={{ display: "flex", gap: 10 }}>
         <button
@@ -80,7 +83,7 @@ function RatingPrompt({ visit, patient, onDone }) {
             cursor: "pointer",
             fontFamily: "inherit"
           }}
-        >لاحقاً</button>
+        >{t('g6.pa.later', lang)}</button>
         <button
           onClick={submit}
           disabled={!rating}
@@ -96,13 +99,14 @@ function RatingPrompt({ visit, patient, onDone }) {
             cursor: can ? "pointer" : "default",
             fontFamily: "inherit"
           }}
-        >إرسال التقييم ✓</button>
+        >{t('g6.pa.sendRating', lang)}</button>
       </div>
     </div>
   );
 }
 
 export default function PatientApp({ patient, onLogout }) {
+  const lang = useLang();
   const [tab, setTab] = useState(initialTab(patient));
   const [appointments, setAppointments] = useState([]);
   const [prescriptions, setPrescriptions] = useState([]);
@@ -157,17 +161,17 @@ export default function PatientApp({ patient, onLogout }) {
       const { error } = await sb.from(BOOKING_TABLE).insert(row);
       if (error) {
         if (isDuplicateBookingError(error)) {
-          alert(BOOK_DUPLICATE_MSG);
+          alert(t('g6.pa.dupMsg', lang));
           setBookForm(clearBookTime);
           setSlotsVersion(x => x + 1);
         } else {
-          alert(BOOK_FAILED_MSG);
+          alert(t('g6.pa.failedMsg', lang));
         }
       } else {
         setBookDone(true);
       }
     } catch (e) {
-      alert(BOOK_FAILED_MSG);
+      alert(t('g6.pa.failedMsg', lang));
     } finally {
       bookingLock.current = false;
       setBooking(false);
@@ -182,11 +186,11 @@ export default function PatientApp({ patient, onLogout }) {
   const isAptSoon = aptSoon(nextApt, new Date());
   const anim = { animation: "slideUp 0.25s ease" };
   const confirmedBadge = a => a.confirmed
-    ? <div style={{ color: C.success, fontSize: 10, fontWeight: 700 }}>✓ مؤكد</div>
-    : <div style={{ color: C.gold, fontSize: 10 }}>⏳ بانتظار التأكيد</div>;
+    ? <div style={{ color: C.success, fontSize: 10, fontWeight: 700 }}>{t('g6.pa.confirmed', lang)}</div>
+    : <div style={{ color: C.gold, fontSize: 10 }}>{t('g6.pa.awaiting', lang)}</div>;
 
   return (
-    <div style={{ height: "100%", background: C.bg, direction: "rtl", display: "flex", flexDirection: "column" }}>
+    <div style={{ height: "100%", background: C.bg, direction: dirOf(lang), display: "flex", flexDirection: "column" }}>
       <div
         style={{
           background: `linear-gradient(135deg,${C.surface},${C.surface2})`,
@@ -231,7 +235,7 @@ export default function PatientApp({ patient, onLogout }) {
                 fontWeight: 700,
                 animation: "pulse 2s infinite"
               }}
-            >⏰ موعد قريب</span>
+            >{t('g6.pa.soon', lang)}</span>
           )}
           <button
             onClick={onLogout}
@@ -245,17 +249,17 @@ export default function PatientApp({ patient, onLogout }) {
               cursor: "pointer",
               fontFamily: "inherit"
             }}
-          >خروج</button>
+          >{t('g6.pa.logout', lang)}</button>
         </div>
       </div>
 
       <div style={{ flex: 1, overflowY: "auto", padding: "16px 16px 0" }}>
-        {loading && <div style={{ color: C.muted, textAlign: "center", padding: 40, fontSize: 13 }}>⏳ جاري التحميل...</div>}
+        {loading && <div style={{ color: C.muted, textAlign: "center", padding: 40, fontSize: 13 }}>{t('g6.pa.loading', lang)}</div>}
 
         {!loading && tab === "home" && (
           <div style={anim}>
-            <div style={{ color: C.text, fontWeight: 800, fontSize: 18, marginBottom: 2 }}>{"أهلاً "}{firstName(patient)}{" 👋"}</div>
-            <div style={{ color: C.muted, fontSize: 12, marginBottom: 20 }}>عيادة د. عبدالستار صقر</div>
+            <div style={{ color: C.text, fontWeight: 800, fontSize: 18, marginBottom: 2 }}>{t('g6.pa.welcome', lang)}{firstName(patient)}{" 👋"}</div>
+            <div style={{ color: C.muted, fontSize: 12, marginBottom: 20 }}>{t('g6.pa.clinicName', lang)}</div>
             {nextApt && (
               <div
                 style={{
@@ -270,11 +274,11 @@ export default function PatientApp({ patient, onLogout }) {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                   <div>
                     <div style={{ color: isAptSoon ? C.gold : C.accent, fontWeight: 700, fontSize: 12, marginBottom: 6 }}>
-                      {isAptSoon ? "⏰ موعدك قريب جداً!" : "📅 موعدك القادم"}
+                      {isAptSoon ? t('g6.pa.verySoon', lang) : t('g6.pa.nextApt', lang)}
                     </div>
                     <div style={{ color: C.text, fontWeight: 800, fontSize: 16 }}>{nextApt.date}</div>
-                    <div style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>{nextApt.time}{" · "}{nextApt.type}</div>
-                    <div style={{ color: C.muted, fontSize: 12, marginTop: 2 }}>{"🏥 "}{nextAptPlace(nextApt, clinicDisplay)}</div>
+                    <div style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>{nextApt.time}{" · "}{tv(nextApt.type)}</div>
+                    <div style={{ color: C.muted, fontSize: 12, marginTop: 2 }}>{"🏥 "}{tv(nextAptPlace(nextApt, clinicDisplay))}</div>
                   </div>
                   <div style={{ textAlign: "center" }}>
                     {nextApt.confirmed ? (
@@ -288,7 +292,7 @@ export default function PatientApp({ patient, onLogout }) {
                           fontSize: 12,
                           fontWeight: 700
                         }}
-                      >✓ مؤكد</div>
+                      >{t('g6.pa.confirmed', lang)}</div>
                     ) : (
                       <div
                         style={{
@@ -300,7 +304,7 @@ export default function PatientApp({ patient, onLogout }) {
                           fontSize: 11,
                           fontWeight: 700
                         }}
-                      >⏳ بانتظار التأكيد</div>
+                      >{t('g6.pa.awaiting', lang)}</div>
                     )}
                   </div>
                 </div>
@@ -308,10 +312,10 @@ export default function PatientApp({ patient, onLogout }) {
             )}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
               {[
-                { icon: "📅", label: "مواعيد قادمة", val: upcomingApts.length, color: C.accent, action: () => setTab("apts") },
-                { icon: "💊", label: "روشتات", val: prescriptions.length, color: C.teal, action: () => setTab("rx") },
-                { icon: "🔬", label: "فحوصات", val: exams.length, color: C.gold, action: () => setTab("exams") },
-                { icon: "🗓", label: "زيارات سابقة", val: pastApts.length, color: C.muted, action: () => setTab("apts") }
+                { icon: "📅", label: t('g6.pa.statUpcoming', lang), val: upcomingApts.length, color: C.accent, action: () => setTab("apts") },
+                { icon: "💊", label: t('g6.pa.statRx', lang), val: prescriptions.length, color: C.teal, action: () => setTab("rx") },
+                { icon: "🔬", label: t('g6.pa.statExams', lang), val: exams.length, color: C.gold, action: () => setTab("exams") },
+                { icon: "🗓", label: t('g6.pa.statPast', lang), val: pastApts.length, color: C.muted, action: () => setTab("apts") }
               ].map((s, i) => (
                 <div
                   key={i}
@@ -351,13 +355,13 @@ export default function PatientApp({ patient, onLogout }) {
                 }}
               >➕</div>
               <div>
-                <div style={{ color: C.text, fontWeight: 700, fontSize: 14 }}>احجز موعد جديد</div>
-                <div style={{ color: C.muted, fontSize: 12, marginTop: 2 }}>اختر المكان والوقت المناسب لك</div>
+                <div style={{ color: C.text, fontWeight: 700, fontSize: 14 }}>{t('g6.pa.bookNew', lang)}</div>
+                <div style={{ color: C.muted, fontSize: 12, marginTop: 2 }}>{t('g6.pa.pickPlaceTime', lang)}</div>
               </div>
-              <div style={{ color: C.accent, fontSize: 18, marginRight: "auto" }}>←</div>
+              <div style={{ color: C.accent, fontSize: 18, marginInlineStart: "auto" }}>{lang === "en" ? "→" : "←"}</div>
             </div>
             <div style={{ background: C.card, borderRadius: 14, padding: 14, border: "1px solid " + C.border, marginBottom: 16 }}>
-              <div style={{ color: C.text, fontWeight: 700, fontSize: 13, marginBottom: 12 }}>📞 تواصل معنا</div>
+              <div style={{ color: C.text, fontWeight: 700, fontSize: 13, marginBottom: 12 }}>{t('g6.pa.contactUs', lang)}</div>
               {PATIENT_CLINICS.map(c => (
                 <div
                   key={c.id}
@@ -371,8 +375,8 @@ export default function PatientApp({ patient, onLogout }) {
                   }}
                 >
                   <div>
-                    <div style={{ color: C.text, fontSize: 12, fontWeight: 600 }}>{c.icon}{" "}{c.name}</div>
-                    <div style={{ color: C.muted, fontSize: 11 }}>{"📍 "}{c.address}</div>
+                    <div style={{ color: C.text, fontSize: 12, fontWeight: 600 }}>{c.icon}{" "}{tv(c.name)}</div>
+                    <div style={{ color: C.muted, fontSize: 11 }}>{"📍 "}{tv(c.address)}</div>
                   </div>
                   <div style={{ display: "flex", gap: 6 }}>
                     <a
@@ -409,8 +413,8 @@ export default function PatientApp({ patient, onLogout }) {
 
         {!loading && tab === "book" && (
           <div style={anim}>
-            <div style={{ color: C.text, fontWeight: 700, fontSize: 16, marginBottom: 4 }}>➕ احجز موعد</div>
-            <div style={{ color: C.muted, fontSize: 12, marginBottom: 16 }}>اختر المكان والوقت المناسب</div>
+            <div style={{ color: C.text, fontWeight: 700, fontSize: 16, marginBottom: 4 }}>{t('g6.pa.bookTitle', lang)}</div>
+            <div style={{ color: C.muted, fontSize: 12, marginBottom: 16 }}>{t('g6.pa.pickPlaceTimeShort', lang)}</div>
             {bookDone ? (
               <div
                 style={{
@@ -423,16 +427,16 @@ export default function PatientApp({ patient, onLogout }) {
                 }}
               >
                 <div style={{ fontSize: 52, marginBottom: 12 }}>✅</div>
-                <div style={{ color: C.success, fontWeight: 800, fontSize: 18, marginBottom: 8 }}>تم إرسال طلب الحجز!</div>
-                <div style={{ background: C.bg, borderRadius: 12, padding: 14, marginBottom: 16, textAlign: "right" }}>
+                <div style={{ color: C.success, fontWeight: 800, fontSize: 18, marginBottom: 8 }}>{t('g6.pa.bookSent', lang)}</div>
+                <div style={{ background: C.bg, borderRadius: 12, padding: 14, marginBottom: 16, textAlign: "start" }}>
                   {bookDoneSummary(bookForm).map(([icon, val]) => (
                     <div key={icon} style={{ display: "flex", gap: 8, marginBottom: 6 }}>
                       <span>{icon}</span>
-                      <span style={{ color: C.text, fontSize: 13 }}>{val}</span>
+                      <span style={{ color: C.text, fontSize: 13 }}>{icon === "🔬" || icon === "📍" ? tv(val) : val}</span>
                     </div>
                   ))}
                 </div>
-                <div style={{ color: C.muted, fontSize: 12, marginBottom: 20 }}>سيتم التواصل معك لتأكيد الموعد</div>
+                <div style={{ color: C.muted, fontSize: 12, marginBottom: 20 }}>{t('g6.pa.willContact', lang)}</div>
                 <button
                   onClick={() => {
                     setBookDone(false);
@@ -449,7 +453,7 @@ export default function PatientApp({ patient, onLogout }) {
                     cursor: "pointer",
                     fontFamily: "inherit"
                   }}
-                >حجز موعد آخر</button>
+                >{t('g6.pa.bookAnother', lang)}</button>
               </div>
             ) : (
               <BookingForm
@@ -466,10 +470,10 @@ export default function PatientApp({ patient, onLogout }) {
 
         {!loading && tab === "apts" && (
           <div style={anim}>
-            <div style={{ color: C.text, fontWeight: 700, fontSize: 16, marginBottom: 16 }}>📅 مواعيدي</div>
+            <div style={{ color: C.text, fontWeight: 700, fontSize: 16, marginBottom: 16 }}>{t('g6.pa.myApts', lang)}</div>
             {upcomingApts.length > 0 && (
               <>
-                <div style={{ color: C.accent, fontSize: 12, fontWeight: 700, marginBottom: 10 }}>القادمة</div>
+                <div style={{ color: C.accent, fontSize: 12, fontWeight: 700, marginBottom: 10 }}>{t('g6.pa.upcoming', lang)}</div>
                 {upcomingApts.map(a => (
                   <div
                     key={a.id}
@@ -479,14 +483,14 @@ export default function PatientApp({ patient, onLogout }) {
                       borderRadius: 16,
                       padding: "14px",
                       marginBottom: 10,
-                      borderRight: "3px solid " + (a.confirmed ? C.success : C.accent)
+                      borderInlineStart: "3px solid " + (a.confirmed ? C.success : C.accent)
                     }}
                   >
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
                       <div>
                         <div style={{ color: C.text, fontWeight: 700, fontSize: 14 }}>{a.date}</div>
-                        <div style={{ color: C.muted, fontSize: 12, marginTop: 2 }}>{a.type}</div>
-                        {a.clinic && <div style={{ color: C.teal, fontSize: 11, marginTop: 2 }}>{"🏥 "}{clinicDisplay(a.clinic)}</div>}
+                        <div style={{ color: C.muted, fontSize: 12, marginTop: 2 }}>{tv(a.type)}</div>
+                        {a.clinic && <div style={{ color: C.teal, fontSize: 11, marginTop: 2 }}>{"🏥 "}{tv(clinicDisplay(a.clinic))}</div>}
                       </div>
                       <div style={{ textAlign: "center" }}>
                         <div style={{ color: C.accent, fontSize: 18, fontWeight: 800 }}>{a.time}</div>
@@ -500,7 +504,7 @@ export default function PatientApp({ patient, onLogout }) {
             )}
             {pastApts.length > 0 && (
               <>
-                <div style={{ color: C.muted, fontSize: 12, fontWeight: 700, marginTop: 16, marginBottom: 10 }}>السابقة</div>
+                <div style={{ color: C.muted, fontSize: 12, fontWeight: 700, marginTop: 16, marginBottom: 10 }}>{t('g6.pa.past', lang)}</div>
                 {pastApts.map(a => (
                   <div
                     key={a.id}
@@ -509,7 +513,7 @@ export default function PatientApp({ patient, onLogout }) {
                     <div style={{ display: "flex", justifyContent: "space-between" }}>
                       <div>
                         <div style={{ color: C.text, fontSize: 13 }}>{a.date}</div>
-                        <div style={{ color: C.muted, fontSize: 11 }}>{a.type}</div>
+                        <div style={{ color: C.muted, fontSize: 11 }}>{tv(a.type)}</div>
                       </div>
                       <div style={{ color: C.muted, fontSize: 14, fontWeight: 700 }}>{a.time}</div>
                     </div>
@@ -517,32 +521,32 @@ export default function PatientApp({ patient, onLogout }) {
                 ))}
               </>
             )}
-            {appointments.length === 0 && <div style={{ color: C.muted, textAlign: "center", padding: 40 }}>لا توجد مواعيد</div>}
+            {appointments.length === 0 && <div style={{ color: C.muted, textAlign: "center", padding: 40 }}>{t('g6.pa.noApts', lang)}</div>}
           </div>
         )}
 
         {!loading && tab === "rx" && (
           <div style={anim}>
-            <div style={{ color: C.text, fontWeight: 700, fontSize: 16, marginBottom: 16 }}>{"💊 روشتاتي ("}{prescriptions.length}{")"}</div>
-            {prescriptions.length === 0 && <div style={{ color: C.muted, textAlign: "center", padding: 40 }}>لا توجد روشتات بعد</div>}
+            <div style={{ color: C.text, fontWeight: 700, fontSize: 16, marginBottom: 16 }}>{t('g6.pa.myRx', lang)}{" ("}{prescriptions.length}{")"}</div>
+            {prescriptions.length === 0 && <div style={{ color: C.muted, textAlign: "center", padding: 40 }}>{t('g6.pa.noRx', lang)}</div>}
             {prescriptions.map(rx => (
               <div key={rx.id} style={{ background: C.card, border: "1px solid " + C.border, borderRadius: 16, padding: 16, marginBottom: 14 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                   <div style={{ color: C.accent, fontWeight: 700, fontSize: 14 }}>{rx.date}</div>
-                  <div style={{ color: C.muted, fontSize: 11, background: C.bg, padding: "4px 10px", borderRadius: 8 }}>{rx.eye}</div>
+                  <div style={{ color: C.muted, fontSize: 11, background: C.bg, padding: "4px 10px", borderRadius: 8 }}>{tv(rx.eye)}</div>
                 </div>
                 <div style={{ background: C.bg, borderRadius: 10, padding: 10, marginBottom: 12, border: "1px solid " + C.border }}>
-                  <div style={{ color: C.text, fontSize: 11, fontWeight: 700, marginBottom: 8 }}>👓 كشف النظارة</div>
+                  <div style={{ color: C.text, fontSize: 11, fontWeight: 700, marginBottom: 8 }}>{t('g6.pa.glassesRx', lang)}</div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6, fontSize: 10, textAlign: "center" }}>
-                    <div style={{ color: C.muted }}>العين</div>
+                    <div style={{ color: C.muted }}>{t('g6.pa.eye', lang)}</div>
                     <div style={{ color: C.muted }}>SPH</div>
                     <div style={{ color: C.muted }}>CYL</div>
                     <div style={{ color: C.muted }}>AX</div>
-                    <div style={{ color: C.text, fontWeight: 700 }}>يمنى</div>
+                    <div style={{ color: C.text, fontWeight: 700 }}>{t('g6.pa.rightShort', lang)}</div>
                     <div style={{ color: C.text }}>{rx.sphR || "-"}</div>
                     <div style={{ color: C.text }}>{rx.cylR || "-"}</div>
                     <div style={{ color: C.text }}>{rx.axisR || "-"}</div>
-                    <div style={{ color: C.text, fontWeight: 700 }}>يسرى</div>
+                    <div style={{ color: C.text, fontWeight: 700 }}>{t('g6.pa.leftShort', lang)}</div>
                     <div style={{ color: C.text }}>{rx.sphL || "-"}</div>
                     <div style={{ color: C.text }}>{rx.cylL || "-"}</div>
                     <div style={{ color: C.text }}>{rx.axisL || "-"}</div>
@@ -551,13 +555,13 @@ export default function PatientApp({ patient, onLogout }) {
                 </div>
                 {rx.medicines && (
                   <div style={{ background: C.teal + "11", borderRadius: 10, padding: 10, border: "1px solid " + C.teal + "33" }}>
-                    <div style={{ color: C.teal, fontSize: 11, fontWeight: 700, marginBottom: 6 }}>💊 الأدوية</div>
+                    <div style={{ color: C.teal, fontSize: 11, fontWeight: 700, marginBottom: 6 }}>{t('g6.pa.medicines', lang)}</div>
                     {rxMedicineLines(rx.medicines).map((m, i) => (
-                      <div key={i} style={{ color: C.text, fontSize: 12, marginBottom: 4 }}>{"• "}{m}</div>
+                      <div key={i} style={{ color: C.text, fontSize: 12, marginBottom: 4 }}>{"• "}{tv(m)}</div>
                     ))}
                   </div>
                 )}
-                {rx.notes && <div style={{ color: C.muted, fontSize: 11, marginTop: 10 }}>{"📝 "}{rx.notes}</div>}
+                {rx.notes && <div style={{ color: C.muted, fontSize: 11, marginTop: 10 }}>{"📝 "}{tv(rx.notes)}</div>}
               </div>
             ))}
           </div>
@@ -565,15 +569,15 @@ export default function PatientApp({ patient, onLogout }) {
 
         {!loading && tab === "exams" && (
           <div style={anim}>
-            <div style={{ color: C.text, fontWeight: 700, fontSize: 16, marginBottom: 16 }}>{"🔬 نتائج My Investigations ("}{exams.length}{")"}</div>
-            {exams.length === 0 && <div style={{ color: C.muted, textAlign: "center", padding: 40 }}>No investigations yet</div>}
+            <div style={{ color: C.text, fontWeight: 700, fontSize: 16, marginBottom: 16 }}>{t('g6.pa.examsTitle', lang)}{" ("}{exams.length}{")"}</div>
+            {exams.length === 0 && <div style={{ color: C.muted, textAlign: "center", padding: 40 }}>{t('g6.pa.noExams', lang)}</div>}
             {exams.map(ex => (
               <div key={ex.id} style={{ background: C.card, border: "1px solid " + C.border, borderRadius: 16, padding: 16, marginBottom: 14 }}>
-                <div style={{ color: C.accent, fontWeight: 700, fontSize: 14, marginBottom: 12 }}>{ex.date}{" · "}{ex.doctor}</div>
+                <div style={{ color: C.accent, fontWeight: 700, fontSize: 14, marginBottom: 12 }}>{ex.date}{" · "}{tv(ex.doctor)}</div>
                 {ex.chiefComplaint && (
                   <div style={{ marginBottom: 10 }}>
-                    <div style={{ color: C.muted, fontSize: 11, marginBottom: 4 }}>الشكوى</div>
-                    <div style={{ color: C.text, fontSize: 13 }}>{ex.chiefComplaint}</div>
+                    <div style={{ color: C.muted, fontSize: 11, marginBottom: 4 }}>{t('g6.pa.complaint', lang)}</div>
+                    <div style={{ color: C.text, fontSize: 13 }}>{tv(ex.chiefComplaint)}</div>
                   </div>
                 )}
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 10 }}>
@@ -586,17 +590,17 @@ export default function PatientApp({ patient, onLogout }) {
                 </div>
                 {ex.diagnosis && (
                   <div style={{ background: C.accent + "11", borderRadius: 10, padding: 10, border: "1px solid " + C.accent + "33", marginBottom: 8 }}>
-                    <div style={{ color: C.accent, fontSize: 11, fontWeight: 700, marginBottom: 4 }}>التشخيص</div>
-                    <div style={{ color: C.text, fontSize: 13 }}>{ex.diagnosis}</div>
+                    <div style={{ color: C.accent, fontSize: 11, fontWeight: 700, marginBottom: 4 }}>{t('g6.pa.diagnosis', lang)}</div>
+                    <div style={{ color: C.text, fontSize: 13 }}>{tv(ex.diagnosis)}</div>
                   </div>
                 )}
                 {ex.treatmentPlan && (
                   <div style={{ marginTop: 8 }}>
-                    <div style={{ color: C.muted, fontSize: 11, marginBottom: 4 }}>خطة العلاج</div>
-                    <div style={{ color: C.text, fontSize: 12 }}>{ex.treatmentPlan}</div>
+                    <div style={{ color: C.muted, fontSize: 11, marginBottom: 4 }}>{t('g6.pa.plan', lang)}</div>
+                    <div style={{ color: C.text, fontSize: 12 }}>{tv(ex.treatmentPlan)}</div>
                   </div>
                 )}
-                {ex.followUp && <div style={{ color: C.gold, fontSize: 11, marginTop: 8 }}>{"📅 موعد المتابعة: "}{ex.followUp}</div>}
+                {ex.followUp && <div style={{ color: C.gold, fontSize: 11, marginTop: 8 }}>{t('g6.pa.followUp', lang)}{ex.followUp}</div>}
               </div>
             ))}
           </div>
@@ -643,7 +647,7 @@ export default function PatientApp({ patient, onLogout }) {
       </div>
 
       {ratingTarget && (
-        <Modal title="⭐ قيّم زيارتك" onClose={() => setRatingTarget(null)}>
+        <Modal title={t('g6.pa.rateVisit', lang)} onClose={() => setRatingTarget(null)}>
           <RatingPrompt visit={ratingTarget} patient={patient} onDone={() => markVisitRated(ratingTarget.id)} />
         </Modal>
       )}

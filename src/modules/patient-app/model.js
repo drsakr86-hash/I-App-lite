@@ -9,6 +9,7 @@
 // normArabic / normPhone are the already-verified exact copies of the legacy
 // runtime's helpers (see src/modules/patients/list.js).
 import { normArabic, normPhone } from '../patients/list.js';
+import { t } from '../i18n/index.js';
 
 export { normArabic, normPhone };
 
@@ -40,28 +41,28 @@ export const initialTab = patient => patient.isGuest ? 'book' : 'home';
 export function patientTabs(isGuest) {
   return isGuest ? [{
     id: 'book',
-    label: 'احجز',
+    label: t('g6.pa.tabBook'),
     icon: '➕'
   }] : [{
     id: 'home',
-    label: 'الرئيسية',
+    label: t('g6.pa.tabHome'),
     icon: '🏠'
   }, {
     id: 'book',
-    label: 'احجز',
+    label: t('g6.pa.tabBook'),
     icon: '➕'
   }, {
     id: 'apts',
-    label: 'مواعيدي',
+    label: t('g6.pa.tabApts'),
     icon: '📅'
   }, {
     id: 'rx',
-    label: 'روشتاتي',
+    label: t('g6.pa.tabRx'),
     icon: '💊'
   }, {
     // QUIRK: English label in an otherwise Arabic tab bar (legacy text, kept).
     id: 'exams',
-    label: 'My Investigations',
+    label: t('g6.pa.tabExams'),
     icon: '🔬'
   }];
 }
@@ -149,11 +150,12 @@ export const shouldAutoPromptRating = (unrated, patient) => !!(unrated && !patie
 // come prefilled from the patient record by blankBookForm() (see the FIX note
 // there), so this only blocks a registered patient who has no phone on file.
 export function bookFormError(f) {
-  if (!f.clinic) return BOOK_MSG_CLINIC;
-  if (!f.date) return BOOK_MSG_DATE;
-  if (!f.time) return BOOK_MSG_TIME;
-  if (!f.newName?.trim()) return BOOK_MSG_NAME;
-  if (!f.newPhone?.trim()) return BOOK_MSG_PHONE;
+  // BOOK_MSG_* above stay the canonical Arabic strings; t() returns the same text in Arabic and the translation in English.
+  if (!f.clinic) return t('g6.pa.msgClinic');
+  if (!f.date) return t('g6.pa.msgDate');
+  if (!f.time) return t('g6.pa.msgTime');
+  if (!f.newName?.trim()) return t('g6.pa.msgName');
+  if (!f.newPhone?.trim()) return t('g6.pa.msgPhone');
   return null;
 }
 
@@ -220,8 +222,8 @@ export const RATING_STARS = [1, 2, 3, 4, 5];
 // ---- Display helpers -------------------------------------------------------
 
 export const headerAvatar = patient => patient.isGuest ? '🆕' : patient.name?.charAt(0);
-export const headerName = patient => patient.isGuest ? 'مريض جديد' : patient.name;
-export const headerSub = patient => patient.isGuest ? 'احجز موعدك الأول' : patient.patientCode;
+export const headerName = patient => patient.isGuest ? t('g6.pa.newPatient') : patient.name;
+export const headerSub = patient => patient.isGuest ? t('g6.pa.bookFirst') : patient.patientCode;
 export const firstName = patient => patient.name?.split(' ')[0];
 
 // Next-appointment card location line: clinic display name, else the doctor.
@@ -233,4 +235,4 @@ export const rxMedicineLines = medicines => medicines.split('\n').filter(Boolean
 
 // Exam vitals grid: only the filled values, in legacy order.
 export const examVitals = ex =>
-  [['حدة الإبصار يمنى', ex.visualAcuityR], ['حدة الإبصار يسرى', ex.visualAcuityL], ['ضغط العين يمنى', ex.iopR], ['ضغط العين يسرى', ex.iopL]].filter(([, v]) => v);
+  [[t('g6.pa.vaR'), ex.visualAcuityR], [t('g6.pa.vaL'), ex.visualAcuityL], [t('g6.pa.iopR'), ex.iopR], [t('g6.pa.iopL'), ex.iopL]].filter(([, v]) => v);

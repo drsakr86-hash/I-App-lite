@@ -4,11 +4,13 @@ import { Field, inp } from '../modules/ui/atoms.jsx';
 import { MIN_PW_LEN } from '../modules/constants/misc.js';
 import { getUsers, saveUsers } from '../modules/auth/staff-login.js';
 import { hashPassword, DEFAULT_ADMIN_PW } from '../modules/auth/password.js';
+import { t, useLang, dirOf } from '../modules/i18n/index.js';
 
 // Forces a weak/default password to be changed before the app is usable.
 // Exact port of the legacy runtime's ForcePasswordChange
 // (public/legacy/app-runtime.js) -- same validation, same Arabic copy.
 export default function ForcePasswordChange({ user, onDone, onLogout }) {
+  const lang = useLang();
   const [p1, setP1] = useState('');
   const [p2, setP2] = useState('');
   const [err, setErr] = useState('');
@@ -18,15 +20,15 @@ export default function ForcePasswordChange({ user, onDone, onLogout }) {
     if (e && e.preventDefault) e.preventDefault();
     if (busy) return;
     if (p1.length < MIN_PW_LEN) {
-      setErr('❌ كلمة المرور يجب ألا تقل عن ' + MIN_PW_LEN + ' أحرف');
+      setErr(t('g6.fpc.tooShort', lang, { n: MIN_PW_LEN }));
       return;
     }
     if (p1 === DEFAULT_ADMIN_PW || p1.toLowerCase() === String(user.username).toLowerCase()) {
-      setErr('❌ اختر كلمة مرور غير الافتراضية وغير اسم المستخدم');
+      setErr(t('g6.fpc.notDefault', lang));
       return;
     }
     if (p1 !== p2) {
-      setErr('❌ كلمتا المرور غير متطابقتين');
+      setErr(t('g6.fpc.mismatch', lang));
       return;
     }
     setBusy(true);
@@ -41,22 +43,22 @@ export default function ForcePasswordChange({ user, onDone, onLogout }) {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', direction: 'rtl', fontFamily: "'Segoe UI','Tahoma',Arial,sans-serif", padding: '24px 20px' }}>
+    <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', direction: dirOf(lang), fontFamily: "'Segoe UI','Tahoma',Arial,sans-serif", padding: '24px 20px' }}>
       <form
         onSubmit={save}
         style={{ width: '100%', maxWidth: 380, background: C.card, border: '1px solid ' + C.border, borderRadius: 20, padding: '22px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}
       >
-        <div style={{ color: C.gold, fontWeight: 800, fontSize: 16 }}>🔒 تغيير كلمة المرور مطلوب</div>
+        <div style={{ color: C.gold, fontWeight: 800, fontSize: 16 }}>{t('g6.fpc.title', lang)}</div>
         <div style={{ color: C.muted, fontSize: 12, lineHeight: 1.8 }}>
-          مرحباً {user.name}. الحساب يستخدم كلمة مرور افتراضية أو ضعيفة. اختر كلمة مرور جديدة قبل المتابعة لحماية بيانات المرضى.
+          {t('g6.fpc.body', lang, { name: user.name })}
         </div>
-        <Field label={'كلمة المرور الجديدة (' + MIN_PW_LEN + ' أحرف على الأقل)'}>
+        <Field label={t('g6.fpc.newPw', lang, { n: MIN_PW_LEN })}>
           <input
             autoFocus type="password" style={{ ...inp(), direction: 'ltr', textAlign: 'center' }}
             value={p1} onChange={e => { setP1(e.target.value); setErr(''); }}
           />
         </Field>
-        <Field label="تأكيد كلمة المرور">
+        <Field label={t('g6.fpc.confirmPw', lang)}>
           <input
             type="password" style={{ ...inp(), direction: 'ltr', textAlign: 'center' }}
             value={p2} onChange={e => { setP2(e.target.value); setErr(''); }}
@@ -70,11 +72,11 @@ export default function ForcePasswordChange({ user, onDone, onLogout }) {
         <button
           type="submit" disabled={busy}
           style={{ background: `linear-gradient(135deg,${C.accent},${C.teal})`, border: 'none', borderRadius: 11, padding: 13, color: C.bg, fontWeight: 800, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', opacity: busy ? 0.7 : 1 }}
-        >{busy ? '⏳ جاري الحفظ...' : 'حفظ والمتابعة'}</button>
+        >{busy ? t('g6.fpc.saving', lang) : t('g6.fpc.saveContinue', lang)}</button>
         <button
           type="button" onClick={onLogout}
           style={{ background: 'transparent', border: '1px solid ' + C.border, borderRadius: 11, padding: 10, color: C.muted, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}
-        >تسجيل الخروج</button>
+        >{t('g6.fpc.logout', lang)}</button>
       </form>
     </div>
   );

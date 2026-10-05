@@ -2,6 +2,8 @@
 // expression mirrors the legacy runtime's AptForm exactly
 // (public/legacy/app-runtime.js); legacy quirks are kept on purpose.
 
+import { t } from '../../modules/i18n/index.js';
+
 export const DEFAULT_APT_DOCTOR_NAMES = ['د. عبدالستار', 'د. سلمى', 'د. ليلى'];
 const DEFAULT_APT_DOCTOR = 'د. عبدالستار';
 export const APT_CONFLICT_MESSAGE = '⚠ يوجد موعد آخر لنفس الطبيب في هذا التاريخ والوقت';
@@ -32,6 +34,6 @@ export const hasSchedulingConflict = (appointments, f, today) =>
 //   { type: 'save' }              -- clear any error and call onSave(f)
 export const aptSaveOutcome = (appointments, f, today) => {
   if (!f.patient) return { type: 'noop' };
-  if (hasSchedulingConflict(appointments, f, today)) return { type: 'error', message: APT_CONFLICT_MESSAGE };
+  if (hasSchedulingConflict(appointments, f, today)) return { type: 'error', message: t('g3.apt.conflict') };
   return { type: 'save' };
 };

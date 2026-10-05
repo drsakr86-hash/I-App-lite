@@ -1,4 +1,5 @@
 // Pure logic for the Accounting screen (no DOM / React / Supabase).
+import { t, getLang } from '../i18n/index.js';
 
 export function inPeriod(d, period, { today, month }) {
   return period === 'all' ? true : period === 'today' ? d === today : (d || '').startsWith(month);
@@ -27,7 +28,7 @@ export function computeTotalExpenses(expenses) {
 }
 
 export function periodLabel(period) {
-  return period === 'today' ? 'اليوم' : period === 'month' ? 'هذا الشهر' : 'كل الفترة';
+  return period === 'today' ? t('g4.acc.tabToday') : period === 'month' ? t('g4.acc.tabMonth') : t('g4.acc.periodAll');
 }
 
 // Per-clinic revenue/expense/net breakdown for the comparison list.
@@ -48,23 +49,24 @@ export function buildClinicComparison(visits, expenses, clinics, { period, today
 export function buildMissingRecurringExpenseEntries(recurringExpenses, expenses, { monthStr, todayStr, makeId = () => Date.now() + Math.random() }) {
   if (!recurringExpenses || recurringExpenses.length === 0) return [];
   const missing = recurringExpenses.filter(
-    t => !expenses.some(e => e.recurringId === t.id && (e.date || '').startsWith(monthStr))
+    r => !expenses.some(e => e.recurringId === r.id && (e.date || '').startsWith(monthStr))
   );
-  return missing.map(t => ({
+  // The note is STORED data, so it is always written in canonical Arabic; the screen displays it via tv().
+  return missing.map(r => ({
     id: makeId(),
     date: todayStr,
-    category: t.category,
-    amount: t.amount,
-    notes: (t.notes ? t.notes + ' · ' : '') + 'مصروف شهري ثابت',
-    clinic: t.clinic || '',
-    recurringId: t.id
+    category: r.category,
+    amount: r.amount,
+    notes: (r.notes ? r.notes + ' · ' : '') + t('g4.acc.recurringNote', 'ar'),
+    clinic: r.clinic || '',
+    recurringId: r.id
   }));
 }
 
 export function reportDateLabel(period, monthStr, now = new Date()) {
   return period === 'today'
-    ? now.toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+    ? now.toLocaleDateString(getLang() === 'en' ? 'en-GB' : 'ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
     : period === 'month'
-    ? `شهر ${monthStr}`
-    : 'كل الفترة';
+    ? t('g4.acc.reportMonth', { month: monthStr })
+    : t('g4.acc.periodAll');
 }

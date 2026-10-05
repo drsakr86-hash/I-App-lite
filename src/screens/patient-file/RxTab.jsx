@@ -1,15 +1,18 @@
 import React from 'react';
 import { C } from '../../modules/theme/index.js';
 import { medicinesToText } from '../../modules/patient-file/normalize.js';
+import { t, useLang } from '../../modules/i18n/index.js';
+import { tv } from '../../modules/i18n/tv.js';
 
 // Patient file — "rx" tab. Presentational port of the legacy PatientFile JSX;
 // all state and handlers come from the legacy function through ctx.
 export default function RxTab({ ctx }) {
   const { onDeleteRx, rxList, setModal } = ctx;
+  const lang = useLang();
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-        <div style={{ color: C.text, fontWeight: 700, fontSize: 14 }}>الوصفات ({rxList.length})</div>
+        <div style={{ color: C.text, fontWeight: 700, fontSize: 14 }}>{t("tab.rx", lang)} ({rxList.length})</div>
         <div
           role="button"
           tabIndex={0}
@@ -25,10 +28,10 @@ export default function RxTab({ ctx }) {
             cursor: "pointer"
           }}
         >
-          + وصفة جديدة
+          + {t("g1.pf.newRx", lang)}
         </div>
       </div>
-      {rxList.length === 0 && (<div style={{ color: C.muted, textAlign: "center", padding: 40, fontSize: 13 }}>لا توجد وصفات لهذا المريض</div>)}
+      {rxList.length === 0 && (<div style={{ color: C.muted, textAlign: "center", padding: 40, fontSize: 13 }}>{t("g1.rx.none", lang)}</div>)}
       {rxList.map(rx => (
         <div
           key={rx.id}
@@ -36,7 +39,7 @@ export default function RxTab({ ctx }) {
           style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 14, marginBottom: 12 }}
         >
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-            <div style={{ color: C.accent, fontWeight: 700, fontSize: 13 }}>{rx.date}{" · "}{rx.eye}</div>
+            <div style={{ color: C.accent, fontWeight: 700, fontSize: 13 }}>{rx.date}{" · "}{tv(rx.eye)}</div>
             <div style={{ display: "flex", gap: 6 }}>
               <div
                 role="button"
@@ -55,11 +58,12 @@ export default function RxTab({ ctx }) {
                   fontWeight: 600
                 }}
               >
-                ✏ تعديل
+                ✏ {t("g1.common.edit", lang)}
               </div>
               <div
                 role="button"
                 tabIndex={0}
+                aria-label={t("g1.common.delete", lang)}
                 onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.currentTarget.click(); } }}
                 onClick={() => onDeleteRx(rx)}
                 style={{
@@ -77,7 +81,7 @@ export default function RxTab({ ctx }) {
             </div>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
-            {[["SPH يمنى", rx.sphR], ["CYL يمنى", rx.cylR], ["AXIS يمنى", rx.axisR], ["SPH يسرى", rx.sphL], ["CYL يسرى", rx.cylL], ["AXIS يسرى", rx.axisL]].map(([k, v]) => (
+            {[[t("g1.rx.sphR", lang), rx.sphR], [t("g1.rx.cylR", lang), rx.cylR], [t("g1.rx.axisR", lang), rx.axisR], [t("g1.rx.sphL", lang), rx.sphL], [t("g1.rx.cylL", lang), rx.cylL], [t("g1.rx.axisL", lang), rx.axisL]].map(([k, v]) => (
               <div key={k} style={{ background: C.bg, borderRadius: 8, padding: "6px 10px" }}>
                 <div style={{ color: C.muted, fontSize: 10 }}>{k}</div>
                 <div style={{ color: C.text, fontWeight: 600, fontSize: 13 }}>{v || "-"}</div>
@@ -90,7 +94,7 @@ export default function RxTab({ ctx }) {
               <span style={{ color: C.teal, fontWeight: 700 }}>{rx.add}</span>
               {rx.ipd && (
                 <>
-                  <span style={{ color: C.muted, fontSize: 11, marginRight: 12 }}>{"IPD: "}</span>
+                  <span style={{ color: C.muted, fontSize: 11, marginInlineStart: 12 }}>{"IPD: "}</span>
                   <span style={{ color: C.teal, fontWeight: 700 }}>{rx.ipd}</span>
                 </>
               )}
@@ -100,11 +104,11 @@ export default function RxTab({ ctx }) {
             <div
               style={{ background: C.gold + "11", border: `1px solid ${C.gold}33`, borderRadius: 10, padding: 10, marginBottom: 8 }}
             >
-              <div style={{ color: C.gold, fontSize: 11, fontWeight: 700, marginBottom: 3 }}>💊 الأدوية</div>
-              <div style={{ color: C.text, fontSize: 12, whiteSpace: "pre-line" }}>{medicinesToText(rx.medicines)}</div>
+              <div style={{ color: C.gold, fontSize: 11, fontWeight: 700, marginBottom: 3 }}>💊 {t("g1.rx.medicines", lang)}</div>
+              <div style={{ color: C.text, fontSize: 12, whiteSpace: "pre-line" }}>{tv(medicinesToText(rx.medicines))}</div>
             </div>
           )}
-          {rx.notes && (<div style={{ color: C.muted, fontSize: 11, marginBottom: 8, fontStyle: "italic" }}>{rx.notes}</div>)}
+          {rx.notes && (<div style={{ color: C.muted, fontSize: 11, marginBottom: 8, fontStyle: "italic" }}>{tv(rx.notes)}</div>)}
           <div
             role="button"
             tabIndex={0}
@@ -123,7 +127,7 @@ export default function RxTab({ ctx }) {
               textAlign: "center"
             }}
           >
-            🖨️ طباعة الوصفة / كشف النظارة
+            🖨️ {t("g1.rx.print", lang)}
           </div>
         </div>
       ))}

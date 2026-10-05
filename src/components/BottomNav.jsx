@@ -7,12 +7,14 @@ import React from 'react';
 import { C } from '../modules/theme/index.js';
 import { XRAY_ICON } from '../modules/ui/atoms.jsx';
 import { navItemsForRole } from './bottomnav-model.js';
+import { t, useLang } from '../modules/i18n/index.js';
 
 export default function BottomNav({ active, setActive, role }) {
+  const lang = useLang();
   const items = navItemsForRole(role);
   return (
     <div style={{
-      position: 'fixed', bottom: 0, left: 0, right: 0, maxWidth: 480, margin: '0 auto',
+      position: 'fixed', bottom: 0, insetInlineStart: 0, insetInlineEnd: 0, maxWidth: 480, margin: '0 auto',
       background: C.surface, borderTop: `1px solid ${C.border}`,
       display: 'flex', justifyContent: 'space-around', alignItems: 'center', height: 64, zIndex: 200
     }}>
@@ -41,7 +43,7 @@ export default function BottomNav({ active, setActive, role }) {
               />
             ) : item.icon}
           </div>
-          <span style={{ fontSize: 9, fontWeight: 600, color: active === item.id ? C.accent : C.muted }}>{item.label}</span>
+          <span style={{ fontSize: 9, fontWeight: 600, color: active === item.id ? C.accent : C.muted }}>{t(item.labelKey, lang)}</span>
         </button>
       ))}
     </div>
