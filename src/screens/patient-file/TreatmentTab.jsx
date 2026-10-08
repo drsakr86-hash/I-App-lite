@@ -4,6 +4,22 @@ import { SecHead } from '../../modules/ui/atoms.jsx';
 import { t, useLang } from '../../modules/i18n/index.js';
 import { tv } from '../../modules/i18n/tv.js';
 
+// Splits a stored findings string ("الجفون: OD … · OS … — القرنية: …") into one bullet per finding.
+const toPoints = (text) => String(text || '')
+  .replace(/—\s*تفصيل منظّم\s*—/g, '\n')
+  .split(/\n|\s—\s/)
+  .map(x => x.trim())
+  .filter(Boolean);
+
+function Points({ text }) {
+  const items = toPoints(text);
+  return (
+    <ul style={{ margin: 0, paddingInlineStart: 18, color: C.text, fontSize: 12, lineHeight: 1.9 }}>
+      {items.map((x, i) => <li key={i}>{x}</li>)}
+    </ul>
+  );
+}
+
 // Patient file — "treatment" tab. Presentational port of the legacy PatientFile JSX;
 // all state and handlers come from the legacy function through ctx.
 export default function TreatmentTab({ ctx }) {
@@ -33,9 +49,7 @@ export default function TreatmentTab({ ctx }) {
             }}
           >
             <SecHead icon="💊" label={t("g1.tx.plan", lang)} color={C.success}/>
-            <div style={{ color: C.text, fontSize: 13, lineHeight: 1.8, whiteSpace: "pre-wrap" }}>
-              {tv(ex.treatmentPlan)}
-            </div>
+            <Points text={tv(ex.treatmentPlan)} />
           </div>
           {ex.followUp && (
             <div
@@ -58,12 +72,12 @@ export default function TreatmentTab({ ctx }) {
             <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 8 }}>
               <div style={{ background: C.bg, borderRadius: 10, padding: 10 }}>
                 <div style={{ color: C.muted, fontSize: 10, marginBottom: 3 }}>{t("g1.tx.anterior", lang)}</div>
-                <div style={{ color: C.text, fontSize: 12 }}>{tv(ex.anteriorSegment)}</div>
+                <Points text={tv(ex.anteriorSegment)} />
               </div>
               {ex.posteriorSegment && (
                 <div style={{ background: C.bg, borderRadius: 10, padding: 10 }}>
                   <div style={{ color: C.muted, fontSize: 10, marginBottom: 3 }}>{t("g1.tx.posterior", lang)}</div>
-                  <div style={{ color: C.text, fontSize: 12 }}>{tv(ex.posteriorSegment)}</div>
+                  <Points text={tv(ex.posteriorSegment)} />
                 </div>
               )}
             </div>

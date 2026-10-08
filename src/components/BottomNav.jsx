@@ -14,7 +14,7 @@ export default function BottomNav({ active, setActive, role }) {
   const items = navItemsForRole(role);
   return (
     <div style={{
-      position: 'fixed', bottom: 0, insetInlineStart: 0, insetInlineEnd: 0, maxWidth: 480, margin: '0 auto',
+      position: 'fixed', bottom: 0, insetInlineStart: 0, insetInlineEnd: 0,
       background: C.surface, borderTop: `1px solid ${C.border}`,
       display: 'flex', justifyContent: 'space-around', alignItems: 'center', height: 64, zIndex: 200
     }}>

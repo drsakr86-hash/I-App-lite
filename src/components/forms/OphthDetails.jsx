@@ -14,7 +14,7 @@ const OTHER = '__other__';
 
 // Drop-down with an "أخرى…" escape hatch. The stored value is always plain text:
 // a value that is not in the list (old record, or typed under "أخرى…") is kept and shown.
-function Pick({ value, onChange, options, label, ltr }) {
+function Pick({ value, onChange, options, label, ltr, startAt }) {
   const lang = useLang();
   const v = value || '';
   const inList = v === '' || options.includes(v);
@@ -27,7 +27,8 @@ function Pick({ value, onChange, options, label, ltr }) {
         style={inp()}
         aria-label={label}
         dir={ltr ? 'ltr' : undefined}
-        value={showText ? OTHER : v}
+        onBlur={() => { if (!showText && !v && startAt && options.includes(startAt)) onChange(startAt); }}
+        value={showText ? OTHER : (v || (startAt && options.includes(startAt) ? startAt : ''))}
         onChange={e => {
           if (e.target.value === OTHER) { setTyping(true); return; }
           setTyping(false);
@@ -132,7 +133,7 @@ export function OphthFindings({ value, onChange }) {
         <div key={'r' + eye} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
           {[['sph', 'SPH', SPH_OPTIONS], ['cyl', 'CYL', CYL_OPTIONS], ['axis', 'AXIS', AXIS_OPTIONS]].map(([k, l, opts]) => (
             <Eye key={k} label={`${l} ${eye.toUpperCase()}`}>
-              <Pick ltr label={`${l} ${eye.toUpperCase()}`} options={opts} value={o.refraction[eye][k]} onChange={val => onChange(setPath(o, ['refraction', eye, k], val))} />
+              <Pick ltr startAt={k === 'sph' ? 'Plano' : undefined} label={`${l} ${eye.toUpperCase()}`} options={opts} value={o.refraction[eye][k]} onChange={val => onChange(setPath(o, ['refraction', eye, k], val))} />
             </Eye>
           ))}
         </div>

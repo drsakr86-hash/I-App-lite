@@ -249,8 +249,8 @@ export default function App() {
     })
   };
   return (
-    <div style={{ minHeight: "100vh", background: "#000", display: "flex", justifyContent: "center", alignItems: "flex-start" }}>
-      <div style={{ width: "100%", maxWidth: 480, minHeight: "100vh", background: C.bg, direction: dirOf(lang), fontFamily: "'Segoe UI','Tahoma',Arial,sans-serif", position: "relative", overflowX: "hidden" }}>
+    <div style={{ minHeight: "100vh", background: C.bg, display: "flex", justifyContent: "center", alignItems: "flex-start" }}>
+      <div style={{ width: "100%", maxWidth: "none", minHeight: "100vh", background: C.bg, direction: dirOf(lang), fontFamily: "'Segoe UI','Tahoma',Arial,sans-serif", position: "relative", overflowX: "hidden" }}>
         <TopBar primary={primary} onSearch={() => setShowSearch(true)} syncing={syncing} session={session} onLogout={handleLogout} />
         <div style={{ overflowY: "auto", maxHeight: "calc(100vh - 128px)", animation: "slideUp 0.25s ease" }}>
           <Suspense fallback={<LazyFallback />}>{screens[effectiveTab]}</Suspense>
