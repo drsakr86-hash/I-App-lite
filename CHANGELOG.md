@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Accounting redesign (see `docs/ACCOUNTING-FINAL-REPORT.md`): separate financial domain (charges → payments → balanced ledger → accounts), payment methods and accounts, append-only/reversal-only history, doctor settlements, cash reconciliation with period lock, financial audit trail, explicit recurring-expense generation, idempotent legacy migration with dry-run. Secretary collection records fee + amount collected now + method + account. SQL in `docs/sql/accounting-core.sql` (not applied until approved; rollback included). Settings reset no longer touches expenses. Tests 702 → 740.
 - Patient booking: same-day booking is allowed again (today is offered while a slot at least 10 minutes ahead remains) and slots are 10 minutes apart (was 30), inside the same clinic windows.
 - Admin: pending patient booking requests now appear on the dashboard and the appointments screen with accept/reject (previously only the secretary screen read `iapp_booking_requests`). Status writes are checked, accepting twice never duplicates an appointment, and a request already handled elsewhere is reported.
 

@@ -14,6 +14,9 @@
 
 import { getSB } from '../data-access/index.js';
 import { LS, isDirty, offlineNow, tq } from './engine.js';
+import {
+  FINANCE_ROW_TABLES, expenseExtraFromRow, expenseExtraToRow, recurringExtraFromRow, recurringExtraToRow
+} from './finance-tables.js';
 
 export const ROW_TABLES = {
   iapp_visits: {
@@ -62,7 +65,8 @@ export const ROW_TABLES = {
       amount: r.amount == null ? '' : String(r.amount),
       notes: r.notes || '',
       clinic: r.clinic || '',
-      recurringId: r.recurring_id || undefined
+      recurringId: r.recurring_id || undefined,
+      ...expenseExtraFromRow(r)
     }),
     toRow: e => ({
       id: String(e.id),
@@ -72,6 +76,7 @@ export const ROW_TABLES = {
       notes: e.notes || null,
       clinic: e.clinic || null,
       recurring_id: e.recurringId == null ? null : String(e.recurringId),
+      ...expenseExtraToRow(e),
       updated_at: new Date().toISOString()
     }),
     order: 'date'
@@ -83,7 +88,8 @@ export const ROW_TABLES = {
       category: r.category || '',
       amount: r.amount == null ? '' : String(r.amount),
       notes: r.notes || '',
-      clinic: r.clinic || ''
+      clinic: r.clinic || '',
+      ...recurringExtraFromRow(r)
     }),
     toRow: r => ({
       id: String(r.id),
@@ -91,11 +97,16 @@ export const ROW_TABLES = {
       amount: r.amount === undefined || r.amount === '' ? null : String(r.amount),
       notes: r.notes || null,
       clinic: r.clinic || null,
+      ...recurringExtraToRow(r),
       updated_at: new Date().toISOString()
     }),
     order: 'id'
-  }
+  },
+  // Accounting core tables (see finance-tables.js for the insertOnly / noDelete / paged flags).
+  ...FINANCE_ROW_TABLES
 };
+
+const PAGE = 1000;
 
 export async function rowList(key) {
   const cfg = ROW_TABLES[key];
@@ -104,10 +115,26 @@ export async function rowList(key) {
     const sb = getSB();
     if (!sb) return undefined;
     if (offlineNow()) return undefined;
-    const { data, error } = await tq(sb.from(cfg.table).select('*').order(cfg.order, { ascending: true }));
-    if (error) {
-      console.warn('rowList ' + key, error.message);
-      return undefined;
+    let data;
+    if (cfg.paged) {
+      // PostgREST caps one response (1000 rows); read in pages so a long-lived ledger is never truncated.
+      data = [];
+      for (let from = 0; ; from += PAGE) {
+        const page = await tq(sb.from(cfg.table).select('*').order(cfg.order, { ascending: true }).order('id', { ascending: true }).range(from, from + PAGE - 1));
+        if (page.error) {
+          console.warn('rowList ' + key, page.error.message);
+          return undefined;
+        }
+        data.push(...(page.data || []));
+        if (!page.data || page.data.length < PAGE) break;
+      }
+    } else {
+      const res = await tq(sb.from(cfg.table).select('*').order(cfg.order, { ascending: true }));
+      if (res.error) {
+        console.warn('rowList ' + key, res.error.message);
+        return undefined;
+      }
+      data = res.data;
     }
     const list = (data || []).map(cfg.fromRow);
     if (!isDirty(key)) LS.set(key, JSON.stringify(list));
@@ -122,7 +149,9 @@ export async function rowUpsert(key, rec) {
   const cfg = ROW_TABLES[key];
   const sb = getSB();
   if (!cfg || !sb) return false;
-  const { error } = await tq(sb.from(cfg.table).upsert(cfg.toRow(rec), { onConflict: 'id' }));
+  // insertOnly rows are immutable: an existing id is left untouched (ON CONFLICT DO NOTHING).
+  const opts = cfg.insertOnly ? { onConflict: 'id', ignoreDuplicates: true } : { onConflict: 'id' };
+  const { error } = await tq(sb.from(cfg.table).upsert(cfg.toRow(rec), opts));
   if (error) console.warn('rowUpsert ' + key, error.message);
   return !error;
 }
@@ -131,16 +160,23 @@ export async function rowDelete(key, id) {
   const cfg = ROW_TABLES[key];
   const sb = getSB();
   if (!cfg || !sb) return false;
+  if (cfg.noDelete) return false; // financial history is never deleted (post a reversal instead)
   const { error } = await tq(sb.from(cfg.table).delete().eq('id', String(id)));
   if (error) console.warn('rowDelete ' + key, error.message);
   return !error;
 }
 
 export async function rowMutate(key, mutator, verify) {
+  const cfg = ROW_TABLES[key] || {};
   const base = await rowList(key);
   if (base === undefined) return { ok: false, error: 'offline' };
-  const next = mutator(base);
+  let next = mutator(base);
   if (next && !Array.isArray(next) && next.abort) return { ok: false, error: next.abort, data: base };
+  if (cfg.noDelete) {
+    // append-only semantics: rows missing from the proposed list are KEPT, never removed.
+    const have = new Set(next.map(r => String(r.id)));
+    next = [...next, ...base.filter(r => !have.has(String(r.id)))];
+  }
   const prevById = new Map(base.map(r => [String(r.id), r]));
   const nextById = new Map(next.map(r => [String(r.id), r]));
   const changed = next.filter(r => {

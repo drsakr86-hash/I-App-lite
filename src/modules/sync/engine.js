@@ -67,7 +67,11 @@ export const BACKUP_KEEP = 5;
 export const BACKUP_KEYS = [
   'iapp_patients', 'iapp_visits', 'iapp_exams', 'iapp_prescriptions',
   'iapp_appointments', 'iapp_prices', 'iapp_doctors', 'iapp_clinic',
-  'iapp_expenses', 'iapp_recurring_expenses', 'iapp_custom_tests', 'iapp_imaging_orders'
+  'iapp_expenses', 'iapp_recurring_expenses', 'iapp_custom_tests', 'iapp_imaging_orders',
+  // accounting core: only the small, mutable configuration tables are snapshotted here. The big
+  // append-only tables (charges, payments, ledger, audit) are protected by DB triggers and are NOT
+  // copied into the 5 rolling snapshots (they would multiply the size) — see docs/ACCOUNTING-AUDIT.md.
+  'iapp_fin_accounts', 'iapp_doctor_share_rules', 'iapp_doctor_settlements'
 ];
 
 // ---- sync-key display labels ---------------------------------------------

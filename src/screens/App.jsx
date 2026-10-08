@@ -129,8 +129,8 @@ export default function App() {
     setRawPr(SEED.prices);
     setRawCT(SEED.customTests);
     setRawCl(SEED.clinic);
-    setRawEx(SEED.expenses);
-    setRawRE(SEED.recurringExpenses);
+    // Financial data (expenses, recurring templates and all finance tables) is deliberately NOT reset here:
+    // posted money is append-only and must never be wiped by a settings button.
   };
   useEffect(() => {
     if (!alertsShown && session) {
@@ -241,7 +241,7 @@ export default function App() {
       patients, primary, clinic
     }),
     accounting: React.createElement(Accounting, {
-      visits, expenses, setExpenses, recurringExpenses, setRecurringExpenses, doctors, clinic
+      visits, expenses, recurringExpenses, appointments, doctors, clinic, session
     }),
     settings: React.createElement(Settings, {
       patients, appointments, prescriptions, exams, visits, doctors, setDoctors,
