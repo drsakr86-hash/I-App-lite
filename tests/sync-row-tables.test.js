@@ -57,8 +57,9 @@ function deleteReturning(result) {
 
 const visitRow = { id: 1, patient_id: 5, patient: 'Ali', date: '2026-01-01', type: 'كشف', doctor: '', clinic: '', complaint: '', result: '', cost: '100', paid: true, next_visit: '', notes: '', rated: false };
 
-test('ROW_TABLES: has exactly the three expected keys, with table names and order columns', () => {
-  assert.deepEqual(Object.keys(ROW_TABLES).sort(), ['iapp_expenses', 'iapp_recurring_expenses', 'iapp_visits']);
+test('ROW_TABLES: the three legacy keys plus the accounting-core tables, with table names and order columns', () => {
+  const FIN = ['iapp_accounting_entries', 'iapp_cash_reconciliations', 'iapp_charges', 'iapp_doctor_settlements', 'iapp_doctor_share_rules', 'iapp_fin_accounts', 'iapp_fin_audit', 'iapp_payments', 'iapp_revenue_allocations'];
+  assert.deepEqual(Object.keys(ROW_TABLES).sort(), ['iapp_expenses', 'iapp_recurring_expenses', 'iapp_visits', ...FIN].sort());
   assert.equal(ROW_TABLES.iapp_visits.table, 'iapp_visits');
   assert.equal(ROW_TABLES.iapp_visits.order, 'date');
   assert.equal(ROW_TABLES.iapp_expenses.table, 'iapp_expenses');

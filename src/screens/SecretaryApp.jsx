@@ -19,6 +19,7 @@ import { getSB } from "../modules/data-access/index.js";
 import { logError } from "../services/logger.js";
 import { trashPut, logAudit } from "../modules/sync/index.js";
 import { newId } from "../modules/constants/misc.js";
+import { loadFinanceState, submitCollection, collectionSnapshot, selectableAccounts, newFinId, FinanceError } from "../modules/finance/index.js";
 import { waOpen, waReminderText } from "../modules/notifications/index.js";
 import WaitingRoom from "./WaitingRoom.jsx";
 import { t, useLang, dirOf } from "../modules/i18n/index.js";
@@ -72,6 +73,16 @@ export default function SecretaryApp() {
   const [prices, setPrices] = useState([]);
   const [modal, setModal] = useState(null);
   const [collectApt, setCollectApt] = useState(null);
+  // Accounting state for the collection modal (null = accounting not set up yet → the modal keeps its legacy behaviour).
+  const [finState, setFinState] = useState(null);
+  const collectPayId = useRef(null);
+  useEffect(() => {
+    if (!collectApt) { setFinState(null); collectPayId.current = null; return undefined; }
+    let live = true;
+    collectPayId.current = newFinId('pay');
+    loadFinanceState("collect").then(r => { if (live && !r.offline && selectableAccounts(r.state.accounts).length) setFinState(r.state); }).catch(() => {});
+    return () => { live = false; };
+  }, [collectApt]);
   const [filterDate, setFilterDate] = useState(localISO());
   const [filterClinic, setFilterClinic] = useState("");
   const [search, setSearch] = useState("");
@@ -214,18 +225,34 @@ export default function SecretaryApp() {
     const rec = buildCollectionVisitRecord(apt, cost, paid, clinicLabel);
     await sbMutate("iapp_visits", visits => upsertVisit(visits, rec), list => list.some(v => v.id === vid));
   };
-  const handleSaveCollect = async (cost, paid) => {
-    const apt = collectApt;
-    await updateApt({
-      ...apt,
-      cost,
-      paid
-    });
+  // Best-effort mirror of the legacy numbers (visit.cost/paid) so the older screens keep agreeing with accounting.
+  const mirrorLegacy = async (apt, cost, paid) => {
+    await updateApt({ ...apt, cost, paid });
     await pushVisitRecord(apt, cost, paid);
+  };
+  const finishCollect = (apt, cost, paid) => {
     setCollectApt(null);
     const [auditAction, auditDetail] = collectAudit(apt, cost, paid);
     logAudit(auditAction, auditDetail);
     setToast(collectToast(cost, paid));
+  };
+  const handleSaveCollect = async (cost, paid) => {
+    const apt = collectApt;
+    await mirrorLegacy(apt, cost, paid);
+    finishCollect(apt, cost, paid);
+  };
+  const handleSaveFinanceCollect = async ({ cost, collected, method, accountId }) => {
+    const apt = collectApt;
+    let r;
+    try {
+      r = await submitCollection(finState, { apt, cost, collected, method, accountId, paymentId: collectPayId.current }, { by: session.name || session.username, role: session.role });
+    } catch (e) {
+      alert(e instanceof FinanceError ? t("g8.err." + e.code, lang) : String(e && e.message || e));
+      return;
+    }
+    if (!r.ok) { alert(t("g8.collect.commitFailed", lang)); return; }
+    await mirrorLegacy(apt, r.plan.mirror.cost, r.plan.mirror.paid);
+    finishCollect(apt, r.plan.mirror.cost, r.plan.mirror.paid);
   };
   const pendingFromPatient = countPendingFromPatient(apts);
   const waitingCount = countWaitingToday(apts, today);
@@ -487,7 +514,7 @@ export default function SecretaryApp() {
       )}
       {collectApt && (
         <Modal title={t("g5.sec.modalCollect", lang)} onClose={() => setCollectApt(null)}>
-          <CollectModal apt={collectApt} prices={prices} onSave={handleSaveCollect} onClose={() => setCollectApt(null)} />
+          <CollectModal apt={collectApt} prices={prices} finance={finState ? { accounts: selectableAccounts(finState.accounts), snapshot: collectionSnapshot(finState, collectApt) } : null} onSave={finState ? handleSaveFinanceCollect : handleSaveCollect} onClose={() => setCollectApt(null)} />
         </Modal>
       )}
       {toast && <Toast msg={toast} onDone={() => setToast(null)} />}
