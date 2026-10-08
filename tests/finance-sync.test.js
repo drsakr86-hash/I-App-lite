@@ -163,3 +163,9 @@ test('offline: commitBatch queues rows locally through the existing sync queue (
     SyncStore.set({ online: true });
   }
 });
+
+test('flush order: finance keys are flushed parents-first, other keys keep their order and go first', async () => {
+  const { sortForFlush } = await import('../src/modules/sync/finance-tables.js');
+  const out = sortForFlush(['iapp_fin_audit', 'iapp_payments', 'iapp_patients', 'iapp_accounting_entries', 'iapp_charges', 'iapp_fin_accounts', 'iapp_exams']);
+  assert.deepEqual(out, ['iapp_patients', 'iapp_exams', 'iapp_fin_accounts', 'iapp_charges', 'iapp_payments', 'iapp_accounting_entries', 'iapp_fin_audit']);
+});

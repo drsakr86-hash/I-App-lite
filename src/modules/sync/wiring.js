@@ -27,6 +27,7 @@ import {
   isDirty, dirtyKeys, refreshPending, offlineNow
 } from './engine.js';
 import { ROW_TABLES, rowList, rowMutate } from './row-tables.js';
+import { sortForFlush } from './finance-tables.js';
 import { sbGetStore, sbSetStore } from './store-io.js';
 import { aptList, aptSetAll } from '../appointments/core.js';
 import { APT_KEY } from '../appointments/appointment.mapper.js';
@@ -97,7 +98,7 @@ export function isFlushing(key) {
 let _flushAllBusy = false;
 export async function flushAll() {
   if (_flushAllBusy) return;
-  const keys = dirtyKeys();
+  const keys = sortForFlush(dirtyKeys());
   if (!keys.length) {
     SyncStore.set({ pending: 0, pendingKeys: [], syncing: false });
     return;
