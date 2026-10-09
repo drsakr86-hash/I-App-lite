@@ -31,6 +31,7 @@ const builder = (table, op) => {
 globalThis.__IAppSupabaseClient = {
   from: table => ({
     select: () => builder(table, 'select'),
+    insert: payload => { const b = builder(table, 'insert'); calls[calls.length - 1].payload = payload; return b; },
     upsert: (payload, opts) => { const b = builder(table, 'upsert'); calls[calls.length - 1].payload = payload; calls[calls.length - 1].opts = opts; return b; },
     delete: () => builder(table, 'delete')
   })
@@ -102,13 +103,24 @@ test('rowList: a page error returns undefined (never a truncated list)', async (
   assert.equal(await rowList(FIN_KEYS.charges), undefined);
 });
 
-test('rowUpsert on an insertOnly table uses ignoreDuplicates (a retry or a changed row cannot overwrite a posted one)', async () => {
+test('rowUpsert on an insertOnly table is a plain INSERT (no ON CONFLICT: the secretary has no SELECT policy); mutable tables still upsert', async () => {
   script = () => ({ error: null });
   assert.equal(await rowUpsert(FIN_KEYS.payments, { id: 'p1', amount: '5.00' }), true);
-  assert.deepEqual(calls[0].opts, { onConflict: 'id', ignoreDuplicates: true });
+  assert.equal(calls[0].op, 'insert');
+  assert.equal(calls[0].opts, null);
   calls = [];
   await rowUpsert(FIN_KEYS.accounts, { id: 'a1', name: 'x' });
+  assert.equal(calls[0].op, 'upsert');
   assert.deepEqual(calls[0].opts, { onConflict: 'id' });
+});
+
+test('rowUpsert: re-sending an existing insertOnly row (primary-key duplicate) is success; any other failure is not', async () => {
+  script = () => ({ error: { code: '23505', message: 'duplicate key value violates unique constraint "iapp_payments_pkey"' } });
+  assert.equal(await rowUpsert(FIN_KEYS.payments, { id: 'p1', amount: '5.00' }), true);
+  script = () => ({ error: { code: '23505', message: 'duplicate key value violates unique constraint "iapp_payments_source_uq"' } });
+  assert.equal(await rowUpsert(FIN_KEYS.payments, { id: 'p2', amount: '5.00' }), false);
+  script = () => ({ error: { code: '42501', message: 'new row violates row-level security policy' } });
+  assert.equal(await rowUpsert(FIN_KEYS.payments, { id: 'p3', amount: '5.00' }), false);
 });
 
 test('rowDelete refuses on noDelete tables without calling the server', async () => {
@@ -123,7 +135,7 @@ test('rowMutate on a noDelete table keeps rows missing from the proposed list an
   const res = await rowMutate(FIN_KEYS.payments, () => [{ id: 'p3', kind: 'payment', amount: '9.00' }]);
   assert.equal(res.ok, true);
   assert.ok(calls.every(c => c.op !== 'delete'), 'no delete');
-  assert.equal(calls.filter(c => c.op === 'upsert').length, 1, 'only the new row is written');
+  assert.equal(calls.filter(c => c.op === 'insert').length, 1, 'only the new row is written');
   assert.deepEqual(JSON.parse(globalThis.localStorage.getItem(FIN_KEYS.payments)).map(r => r.id).sort(), ['p1', 'p2', 'p3']);
 });
 
@@ -132,12 +144,86 @@ test('store: upsertById never drops rows; commit order is parents-first; scopes 
   assert.deepEqual(out.map(r => r.id + r.v), ['a1', 'b2', 'c1']);
   assert.deepEqual(upsertById(undefined, [{ id: 'x' }]).map(r => r.id), ['x']);
   const names = COMMIT_ORDER.map(([n]) => n);
-  assert.ok(names.indexOf('accounts') < names.indexOf('charges'));
-  assert.ok(names.indexOf('charges') < names.indexOf('payments'));
-  assert.ok(names.indexOf('payments') < names.indexOf('entries'));
+  const before = (a, b) => assert.ok(names.indexOf(a) < names.indexOf(b), a + ' before ' + b);
+  before('accounts', 'charges'); before('charges', 'payments'); before('payments', 'entries'); before('expenses', 'entries');
+  before('reconciliations', 'entries'); before('charges', 'entries'); before('payments', 'settlements'); before('settlements', 'allocations');
   assert.equal(names.at(-1), 'audit');
-  assert.ok(SCOPES.collect.every(x => SCOPES.full.some(y => y[1] === x[1])));
-  assert.ok(!SCOPES.collect.some(([n]) => ['settlements', 'rules', 'expenses', 'reconciliations'].includes(n)), 'secretary scope stays minimal');
+  assert.ok(!('collect' in SCOPES), 'the secretary has no finance read scope: she uses the collection RPC');
+});
+
+test('flush order matches the commit order for every key (entries after every origin row, audit last)', async () => {
+  const { FINANCE_FLUSH_ORDER } = await import('../src/modules/sync/finance-tables.js');
+  const commitKeys = COMMIT_ORDER.map(([, k]) => k);
+  assert.deepEqual(FINANCE_FLUSH_ORDER.filter(k => commitKeys.includes(k)), commitKeys.filter(k => FINANCE_FLUSH_ORDER.includes(k)));
+  assert.equal(FINANCE_FLUSH_ORDER.at(-1), 'iapp_fin_audit');
+  assert.equal(FINANCE_FLUSH_ORDER.at(-2), 'iapp_accounting_entries');
+});
+
+test('commitBatch with verify:false (secretary) never re-reads the table and still writes every row', async () => {
+  const { commitBatch } = await import('../src/modules/finance/store.js');
+  script = rec => (rec.op === 'select' ? { data: [], error: null } : { error: null });   // RLS: she reads nothing back
+  const batch = { accounts: [], charges: [{ id: 'c1', kind: 'charge', amount: '10.00' }], payments: [{ id: 'p1', kind: 'payment', amount: '10.00' }], entries: [], lines: [], rules: [], allocations: [], settlements: [], reconciliations: [], audit: [], expenses: [], recurring: [] };
+  const strict = await commitBatch(batch, undefined, { verify: true });
+  assert.equal(strict.ok, false, 'with verify the read-back finds nothing and reports a conflict');
+  const strictReads = calls.filter(c => c.op === 'select').length;
+  calls = [];
+  const res = await commitBatch(batch, undefined, { verify: false });
+  assert.equal(res.ok, true);
+  for (const t of ['iapp_charges', 'iapp_payments']) {
+    const ops = calls.filter(c => c.table === t).map(c => c.op);
+    assert.ok(ops.includes('insert') && ops.lastIndexOf('select') < ops.indexOf('insert'), t + ': no read after the write (' + ops.join(',') + ')');
+  }
+  assert.ok(strictReads > 0);
+  assert.deepEqual(calls.filter(c => c.op === 'insert').map(c => c.table), ['iapp_charges', 'iapp_payments']);
+});
+
+test('collection state RPC → state: aggregates become serverBalances, old payments are never needed, pending local rows are layered once', async () => {
+  const { stateFromCollectionRpc } = await import('../src/modules/finance/store.js');
+  const { chargeBalance, effectivePayments } = await import('../src/modules/finance/billing.js');
+  const rpc = {
+    accounts: [{ id: 'cash', name: 'Cash', type: 'cash', clinic: null, active: true, is_legacy: false }],
+    charges: [{ charge: { id: 'chg-1', kind: 'charge', amount: 500, discount: 0, net_amount: 500, service_date: '2026-10-01', source: 'COLLECT_MODAL', source_ref: 'apt-A1', appointment_id: 'A1', visit_id: 'apt-A1', status: 'posted' },
+      adjustments: [{ id: 'adj-1', kind: 'adjustment', parent_id: 'chg-1', amount: 0, discount: 0, net_amount: 50, service_date: '2026-10-02', source: 'MANUAL', status: 'posted', reason: 'x' }],
+      net: 550, paid: 350, refunded: 0, outstanding: 200 }],
+    known_ids: ['pay-confirmed']
+  };
+  const local = { charges: [], payments: [
+    { id: 'pay-confirmed', kind: 'payment', chargeId: 'chg-1', amount: '350.00' },     // the server already holds it → ignored
+    { id: 'pay-pending', kind: 'payment', chargeId: 'chg-1', amount: '100.00' }       // queued offline, not on the server yet → counted
+  ] };
+  const st = stateFromCollectionRpc(rpc, local);
+  assert.equal(st.accounts.length, 1);
+  assert.deepEqual(st.charges.map(c => c.id), ['chg-1', 'adj-1']);
+  assert.deepEqual(st.serverBalances['chg-1'], { paid: 35000, refunded: 0 });
+  assert.deepEqual(effectivePayments(st.payments).map(p => p.id), ['pay-pending']);
+  const b = chargeBalance('chg-1', st);
+  assert.equal(b.net, 55000);
+  assert.equal(b.paid, 45000);
+  assert.equal(b.outstanding, 10000);
+  assert.deepEqual(stateFromCollectionRpc({ accounts: [], charges: [], known_ids: [] }).charges, []);
+});
+
+test('loadCollectionState: offline → {offline:true} without calling the server; RPC error → offline; success maps the RPC', async () => {
+  const { loadCollectionState } = await import('../src/modules/finance/store.js');
+  const rpcCalls = [];
+  let rpcResult = { data: { accounts: [], charges: [], known_ids: [] }, error: null };
+  const sb = globalThis.__IAppSupabaseClient;
+  sb.rpc = (fn, args) => { rpcCalls.push({ fn, args }); const b = { abortSignal: () => b, retry: () => Promise.resolve(rpcResult) }; return b; };
+  const ok = await loadCollectionState(['A1']);
+  assert.equal(ok.offline, false);
+  assert.deepEqual(rpcCalls[0], { fn: 'iapp_fin_collection_state', args: { p_apt_ids: ['A1'], p_pending_ids: [] } });
+  rpcResult = { data: null, error: { message: 'not allowed' } };
+  assert.equal((await loadCollectionState(['A1'])).offline, true);
+  const navDesc = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+  Object.defineProperty(globalThis, 'navigator', { value: { onLine: false }, configurable: true, writable: true });
+  try {
+    rpcCalls.length = 0;
+    assert.equal((await loadCollectionState(['A1'])).offline, true);
+    assert.equal(rpcCalls.length, 0);
+  } finally {
+    if (navDesc) Object.defineProperty(globalThis, 'navigator', navDesc); else delete globalThis.navigator;
+    delete sb.rpc;
+  }
 });
 
 test('backup keys include the small finance tables that must survive the weekly export', () => {

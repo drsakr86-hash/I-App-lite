@@ -145,12 +145,23 @@ export async function rowList(key) {
   }
 }
 
+// 23505 on the PRIMARY KEY only (a different unique index — e.g. one charge per source — is a real conflict).
+const isPkDuplicate = e => e && e.code === '23505' && /_pkey"?/.test(String(e.message || e.details || ''));
+
 export async function rowUpsert(key, rec) {
   const cfg = ROW_TABLES[key];
   const sb = getSB();
   if (!cfg || !sb) return false;
-  // insertOnly rows are immutable: an existing id is left untouched (ON CONFLICT DO NOTHING).
-  const opts = cfg.insertOnly ? { onConflict: 'id', ignoreDuplicates: true } : { onConflict: 'id' };
+  if (cfg.insertOnly) {
+    // insertOnly rows are immutable: a plain INSERT, and "this id already exists" counts as success (an offline
+    // retry). NOT upsert/ON CONFLICT: PostgREST's ON CONFLICT path needs a SELECT policy, which the secretary
+    // deliberately does not have on the finance tables (she may only INSERT a documented collection).
+    const { error } = await tq(sb.from(cfg.table).insert(cfg.toRow(rec)));
+    if (error && isPkDuplicate(error)) return true;
+    if (error) console.warn('rowUpsert ' + key, error.message);
+    return !error;
+  }
+  const opts = { onConflict: 'id' };
   const { error } = await tq(sb.from(cfg.table).upsert(cfg.toRow(rec), opts));
   if (error) console.warn('rowUpsert ' + key, error.message);
   return !error;

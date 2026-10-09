@@ -19,7 +19,7 @@ import { getSB } from "../modules/data-access/index.js";
 import { logError } from "../services/logger.js";
 import { trashPut, logAudit } from "../modules/sync/index.js";
 import { newId } from "../modules/constants/misc.js";
-import { loadFinanceState, submitCollection, collectionSnapshot, selectableAccounts, newFinId, FinanceError } from "../modules/finance/index.js";
+import { loadCollectionState, submitCollection, collectionSnapshot, selectableAccounts, newFinId, FinanceError } from "../modules/finance/index.js";
 import { waOpen, waReminderText } from "../modules/notifications/index.js";
 import WaitingRoom from "./WaitingRoom.jsx";
 import { t, useLang, dirOf } from "../modules/i18n/index.js";
@@ -80,7 +80,7 @@ export default function SecretaryApp() {
     if (!collectApt) { setFinState(null); collectPayId.current = null; return undefined; }
     let live = true;
     collectPayId.current = newFinId('pay');
-    loadFinanceState("collect").then(r => { if (live && !r.offline && selectableAccounts(r.state.accounts).length) setFinState(r.state); }).catch(() => {});
+    loadCollectionState([collectApt.id]).then(r => { if (live && !r.offline && selectableAccounts(r.state.accounts).length) setFinState(r.state); }).catch(() => {});
     return () => { live = false; };
   }, [collectApt]);
   const [filterDate, setFilterDate] = useState(localISO());

@@ -25,11 +25,15 @@ export function chargeNetMinor(chargeId, charges) {
 }
 
 // {net, paid, refunded, outstanding} in minor units for one charge.
+// `state.serverBalances[chargeId] = {paid, refunded}` (minor units) is the baseline the secretary gets from the server RPC
+// (computed over the FULL ledger; she cannot read the payment rows). Payments in `state.payments` are then only the ones
+// created/pending on this device, and are added on top.
 export function chargeBalance(chargeId, state) {
   const net = chargeNetMinor(chargeId, state.charges);
   const eff = effectivePayments(state.payments).filter(p => p.chargeId === chargeId);
-  const paid = eff.filter(p => p.kind === 'payment').reduce((s, p) => s + toMinor(p.amount), 0);
-  const refunded = eff.filter(p => p.kind === 'refund').reduce((s, p) => s + toMinor(p.amount), 0);
+  const base = (state.serverBalances && state.serverBalances[chargeId]) || { paid: 0, refunded: 0 };
+  const paid = (base.paid || 0) + eff.filter(p => p.kind === 'payment').reduce((s, p) => s + toMinor(p.amount), 0);
+  const refunded = (base.refunded || 0) + eff.filter(p => p.kind === 'refund').reduce((s, p) => s + toMinor(p.amount), 0);
   return { net, paid, refunded, netPaid: paid - refunded, outstanding: net - (paid - refunded) };
 }
 
@@ -77,7 +81,9 @@ export function createCharge(state, input, ctx = {}) {
   const discount = toMinor(input.discount ?? 0);
   if (amount === null || amount <= 0) fail('AMOUNT_INVALID', 'charge amount must be positive');
   if (discount === null || discount < 0 || discount > amount) fail('DISCOUNT_INVALID', 'discount must be between 0 and amount');
-  const id = input.id || newFinId('chg');
+  // Deterministic id for a charge that has a source reference: two devices (or a retry) creating the charge for the same
+  // appointment produce the SAME row, so the second insert is a harmless duplicate instead of a second receivable.
+  const id = input.id || (sourceRef ? 'chg-' + source.toLowerCase() + '-' + sourceRef : newFinId('chg'));
   const charge = {
     id, kind: 'charge', parentId: null, patientId: input.patientId ?? null, visitId: input.visitId ?? null,
     appointmentId: input.appointmentId ?? null, service: input.service || '', amount: fromMinor(amount),
