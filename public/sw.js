@@ -1,33 +1,35 @@
 // I App — Service Worker
-const VERSION = "iapp-v13-20261004"; // clinical refinement: image cache can be cleared on sign-out
-const SHELL = "iapp-shell-" + VERSION;
-const IMGS = "iapp-img-" + VERSION;
-const FONTS = "iapp-font-" + VERSION;
+//
+// BUILD and PRECACHE are stamped at build time by the vite plugin in vite.config.js (dist/sw.js), so every deploy ships a
+// byte-different worker that is installed and activated as ONE consistent set:
+//   index.html + every hashed js/css chunk of THAT build are precached together under the cache "iapp-shell-<BUILD>".
+//   If any file of the set cannot be fetched, the install FAILS and the previous worker + cache stay in charge
+//   (a half-filled cache is exactly what produced "Failed to fetch dynamically imported module").
+// The previous shell cache is kept for one more generation so a tab that is still running the old build can keep loading
+// its own chunks; older ones are deleted.
+const BUILD = "__BUILD_ID__";
+const PRECACHE = /*__PRECACHE_LIST__*/ [];
+const IMG_VERSION = "iapp-v13-20261004"; // image/font caches are independent of the build: they survive deploys
+const SHELL_PREFIX = "iapp-shell-";
+const SHELL = SHELL_PREFIX + BUILD;
+const IMGS = "iapp-img-" + IMG_VERSION;
+const FONTS = "iapp-font-" + IMG_VERSION;
 const MAX_IMGS = 150;
 
+async function precacheAll(cache) {
+  const urls = ["./", "./index.html", "./queue-display.html", ...PRECACHE];
+  const unique = [...new Set(urls)];
+  // "reload": bypass the HTTP cache so the files are the ones of this deploy, not a stale CDN/browser copy.
+  await Promise.all(unique.map(async u => {
+    const res = await fetch(new Request(u, { cache: "reload" }));
+    if (!res || !res.ok) throw new Error("precache failed: " + u + " " + (res && res.status));
+    await cache.put(u, res);
+  }));
+}
+
 self.addEventListener("install", event => {
-  event.waitUntil(
-    caches.open(SHELL)
-      .then(async cache => {
-        // Vite hashes asset names, so read them from the built index.html
-        // and precache them for offline support. The legacy runtime
-        // (./legacy/app-runtime.js) is gone -- React is now the only
-        // runtime -- so it is no longer in this list.
-        const urls = ["./", "./index.html", "./queue-display.html"];
-        try {
-          const html = await (await fetch("./index.html", { cache: "no-store" })).text();
-          for (const m of html.matchAll(/(?:src|href)="(\.\/assets\/[^"]+)"/g)) urls.push(m[1]);
-        } catch (_) { /* precache of the shell is best-effort */ }
-        try {
-          // code-split chunks (React.lazy screens) are not referenced by index.html
-          const list = await (await fetch("./precache.json", { cache: "no-store" })).json();
-          if (Array.isArray(list)) for (const u of list) if (typeof u === "string" && u.startsWith("./assets/") && !urls.includes(u)) urls.push(u);
-        } catch (_) { /* no manifest (dev server / older build): lazy chunks are cached on first use */ }
-        await Promise.all(urls.map(u => cache.add(u).catch(() => {})));
-      })
-      .catch(() => {})
-      .then(() => self.skipWaiting())
-  );
+  // No catch: a failed precache rejects the install; the browser keeps the old worker and retries on the next update check.
+  event.waitUntil(caches.open(SHELL).then(precacheAll).then(() => self.skipWaiting()));
 });
 
 // Sign-out: the page asks the worker to drop cached medical images so they are not
@@ -40,9 +42,11 @@ self.addEventListener("message", event => {
 
 self.addEventListener("activate", event => {
   event.waitUntil(
-    caches.keys().then(keys => Promise.all(
-      keys.filter(k => k !== SHELL && k !== IMGS && k !== FONTS).map(k => caches.delete(k))
-    )).then(() => self.clients.claim())
+    caches.keys().then(async keys => {
+      const shells = keys.filter(k => k.startsWith(SHELL_PREFIX));          // oldest first
+      const keep = new Set([SHELL, ...shells.filter(k => k !== SHELL).slice(-1), IMGS, FONTS]);
+      await Promise.all(keys.filter(k => !keep.has(k)).map(k => caches.delete(k)));
+    }).then(() => self.clients.claim())
   );
 });
 
@@ -52,20 +56,46 @@ async function trim(cacheName, max) {
   for (let i = 0; i < Math.max(0, keys.length - max); i++) await cache.delete(keys[i]);
 }
 
+// Pages: network first (always the newest index.html, which names the newest chunks). The HTML is NEVER written into
+// the cache here — the cached index.html must stay the one that belongs to the cached chunks. Offline / slow network →
+// the precached index.html of this worker's build (its chunks are in the same cache).
 async function pageHandler(request) {
-  const cache = await caches.open(SHELL);
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 4000);
     const response = await fetch(request, { signal: controller.signal, cache: "no-cache" });
     clearTimeout(timer);
-    if (response && response.ok) await cache.put("./index.html", response.clone());
+    if (response && response.ok) return response;
+  } catch (_) { /* fall through to the cache */ }
+  const cache = await caches.open(SHELL);
+  return (await cache.match("./index.html")) ||
+         (await cache.match("./")) ||
+         new Response("لا يوجد اتصال ولم يتم تخزين التطبيق بعد.", { status: 503 });
+}
+
+// Hashed build files are immutable: cache first (this build, then the previous one), else network and remember it.
+// A missing file stays missing (the 404 is returned as is) — it is never answered with index.html.
+async function assetHandler(request) {
+  const hit = await caches.match(request);
+  if (hit) return hit;
+  const response = await fetch(request);
+  if (response && response.ok) {
+    const copy = response.clone();
+    caches.open(SHELL).then(c => c.put(request, copy)).catch(() => {});
+  }
+  return response;
+}
+
+// Other same-origin files (queue display, icons): network first, cache as a fallback.
+async function otherHandler(request) {
+  try {
+    const response = await fetch(request, { cache: "no-cache" });
+    if (response && response.ok) { const copy = response.clone(); caches.open(SHELL).then(c => c.put(request, copy)).catch(() => {}); }
     return response;
-  } catch (_) {
-    return (await cache.match(request, {ignoreSearch:true})) ||
-           (await cache.match("./index.html")) ||
-           (await cache.match("./")) ||
-           new Response("لا يوجد اتصال ولم يتم تخزين التطبيق بعد.", {status:503});
+  } catch (e) {
+    const hit = await caches.match(request);
+    if (hit) return hit;
+    throw e;
   }
 }
 
@@ -103,13 +133,7 @@ self.addEventListener("fetch", event => {
 
   if (url.origin === self.location.origin) {
     if (request.mode === "navigate") { event.respondWith(pageHandler(request)); return; }
-    event.respondWith(caches.open(SHELL).then(async cache => {
-      const hit = await cache.match(request);
-      const net = fetch(request, { cache: "no-cache" }).then(response => {
-        if (response && response.ok) cache.put(request, response.clone());
-        return response;
-      }).catch(() => null);
-      return hit || (await net) || Response.error();
-    }));
+    if (/\/assets\/[^/]+\.(js|css)$/.test(url.pathname)) { event.respondWith(assetHandler(request)); return; }
+    event.respondWith(otherHandler(request));
   }
 });

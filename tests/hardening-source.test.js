@@ -41,7 +41,7 @@ test('heavy screens are code-split with React.lazy (not imported statically)', (
 });
 
 test('service worker precaches the code-split chunks and the build emits the manifest', () => {
-  assert.match(read('public/sw.js'), /precache\.json/);
+  assert.match(read('public/sw.js'), /PRECACHE/);
   assert.match(read('vite.config.js'), /precache\.json/);
 });
 
