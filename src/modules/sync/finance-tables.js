@@ -138,8 +138,10 @@ export const recurringExtraToRow = e => {
 // Parents before children. The flusher writes dirty keys independently, so when several finance keys were
 // queued offline they MUST be flushed in this order (a payment before its charge/account is rejected by the DB).
 export const FINANCE_FLUSH_ORDER = [
-  'iapp_fin_accounts', 'iapp_charges', 'iapp_payments', 'iapp_accounting_entries', 'iapp_doctor_share_rules',
-  'iapp_doctor_settlements', 'iapp_revenue_allocations', 'iapp_cash_reconciliations', 'iapp_expenses', 'iapp_recurring_expenses', 'iapp_fin_audit'
+  'iapp_fin_accounts', 'iapp_charges', 'iapp_doctor_share_rules', 'iapp_payments', 'iapp_doctor_settlements', 'iapp_revenue_allocations',
+  'iapp_cash_reconciliations', 'iapp_expenses', 'iapp_recurring_expenses',
+  // ledger entries last: the server only accepts an entry whose origin row (charge/payment/expense/reconciliation) already exists
+  'iapp_accounting_entries', 'iapp_fin_audit'
 ];
 // Rank used to sort dirty keys; non-finance keys keep their relative order and go first.
 export const flushRank = key => { const i = FINANCE_FLUSH_ORDER.indexOf(key); return i < 0 ? -1 : i; };
