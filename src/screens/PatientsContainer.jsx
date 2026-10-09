@@ -2,7 +2,8 @@ import React, { lazy, Suspense } from 'react';
 import Patients from './Patients.jsx';
 import LazyFallback from '../components/LazyFallback.jsx';
 
-const PatientFileContainer = lazy(() => import('./PatientFileContainer.jsx'));
+import { retryImport } from '../app/chunk-recovery.js';
+const PatientFileContainer = lazy(() => retryImport(() => import('./PatientFileContainer.jsx')));
 import { usePatientsOrchestration } from '../modules/patients/patients-orchestration.js';
 
 // Wires the live Patients list + patient-file data layer

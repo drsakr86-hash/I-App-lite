@@ -1,3 +1,4 @@
+import { installPreloadErrorHandler } from './app/chunk-recovery.js';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { HashRouter, useNavigate, useLocation } from 'react-router-dom';
@@ -286,10 +287,18 @@ root.render(
   React.createElement(HashRouter, null, React.createElement(ThemeRoot, null))
 );
 
+// A lazy chunk/CSS that no longer exists (new deploy) → one guarded reload to the new build.
+installPreloadErrorHandler();
+
 // Offline support (production build only; the dev server must not be cached).
+// sw.js is rewritten at build time (build id + exact precache list), so every deploy ships a byte-different worker;
+// updateViaCache:'none' makes the browser always re-check it, and update() is also asked on load / when the tab returns.
 if (import.meta.env.PROD && 'serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register(import.meta.env.BASE_URL + 'sw.js?v=20261001')
+    navigator.serviceWorker.register(import.meta.env.BASE_URL + 'sw.js', { updateViaCache: 'none' })
+      .then(reg => {
+        document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reg.update().catch(() => {}); });
+      })
       .catch(e => console.warn('SW register failed', e));
   });
 }

@@ -20,10 +20,11 @@ import PatientsContainer from "./PatientsContainer.jsx";
 import Appointments from "./Appointments.jsx";
 import WaitingRoom from "./WaitingRoom.jsx";
 import Prescriptions from "./Prescriptions.jsx";
-const Radiology = lazy(() => import("./Radiology.jsx"));
-const ImagingCenter = lazy(() => import("./ImagingCenter.jsx"));
-const Accounting = lazy(() => import("./Accounting.jsx"));
-const Settings = lazy(() => import("./Settings.jsx"));
+import { retryImport } from '../app/chunk-recovery.js';
+const Radiology = lazy(() => retryImport(() => import("./Radiology.jsx")));
+const ImagingCenter = lazy(() => retryImport(() => import("./ImagingCenter.jsx")));
+const Accounting = lazy(() => retryImport(() => import("./Accounting.jsx")));
+const Settings = lazy(() => retryImport(() => import("./Settings.jsx")));
 
 // Doctor-app shell. Exact port of the legacy runtime's App()
 // (public/legacy/app-runtime.js) -- same state, same effects, same screens

@@ -22,6 +22,8 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+      - name: Verify dist is one consistent build (index.html, chunks, precache.json, sw.js)
+        run: npm run verify:dist
       - run: touch dist/.nojekyll
       - uses: actions/upload-pages-artifact@v3
         with:
@@ -35,3 +37,9 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Verify the LIVE site is one consistent build
+        run: node scripts/verify-live.mjs "${{ steps.deployment.outputs.page_url }}" 12

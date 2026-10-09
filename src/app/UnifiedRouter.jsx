@@ -14,9 +14,10 @@ import { maybeDailyBackup } from '../modules/datatools/index.js';
 import { setCurrentUser } from '../modules/auth/current-user.js';
 import UnifiedLogin from '../screens/UnifiedLogin.jsx';
 import ForcePasswordChange from '../screens/ForcePasswordChange.jsx';
-const PatientApp = lazy(() => import('../screens/PatientApp.jsx'));
-const SecretaryApp = lazy(() => import('../screens/SecretaryApp.jsx'));
+const PatientApp = lazy(() => retryImport(() => import('../screens/PatientApp.jsx')));
+const SecretaryApp = lazy(() => retryImport(() => import('../screens/SecretaryApp.jsx')));
 import App from '../screens/App.jsx';
+import { retryImport } from './chunk-recovery.js';
 import LazyFallback from '../components/LazyFallback.jsx';
 
 // The app's single router/session gate. Exact port of the legacy runtime's
