@@ -4,6 +4,8 @@ import { PRICE_ICONS, initialPriceState, canSavePrice } from './settings-forms-m
 import { C } from '../../modules/theme/index.js';
 import { Field, inp } from '../../modules/ui/atoms.jsx';
 import { t, useLang } from '../../modules/i18n/index.js';
+import { tv } from '../../modules/i18n/tv.js';
+import { clinicLabel, CLINICS_LIST } from '../../modules/constants/index.js';
 
 // Service price add/edit form (Settings). Exact port of the legacy runtime's
 // PriceForm (public/legacy/app-runtime.js).
@@ -15,6 +17,12 @@ export default function PriceForm({ initial, onSave, onClose }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <Field label={t('g3.price.serviceName', lang)}>
         <input style={inp()} value={f.name} onChange={s('name')} placeholder={t('g3.price.serviceNamePh', lang)} />
+      </Field>
+      <Field label={t('g3.price.clinic', lang)}>
+        <select style={inp()} value={f.clinic || ''} onChange={s('clinic')}>
+          <option value="">{t('g3.price.allClinics', lang)}</option>
+          {CLINICS_LIST.map(c => <option key={c} value={c}>{tv(clinicLabel(c), lang)}</option>)}
+        </select>
       </Field>
       <Field label={t('g3.price.price', lang)}>
         <input

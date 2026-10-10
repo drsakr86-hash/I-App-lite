@@ -2,6 +2,8 @@
 // and expression mirrors the legacy runtime's VisitForm exactly
 // (public/legacy/app-runtime.js); legacy quirks are kept on purpose.
 
+import { pricesForClinic } from './price-clinic.js';
+
 // Default doctor list used by VisitForm / ExamForm / RxForm when the caller
 // passes no doctorNames prop.
 export const DEFAULT_DOCTOR_NAMES = ['د. عبدالستار', 'د. سلمى', 'د. ليلى'];
@@ -40,20 +42,23 @@ export const initialVisitState = (initial, today, defaultClinic) =>
 // Price-list entry matched to a chosen visit type (first match wins). Quirk
 // kept: `type.includes("")` is always true, so a price with an empty/missing
 // name matches every type, and substring matches go both ways.
-export const matchPriceForType = (prices, type) =>
-  prices.find(p => (p.name || '') === type || type.includes(p.name || '') || (p.name || '').includes(type));
+export const matchPriceForType = (prices, type, clinic) =>
+  pricesForClinic(prices, clinic).find(p => (p.name || '') === type || type.includes(p.name || '') || (p.name || '').includes(type));
 
 // State after choosing a type: the cost follows the matched price, otherwise
 // the typed cost is kept.
 export const withVisitType = (v, type, matched) => ({ ...v, type, cost: matched ? matched.price : v.cost });
 
 // Type options: the clinic's price list names when it has any, else the fixed list.
-export const visitTypeOptions = prices => (prices.length > 0 ? prices.map(p => p.name) : VISIT_TYPES);
+export const visitTypeOptions = (prices, clinic) => {
+  const list = pricesForClinic(prices, clinic);
+  return list.length > 0 ? (clinic ? [...new Set(list.map(p => p.name))] : list.map(p => p.name)) : VISIT_TYPES;
+};
 
 // The "reference price" hint under the type select (exact-name match only).
-export const referencePriceShown = (prices, type) => prices.length > 0 && prices.find(p => p.name === type);
-export const referencePriceText = (prices, type) =>
-  Number((prices.find(p => p.name === type) || {}).price || 0).toLocaleString();
+export const referencePriceShown = (prices, type, clinic) => prices.length > 0 && pricesForClinic(prices, clinic).find(p => p.name === type);
+export const referencePriceText = (prices, type, clinic) =>
+  Number((pricesForClinic(prices, clinic).find(p => p.name === type) || {}).price || 0).toLocaleString();
 
 // Complaint select handler: "أخرى..." clears the complaint so it can be typed.
 export const withComplaintSelect = (v, val) => (val === OTHER_COMPLAINT ? { ...v, complaint: '' } : { ...v, complaint: val });

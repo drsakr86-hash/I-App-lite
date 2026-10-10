@@ -21,7 +21,7 @@ export default function SecretaryAptForm({ initial, patients, appointments = [],
   const s = k => e => setF(v => ({ ...v, [k]: e.target.value }));
   const setType = e => {
     const type = e.target.value;
-    const m = matchSecretaryPrice(prices, type);
+    const m = matchSecretaryPrice(prices, type, f.clinic);
     setF(v => withSecretaryAptType(v, type, m, costTouched));
   };
   const label = { color: C.muted, fontSize: 11, display: 'block', marginBottom: 4 };
@@ -111,7 +111,7 @@ export default function SecretaryAptForm({ initial, patients, appointments = [],
       </div>
       <div>
         <label style={label}>{t('g3.apt.clinic', lang)}</label>
-        <select style={inp()} value={f.clinic || SECRETARY_DEFAULT_CLINIC} onChange={s('clinic')}>
+        <select style={inp()} value={f.clinic || SECRETARY_DEFAULT_CLINIC} onChange={e => { const clinic = e.target.value; setF(v => withSecretaryAptType({ ...v, clinic }, v.type, matchSecretaryPrice(prices, v.type || '', clinic), costTouched)); }}>
           {CLINICS_LIST.map(c => <option key={c} value={c}>{tv(clinicLabel(c), lang)}</option>)}
         </select>
       </div>

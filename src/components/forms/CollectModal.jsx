@@ -18,7 +18,7 @@ import { defaultAccountFor } from '../../modules/finance/accounts.js';
 // Without `finance` (accounting not set up yet) it behaves exactly as before: onSave(cost, paid).
 export default function CollectModal({ apt, prices = [], finance = null, onSave, onClose }) {
   const lang = useLang();
-  const matched = matchCollectPrice(prices, apt.type);
+  const matched = matchCollectPrice(prices, apt.type, apt.clinic);
   const [cost, setCost] = useState(initialCollectCost(apt, matched));
   const [paid, setPaid] = useState(initialCollectPaid(apt));
   const [collected, setCollected] = useState(() => {
