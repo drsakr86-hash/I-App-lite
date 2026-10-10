@@ -86,7 +86,7 @@ const exams = [{ ...SEED.exams[0], id: 1, patientId: 1, date: TODAY }];
 const prices = SEED.prices;
 const expenses = [
   { id: 1, date: TODAY, category: 'مستلزمات طبية', amount: '500', notes: 'قطرات ومستلزمات فحص', clinic: 'دمنهور', recurringId: null },
-  { id: 2, date: TODAY, category: 'رواتب', amount: '3000', notes: 'راتب شهري مصروف شهري ثابت', clinic: '', recurringId: 7 },
+  { id: 2, date: TODAY, category: 'رواتب', amount: '3000', notes: 'راتب شهري · مصروف شهري ثابت', clinic: '', recurringId: 7 },
   { id: 3, date: TODAY, category: 'إيجار', amount: '2000', notes: '', clinic: 'الرحمانية', recurringId: null }
 ];
 const recurringExpenses = [{ id: 7, category: 'رواتب', amount: '3000', notes: 'راتب شهري', clinic: '', day: 1, active: true, startMonth: TODAY.slice(0, 7) }];
@@ -315,7 +315,7 @@ add('WaitingRoom', () => h(WaitingRoom, { apts, today: TODAY, onUpdateApt: noopA
 add('Prescriptions', () => h(Prescriptions, { prescriptions, setRx: noop, patients, doctorNames, primaryDoctor: doctors[0], clinic }));
 add('Radiology', () => h(Radiology, { patients, customTests: [{ id: 'c1', name: 'Custom test', name_ar: 'فحص مخصص', cat: 'مخصص' }], setCustomTests: noop, setExams: noop, primary: doctors[0], clinic }));
 add('ImagingCenter', () => h(ImagingCenter, { patients, primary: doctors[0], clinic }), { maxDepth: 3, maxPerLevel: 30 });
-add('Accounting', () => h(Accounting, { visits, expenses, setExpenses: noop, recurringExpenses, setRecurringExpenses: noop, doctors, clinic }));
+add('Accounting', () => h(Accounting, { visits, expenses, setExpenses: noop, recurringExpenses, setRecurringExpenses: noop, doctors, clinic, session: adminSession }));
 add('Settings (admin, filled)', () => h(Settings, { patients, appointments: apts, prescriptions, exams, visits, doctors, setDoctors: noop, prices, setPrices: noop, clinic, setClinic: noop, onReset: noop, users, setUsers: noop, session: adminSession, onLogout: noop }), { fill: true, maxPerLevel: 30 });
 add('Settings (admin)', () => h(Settings, { patients, appointments: apts, prescriptions, exams, visits, doctors, setDoctors: noop, prices, setPrices: noop, clinic, setClinic: noop, onReset: noop, users, setUsers: noop, session: adminSession, onLogout: noop }));
 add('Settings (doctor)', () => h(Settings, { patients, appointments: apts, prescriptions, exams, visits, doctors, setDoctors: noop, prices, setPrices: noop, clinic, setClinic: noop, onReset: noop, users, setUsers: noop, session: { ...adminSession, role: 'doctor' }, onLogout: noop }));
