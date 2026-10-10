@@ -11,6 +11,7 @@
 // ---- SecretaryAptForm ------------------------------------------------------
 
 import { t } from '../../modules/i18n/index.js';
+import { pricesForClinic } from './price-clinic.js';
 
 export const SECRETARY_APT_TYPES = ['فحص روتيني', 'متابعة', 'استشارة', 'قياس نظر', 'فحص شبكية', 'عملية'];
 export const SECRETARY_DEFAULT_CLINIC = 'دمنهور';
@@ -48,7 +49,7 @@ export const initialCostTouched = initial => !!(initial && initial.cost);
 // Price-list entry for a type (first match wins; substring both ways).
 // Quirks kept: a price named "" matches every type; a price with no name
 // throws (p.name.includes).
-export const matchSecretaryPrice = (prices, t) => prices.find(p => p.name === t || p.name.includes(t) || t.includes(p.name));
+export const matchSecretaryPrice = (prices, t, clinic) => pricesForClinic(prices, clinic).find(p => p.name === t || p.name.includes(t) || t.includes(p.name));
 
 // Choosing a type fills the cost from the price list unless the cost was
 // ever typed by hand (or came with the edited appointment).
@@ -85,8 +86,8 @@ export const buildSecretaryAptPayload = (f, now) => ({ ...f, id: f.id || now });
 
 // Quirks kept: a price with no name throws; apt.type undefined matches a
 // price whose name contains "undefined" only.
-export const matchCollectPrice = (prices, type) =>
-  prices.find(p => p.name === type || p.name.includes(type) || (type || '').includes(p.name));
+export const matchCollectPrice = (prices, type, clinic) =>
+  pricesForClinic(prices, clinic).find(p => p.name === type || p.name.includes(type) || (type || '').includes(p.name));
 
 // The stored cost wins when truthy (a stored 0 falls through to the price
 // list), then the matched price, else empty.

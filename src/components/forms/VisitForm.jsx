@@ -21,7 +21,7 @@ export default function VisitForm({ initial, patientId, onSave, onClose, doctorN
   const s = k => e => setF(v => ({ ...v, [k]: e.target.value }));
   const handleTypeChange = e => {
     const type = e.target.value;
-    const matched = matchPriceForType(prices, type);
+    const matched = matchPriceForType(prices, type, f.clinic);
     setF(v => withVisitType(v, type, matched));
   };
   const handleComplaintSelect = e => {
@@ -48,11 +48,11 @@ export default function VisitForm({ initial, patientId, onSave, onClose, doctorN
       </Field>
       <Field label={t('g2.visit.type', lang)}>
         <select style={inp()} value={f.type} onChange={handleTypeChange}>
-          {visitTypeOptions(prices).map(ty => <option key={ty} value={ty}>{tv(ty)}</option>)}
+          {visitTypeOptions(prices, f.clinic).map(ty => <option key={ty} value={ty}>{tv(ty)}</option>)}
         </select>
-        {referencePriceShown(prices, f.type) && (
+        {referencePriceShown(prices, f.type, f.clinic) && (
           <div style={{ color: C.gold, fontSize: 11, marginTop: 4 }}>
-            {'💰 '}{t('g2.visit.refPrice', lang)}{': '}{referencePriceText(prices, f.type)}{' '}{t('g2.common.egp', lang)}
+            {'💰 '}{t('g2.visit.refPrice', lang)}{': '}{referencePriceText(prices, f.type, f.clinic)}{' '}{t('g2.common.egp', lang)}
           </div>
         )}
       </Field>

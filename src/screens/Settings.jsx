@@ -11,7 +11,7 @@ import { C } from '../modules/theme/index.js';
 import { Field, inp } from '../modules/ui/atoms.jsx';
 import { logAudit, saveAutoBackup } from '../modules/sync/index.js';
 import { getSB } from '../modules/data-access/index.js';
-import { localISO, newId, emailKey, ROLE_LABEL, MIN_PW_LEN, GUARD_KEY } from '../modules/constants/index.js';
+import { localISO, clinicLabel, newId, emailKey, ROLE_LABEL, MIN_PW_LEN, GUARD_KEY } from '../modules/constants/index.js';
 import { t, useLang } from '../modules/i18n/index.js';
 import { tv } from '../modules/i18n/tv.js';
 import DataTools from '../components/DataTools.jsx';
@@ -262,6 +262,7 @@ export default function Settings({
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ color: C.text, fontSize: 13, fontWeight: 600 }}>{tv(p.name)}</div>
+              <div style={{ color: C.muted, fontSize: 11 }}>{p.clinic ? tv(clinicLabel(p.clinic)) : t('g3.price.allClinics', lang)}</div>
             </div>
             <div style={{ color: C.gold, fontWeight: 800, fontSize: 14, marginInlineStart: 8 }}>{Number(p.price).toLocaleString()} {cur}</div>
             <div onClick={() => setPriceModal({ edit: p })} style={{ background: C.accent + '22', borderRadius: 8, padding: '5px 8px', color: C.accent, fontSize: 11, cursor: 'pointer' }}>✏</div>
