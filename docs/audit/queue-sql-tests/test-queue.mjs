@@ -178,10 +178,73 @@ await ok('GUARD: an un-rebuildable stale row aborts the apply and changes nothin
   let err = null;
   try { await db.exec(APPLY); } catch (e) { err = e.message; }
   await db.exec('rollback').catch(() => {});
-  assert.match(err || '', /ABORT: 1 stale cache row/);
+  assert.match(err || '', /ABORT G1: stale=1 no_matching_appointment=1/);
   assert.equal(n(await q(`select count(*) n from pg_policies where tablename='iapp_queue_public_cache' and policyname='public_read_queue_cache'`)), 1, 'old policy still in place');
   assert.equal(n(await q(`select count(*) n from public.iapp_queue_public_cache where id='orphan1'`)), 1, 'row not deleted');
   await db.exec(`delete from public.iapp_queue_public_cache where id='orphan1'`);
+});
+
+// G1 variants: each must abort with a precise counter and change nothing (rows kept, backup untouched, old policy kept)
+const bakCount = async () => n(await q(`select count(*) n from public.iapp_queue_public_cache_bak_20261011`));
+const bakBefore = await bakCount();
+const guardCase = async (label, setup, expect, cleanup) => ok(`GUARD: ${label}`, async () => {
+  await db.exec(setup);
+  let err = null;
+  try { await db.exec(APPLY); } catch (e) { err = e.message; }
+  await db.exec('rollback').catch(() => {});
+  assert.match(err || '', expect);
+  assert.equal(n(await q(`select count(*) n from pg_policies where tablename='iapp_queue_public_cache' and policyname='public_read_queue_cache'`)), 1, 'old policy kept');
+  assert.equal(await bakCount(), bakBefore, 'backup untouched');
+  assert.equal(n(await q(`select count(*) n from public.iapp_queue_public_cache where id in ('8001','8002','8003')`)), 1, 'stale row kept');
+  await db.exec(cleanup);
+});
+const d3 = `((now() at time zone 'Africa/Cairo')::date - 3)::text`, d2 = `((now() at time zone 'Africa/Cairo')::date - 2)`;
+await guardCase('cache date differs from the appointment date (cache 3 days ago, appointment 2 days ago)',
+  `insert into public.iapp_appointments values (8001,'G P','CLINIC-A','Dr X','done',${d2},'10:00',1,2,3,false);
+   insert into public.iapp_queue_public_cache (id,patient,clinic,doctor,wait_status,date,time,arrived_at,called_at,queue_number) values ('8001','G P','CLINIC-A','Dr X','done',${d3},'10:00','1','2','3')`,
+  /ABORT G1: stale=1 no_matching_appointment=0 date_mismatch=1 field_mismatch=0/,
+  `delete from public.iapp_queue_public_cache where id='8001'; delete from public.iapp_appointments where id=8001`);
+await guardCase('same date but a field differs (patient name edited after caching)',
+  `insert into public.iapp_appointments values (8002,'Edited Name','CLINIC-A','Dr X','done',${d2},'10:00',1,2,3,false);
+   insert into public.iapp_queue_public_cache (id,patient,clinic,doctor,wait_status,date,time,arrived_at,called_at,queue_number) values ('8002','Old Name','CLINIC-A','Dr X','done',${d2}::text,'10:00','1','2','3')`,
+  /ABORT G1: stale=1 no_matching_appointment=0 date_mismatch=0 field_mismatch=1/,
+  `delete from public.iapp_queue_public_cache where id='8002'; delete from public.iapp_appointments where id=8002`);
+await guardCase('appointment is cancelled (a rebuild would not recreate the row)',
+  `insert into public.iapp_appointments values (8003,'C P','CLINIC-A','Dr X','done',${d2},'10:00',1,2,3,true);
+   insert into public.iapp_queue_public_cache (id,patient,clinic,doctor,wait_status,date,time,arrived_at,called_at,queue_number) values ('8003','C P','CLINIC-A','Dr X','done',${d2}::text,'10:00','1','2','3')`,
+  /ABORT G1: stale=1 no_matching_appointment=1/,
+  `delete from public.iapp_queue_public_cache where id='8003'; delete from public.iapp_appointments where id=8003`);
+
+// ---- BACKUP + RESTORE WITHOUT ASSUMPTIONS ----
+await db.exec(APPLY); // back to the applied state (stale rows are gone; the backup holds them)
+await ok('BACKUP: holds all deleted rows, identical to the pre-change snapshot, and is invisible to anon/authenticated', async () => {
+  const b = await q(`select id,patient,clinic,doctor,wait_status,date,time,arrived_at,called_at,queue_number from public.iapp_queue_public_cache_bak_20261011 order by id`);
+  assert.deepEqual(b, snapshotStale);
+  assert.match(await asErr('anon', 'select * from public.iapp_queue_public_cache_bak_20261011'), /permission denied/);
+  assert.match(await asErr('authenticated', 'select * from public.iapp_queue_public_cache_bak_20261011'), /permission denied/);
+  assert.equal(n(await q(`select count(*) n from pg_class where relname='iapp_queue_public_cache_bak_20261011' and relrowsecurity`)), 1);
+});
+await ok('RESTORE does not depend on appointments: delete/rename/cancel past appointments after the apply, restore is still exact', async () => {
+  await db.exec(`delete from public.iapp_appointments where id=1001; update public.iapp_appointments set patient='Renamed' where id=1002; update public.iapp_appointments set cancelled=true where id=1003; update public.iapp_appointments set date=date '2020-01-01' where id=1004`);
+  await db.exec(ROLLBACK);
+  const now = await q(`select id,patient,clinic,doctor,wait_status,date,time,arrived_at,called_at,queue_number from public.iapp_queue_public_cache where date < '${today}' order by id`);
+  assert.deepEqual(now, snapshotStale);
+});
+await ok('RESTORE covers an earliest date older than any assumed bound (no hardcoded LOWER BOUND in the file)', async () => {
+  assert.doesNotMatch(ROLLBACK, /LOWER BOUND|date '20\d\d-/);
+  const min = (await q(`select min(date) m from public.iapp_queue_public_cache_bak_20261011`))[0].m;
+  assert.equal(min, snapshotStale[0].date < min ? snapshotStale[0].date : min);
+  assert.equal((await q(`select min(date) m from public.iapp_queue_public_cache where date < '${today}'`))[0].m, min);
+});
+await ok('ROLLBACK aborts and changes nothing if the backup table is missing', async () => {
+  await db.exec('alter table public.iapp_queue_public_cache_bak_20261011 rename to hidden_bak');
+  await db.exec(`drop policy public_read_queue_cache on public.iapp_queue_public_cache; create policy public_read_queue_cache_today on public.iapp_queue_public_cache for select to anon, authenticated using (date = ((now() at time zone 'Africa/Cairo')::date)::text)`);
+  let err = null;
+  try { await db.exec(ROLLBACK); } catch (e) { err = e.message; }
+  await db.exec('rollback').catch(() => {});
+  await db.exec('alter table hidden_bak rename to iapp_queue_public_cache_bak_20261011');
+  assert.match(err || '', /ABORT: backup table/);
+  assert.equal(n(await q(`select count(*) n from pg_policies where tablename='iapp_queue_public_cache' and policyname='public_read_queue_cache_today'`)), 1, 'policy unchanged');
 });
 
 console.log(`\nRESULT: ${passed} passed, ${failed} failed`);

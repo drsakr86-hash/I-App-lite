@@ -1,23 +1,35 @@
--- Rollback of queue-public-today-only.sql — restores BOTH the old policy and the deleted history. Safe to run more than once.
--- Part 1 restores the old (open) policy. Part 2 rebuilds past-day cache rows from public.iapp_appointments with the same mapping as the trigger
--- iapp_refresh_queue_public_cache. Verified in production before the change: the 66 stale rows were identical to this rebuild (66/66), and the number of
--- non-cancelled appointments since 2026-10-01 equals the number of cache rows (no extra rows would appear).
--- Adjust the date on the line marked <<LOWER BOUND>> to the earliest date that existed before the change (the pre-flight query prints it).
--- Part 2 alone (without Part 1) is also fine if you only need the data back: the new policy keeps past days hidden from anon.
+-- Rollback of queue-public-today-only.sql. Safe to run more than once. Not applied to production.
+-- There is NO hardcoded lower bound: history is restored from public.iapp_queue_public_cache_bak_20261011,
+-- the private table created by the apply script from exactly the rows it deleted.
+-- Aborts (changes nothing) if that backup table does not exist.
+-- Part 2 alone (without Part 1) is fine if you only need the data back: the today-only policy keeps past days hidden.
+-- After you are sure no rollback is needed, drop the backup:  drop table public.iapp_queue_public_cache_bak_20261011;
 begin;
 set local lock_timeout = '5s';
 
--- Part 1: old policy
+do $$
+begin
+  if to_regclass('public.iapp_queue_public_cache_bak_20261011') is null then
+    raise exception 'ABORT: backup table public.iapp_queue_public_cache_bak_20261011 not found. Nothing was changed.';
+  end if;
+end $$;
+
+-- Part 1: old (open) policy
 drop policy if exists public_read_queue_cache_today on public.iapp_queue_public_cache;
 drop policy if exists public_read_queue_cache on public.iapp_queue_public_cache;
-create policy public_read_queue_cache on public.iapp_queue_public_cache for select to anon, authenticated using (true);
+create policy public_read_queue_cache on public.iapp_queue_public_cache
+  for select to anon, authenticated using (true);
 
--- Part 2: history
-insert into public.iapp_queue_public_cache (id, patient, clinic, doctor, wait_status, date, time, arrived_at, called_at, queue_number, updated_at)
-select a.id::text, a.patient, a.clinic, a.doctor, a.wait_status, a.date::text, a.time, a.arrived_at::text, a.called_at::text, a.queue_number::text, now()
-from public.iapp_appointments a
-where not a.cancelled
-  and a.date >= date '2026-10-01'                                  -- <<LOWER BOUND>>
-  and a.date <  (now() at time zone 'Africa/Cairo')::date
+-- Part 2: history, byte-for-byte from the backup
+insert into public.iapp_queue_public_cache
+select * from public.iapp_queue_public_cache_bak_20261011
 on conflict (id) do nothing;
+
+do $$
+declare missing int;
+begin
+  select count(*) into missing from public.iapp_queue_public_cache_bak_20261011 b
+  where not exists (select 1 from public.iapp_queue_public_cache c where c.id = b.id);
+  if missing > 0 then raise exception 'ABORT: % backed-up row(s) not restored. Nothing was changed.', missing; end if;
+end $$;
 commit;
