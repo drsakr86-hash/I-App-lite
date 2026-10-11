@@ -75,7 +75,8 @@ export default function UnifiedRouter() {
   }, [logout]);
 
   useEffect(() => {
-    if (!ready || !session || session.kind !== 'staff') return;
+    // admin only: the backup is a snapshot of the clinical keys, which a secretary can neither read nor write (store-role-rls.sql)
+    if (!ready || !session || session.kind !== 'staff' || session.role !== 'admin') return;
     const t = setTimeout(() => { maybeDailyBackup(); }, 4000);
     return () => clearTimeout(t);
   }, [ready, session && session.id]);
