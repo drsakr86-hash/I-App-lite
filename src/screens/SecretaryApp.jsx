@@ -80,7 +80,11 @@ export default function SecretaryApp() {
     if (!collectApt) { setFinState(null); collectPayId.current = null; return undefined; }
     let live = true;
     collectPayId.current = newFinId('pay');
-    loadCollectionState([collectApt.id]).then(r => { if (live && !r.offline && selectableAccounts(r.state.accounts).length) setFinState(r.state); }).catch(() => {});
+    loadCollectionState([collectApt.id]).then(r => {
+      if (!live) return;
+      if (r.unavailable) { setToast(t("g8.collect.serverUnavailable", lang)); return; }
+      if (!r.offline && selectableAccounts(r.state.accounts).length) setFinState(r.state);
+    }).catch(() => {});
     return () => { live = false; };
   }, [collectApt]);
   const [filterDate, setFilterDate] = useState(localISO());

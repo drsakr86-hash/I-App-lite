@@ -213,7 +213,14 @@ test('loadCollectionState: offline → {offline:true} without calling the server
   assert.equal(ok.offline, false);
   assert.deepEqual(rpcCalls[0], { fn: 'iapp_fin_collection_state', args: { p_apt_ids: ['A1'], p_pending_ids: [] } });
   rpcResult = { data: null, error: { message: 'not allowed' } };
-  assert.equal((await loadCollectionState(['A1'])).offline, true);
+  const denied = await loadCollectionState(['A1']);
+  assert.equal(denied.offline, true);
+  assert.ok(!denied.unavailable, 'a permission error is not "function missing"');
+  // hardening SQL not applied on the server: PostgREST answers PGRST202 -> the caller must be able to warn the secretary
+  rpcResult = { data: null, error: { code: 'PGRST202', message: 'Could not find the function public.iapp_fin_collection_state(p_apt_ids, p_pending_ids) in the schema cache' } };
+  const missing = await loadCollectionState(['A1']);
+  assert.equal(missing.offline, true);
+  assert.equal(missing.unavailable, true);
   const navDesc = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
   Object.defineProperty(globalThis, 'navigator', { value: { onLine: false }, configurable: true, writable: true });
   try {
