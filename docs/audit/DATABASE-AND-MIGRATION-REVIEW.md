@@ -90,3 +90,6 @@ create unique index concurrently if not exists iapp_patients_core_code_uq on pub
 create sequence if not exists public.iapp_patient_code_seq;  -- then an RPC iapp_next_patient_code() the client calls when online
 ```
 Also decide whether deleting a patient in the app should mark the core row (e.g. archived) instead of leaving it active.
+
+### G — status (2026-10-11): cleanup EXECUTED in production
+Executed with `docs/sql/patient-code-duplicates-fix.sql` (guarded, one transaction; first attempt was refused by guard G0d because one patient had two trash records, the guard was relaxed and re-tested). Result: 0 duplicated codes, 60 core rows unchanged, 12 visits still linked to the same 9 patients; the 6 deleted patients are now `P-0062-D1/-D2`, `P-0063-D1/-D2`, `P-0064-D1/-D2`; their 7 trash records carry the same codes; `iapp_backups` untouched. Private backups: `iapp_patients_core_codefix_bak_20261011`, `iapp_store_trash_codefix_bak_20261011`. Rollback: `patient-code-duplicates-fix-rollback.sql`. The unique index was deliberately NOT created (a concurrent double-issue would become a sync error); create it only together with the server-side sequence.

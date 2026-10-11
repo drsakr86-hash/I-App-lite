@@ -14,9 +14,9 @@ Commits are small and independent; none touches `main`. Each commit message carr
 | 5 | `2fa783b` | F-19 file numbers re-issued after delete/merge | max(current list)+1 | monotonic floor `code-floor.js`, wired in addP/delP/mergePatients, kept by PHI purge | `tests/patient-code-floor.test.js` (5) |
 | 5 | `2fa783b` | F-18 lost update on blob keys | unconditional upsert | NOT fixed (needs server CAS); documented + `todo` test | `tests/sync-lost-update.test.js` (todo) |
 
-Tests: 774 on baseline → 785 now (784 pass, 1 `todo` known limitation, 0 fail). Smoke suites: 3, all green.
+| 6 | (this commit) | F-05 topic 3: public broadcast channel + TV voice leaked full names | `broadcastCall` sent `patient: a.patient`; the TV said the full name through Google TTS | `src/modules/realtime/mask-name.js` (same rule as TV displayName / SQL `iapp_mask_name`) used in `call-channel.js` and in the TV relay; online (Google) voice says the queue number only, device voice the first name | `tests/mask-name.test.js` (6) |
 
-Tests now: 785 (784 pass, 1 todo, 0 fail).
+Tests: 774 on baseline → 791 now (790 pass, 1 `todo` known limitation, 0 fail). Smoke suites: 3, all green.
 
 ## Deliberately NOT changed (and why)
 - `deploy.yml`: adding steps changes the production release path; propose adding the same two smoke steps after review.

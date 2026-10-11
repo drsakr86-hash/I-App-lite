@@ -7,7 +7,7 @@ PGlite is deliberately NOT a dependency of the app. In a scratch folder:
 mkdir /tmp/qtest && cd /tmp/qtest && npm init -y && npm i @electric-sql/pglite@0.3.14
 cp <repo>/docs/audit/queue-sql-tests/*.mjs . && IAPP_REPO=<repo> node test-queue.mjs && IAPP_REPO=<repo> node test-mask.mjs
 ```
-Expected: `test-queue.mjs` 42 passed, `test-mask.mjs` 13 passed. It emulates role switching (`set role anon|authenticated|service_role`), NOT PostgREST/JWT parsing or Supabase Realtime. **PGlite is a single session: it can NOT test concurrency.**
+Also `test-patient-codes.mjs` (12 passed) for docs/sql/patient-code-duplicates-fix*.sql. Expected: `test-queue.mjs` 42 passed, `test-mask.mjs` 19 passed. It emulates role switching (`set role anon|authenticated|service_role`), NOT PostgREST/JWT parsing or Supabase Realtime. **PGlite is a single session: it can NOT test concurrency.**
 
 ## 2. Concurrency tests: `test-concurrency.mjs` on a REAL PostgreSQL server
 Needs a throwaway local PostgreSQL (tested with 16.15; production is 17.x) and `npm i pg` in a scratch folder:
