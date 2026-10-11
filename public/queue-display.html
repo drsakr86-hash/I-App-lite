@@ -254,7 +254,7 @@ function load(){
     });
     setData(rows);
   }).catch(function(e){
-    $('status').innerHTML='<span class="error">تعذر قراءة المواعيد: '+((e&&e.message)||e)+'</span>';
+    var st=$('status');st.textContent='';st.appendChild(el('span','error','تعذر قراءة المواعيد: '+((e&&e.message)||e))); // textContent: an error message is never parsed as HTML
   });
 }
 function subscribe(){
