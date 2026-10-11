@@ -6,8 +6,9 @@
 -- One transaction, all-or-nothing. Guards:
 --  G1 every stale cache row (date < today in Africa/Cairo) must have a NON-cancelled appointment with the same id,
 --     the same date AND the same value in every mapped field, i.e. the row equals what a rebuild would produce;
---  G2 exactly those rows are first copied into a private backup table (RLS on, no policy, all grants revoked),
---     and every one must be present in the backup before anything is deleted;
+--  G2 exactly those rows are first copied into a private backup table (RLS on, no policy, all grants revoked);
+--     a pre-existing backup is never trusted by id: any content difference (G2a) or leftover rows from an earlier run (G2b)
+--     abort; and before any delete every stale row must have a backup row identical in ALL columns (G2c);
 --  G3 after the delete no stale row remains.
 -- The rollback restores from the backup table (no date range, no assumption about appointments).
 -- Side effect: creates ONE new table public.iapp_queue_public_cache_bak_20261011 (same data the cache already exposed, now private). Drop it after the retention period.
@@ -50,26 +51,56 @@ begin
   end if;
 end $$;
 
--- G2
+-- G2: private backup. The table is created if absent; if it already exists (earlier run) it is NEVER trusted by id alone.
 create table if not exists public.iapp_queue_public_cache_bak_20261011
   (like public.iapp_queue_public_cache including defaults);
 alter table public.iapp_queue_public_cache_bak_20261011 enable row level security;
 revoke all on public.iapp_queue_public_cache_bak_20261011 from public, anon, authenticated;
+
+-- G2a/G2b: an existing backup must agree with the rows about to be deleted
+do $$
+declare n_stale int; n_conflict int; n_leftover int;
+begin
+  select count(*) into n_stale from public.iapp_queue_public_cache c
+  where c.date < ((now() at time zone 'Africa/Cairo')::date)::text;
+
+  -- same id, any column (including updated_at) different => the old backup is not a copy of what we are about to delete
+  select count(*) into n_conflict
+  from public.iapp_queue_public_cache c
+  join public.iapp_queue_public_cache_bak_20261011 b on b.id = c.id
+  where c.date < ((now() at time zone 'Africa/Cairo')::date)::text
+    and row(b.*) is distinct from row(c.*);
+  if n_conflict > 0 then
+    raise exception 'ABORT G2a: % existing backup row(s) differ from the current stale row(s) (content_conflict=%). Rename the old backup table and rerun. Nothing was changed.', n_conflict, n_conflict;
+  end if;
+
+  -- a backup holding rows that are not part of this run would be silently reused by the rollback
+  select count(*) into n_leftover
+  from public.iapp_queue_public_cache_bak_20261011 b
+  where n_stale > 0
+    and not exists (select 1 from public.iapp_queue_public_cache c
+                    where c.id = b.id and c.date < ((now() at time zone 'Africa/Cairo')::date)::text);
+  if n_leftover > 0 then
+    raise exception 'ABORT G2b: backup table holds % row(s) from an earlier run that are not in the current stale set (leftover=%). Rename the old backup table and rerun. Nothing was changed.', n_leftover, n_leftover;
+  end if;
+end $$;
 
 insert into public.iapp_queue_public_cache_bak_20261011
 select * from public.iapp_queue_public_cache c
 where c.date < ((now() at time zone 'Africa/Cairo')::date)::text
   and not exists (select 1 from public.iapp_queue_public_cache_bak_20261011 b where b.id = c.id);
 
+-- G2c: every stale row must now have a backup row with IDENTICAL content (all columns), not just the same id
 do $$
-declare missing int;
+declare not_identical int;
 begin
-  select count(*) into missing
+  select count(*) into not_identical
   from public.iapp_queue_public_cache c
   where c.date < ((now() at time zone 'Africa/Cairo')::date)::text
-    and not exists (select 1 from public.iapp_queue_public_cache_bak_20261011 b where b.id = c.id);
-  if missing > 0 then
-    raise exception 'ABORT G2: % row(s) not backed up. Nothing was changed.', missing;
+    and not exists (select 1 from public.iapp_queue_public_cache_bak_20261011 b
+                    where b.id = c.id and row(b.*) is not distinct from row(c.*));
+  if not_identical > 0 then
+    raise exception 'ABORT G2c: % stale row(s) have no identical backup row (not_identical=%). Nothing was changed.', not_identical, not_identical;
   end if;
 end $$;
 

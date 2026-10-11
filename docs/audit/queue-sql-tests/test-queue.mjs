@@ -80,6 +80,7 @@ for (const [i, st, clinic] of [[1, 'waiting', 'CLINIC-A'], [2, 'called', 'CLINIC
 await db.exec(`insert into public.iapp_appointments values (6001, 'Tomorrow Patient', 'CLINIC-A', 'Dr Y', 'waiting', date '${today}' + 1, '09:00', null, null, null, false)`);
 const snapshotStale = await q(`select id,patient,clinic,doctor,wait_status,date,time,arrived_at,called_at,queue_number from public.iapp_queue_public_cache where date < '${today}' order by id`);
 
+const apptJson = JSON.stringify((await q(`select json_agg(a order by id) j from public.iapp_appointments a where id between 1001 and 1020`))[0].j);
 console.log(`# cairo today=${today}; stale cache rows=${snapshotStale.length}`);
 
 // ---- BEFORE ----
@@ -87,7 +88,30 @@ await ok('BEFORE: anon reads ALL days from the table (the leak)', async () => as
 await ok('BEFORE: anon via the view sees only today (view filter works)', async () => assert.equal(n(await as('anon', 'select count(*) n from public.iapp_queue_public')), 4));
 await ok('BEFORE: anon cannot read appointments (permission denied)', async () => assert.match(await asErr('anon', 'select * from public.iapp_appointments'), /permission denied/));
 
+// ---- helpers: full-state snapshot so every negative test proves 'no partial change' ----
+const BAK = 'public.iapp_queue_public_cache_bak_20261011';
+const state = async () => JSON.stringify({
+  pol: await q(`select policyname, qual from pg_policies where tablename='iapp_queue_public_cache' order by 1`),
+  cache: await q('select * from public.iapp_queue_public_cache order by id'),
+  bak: (await q(`select to_regclass('${BAK}')::text r`))[0].r ? await q(`select * from ${BAK} order by id`) : null,
+});
+const quiet = async sql => { await db.exec('alter table public.iapp_appointments disable trigger trg_iapp_refresh_queue_public_cache'); try { await db.exec(sql); } finally { await db.exec('alter table public.iapp_appointments enable trigger trg_iapp_refresh_queue_public_cache'); } };
+const abortCase = async (label, file, expect, setup, cleanup) => ok(label, async () => {
+  if (setup) await quiet(setup);
+  const s0 = await state(); let err = null;
+  try { await db.exec(file); } catch (e) { err = e.message; }
+  await db.exec('rollback').catch(() => {});
+  const s1 = await state();
+  if (cleanup) await quiet(cleanup);
+  assert.match(err || '(no error: the file succeeded)', expect);
+  assert.equal(s1, s0, 'policy, cache and backup are exactly as before the failed run');
+});
+
 // ---- APPLY ----
+await abortCase('FRESH ABORT: a failing guard on a first run leaves no backup table, no policy change, no deleted row', APPLY, /ABORT G1: stale=21 no_matching_appointment=1/,
+  `insert into public.iapp_queue_public_cache (id,patient,clinic,date) values ('orphan0','Orphan','CLINIC-A', ((now() at time zone 'Africa/Cairo')::date - 3)::text)`,
+  `delete from public.iapp_queue_public_cache where id='orphan0'`);
+await ok('FRESH ABORT: backup table did not get created', async () => assert.equal((await q(`select to_regclass('${BAK}')::text r`))[0].r, null));
 await db.exec(APPLY);
 await ok('AFTER apply: exactly one policy, the new one, scoped to anon+authenticated SELECT', async () => {
   const p = await q(`select policyname, cmd, roles::text from pg_policies where tablename='iapp_queue_public_cache'`);
@@ -158,7 +182,7 @@ await ok('ROLLBACK: old open policy restored (using true) and the new one remove
   const p = await q(`select policyname, qual from pg_policies where tablename='iapp_queue_public_cache'`);
   assert.equal(p.length, 1); assert.equal(p[0].policyname, 'public_read_queue_cache'); assert.equal(p[0].qual, 'true');
 });
-await ok('RESTORE: the rollback file rebuilds the deleted history from iapp_appointments, identical to the pre-change snapshot', async () => {
+await ok('RESTORE: the rollback restores the deleted history from the backup table, identical to the pre-change snapshot', async () => {
   const now = await q(`select id,patient,clinic,doctor,wait_status,date,time,arrived_at,called_at,queue_number from public.iapp_queue_public_cache where date < '${today}' order by id`);
   assert.deepEqual(now, snapshotStale);
 });
@@ -171,81 +195,94 @@ await ok('RE-APPLY after rollback works', async () => {
   assert.equal(n(await as('anon', 'select count(*) n from public.iapp_queue_public_cache')), 4);
 });
 
-// ---- GUARD: a stale cache row that cannot be rebuilt must stop the whole change ----
-await ok('GUARD: an un-rebuildable stale row aborts the apply and changes nothing', async () => {
-  await db.exec(`insert into public.iapp_queue_public_cache (id,patient,clinic,date) values ('orphan1','Orphan','CLINIC-A', ((now() at time zone 'Africa/Cairo')::date - 3)::text)`);
-  await db.exec(`drop policy public_read_queue_cache_today on public.iapp_queue_public_cache; create policy public_read_queue_cache on public.iapp_queue_public_cache for select to anon, authenticated using (true);`);
-  let err = null;
-  try { await db.exec(APPLY); } catch (e) { err = e.message; }
-  await db.exec('rollback').catch(() => {});
-  assert.match(err || '', /ABORT G1: stale=1 no_matching_appointment=1/);
-  assert.equal(n(await q(`select count(*) n from pg_policies where tablename='iapp_queue_public_cache' and policyname='public_read_queue_cache'`)), 1, 'old policy still in place');
-  assert.equal(n(await q(`select count(*) n from public.iapp_queue_public_cache where id='orphan1'`)), 1, 'row not deleted');
-  await db.exec(`delete from public.iapp_queue_public_cache where id='orphan1'`);
-});
 
-// G1 variants: each must abort with a precise counter and change nothing (rows kept, backup untouched, old policy kept)
-const bakCount = async () => n(await q(`select count(*) n from public.iapp_queue_public_cache_bak_20261011`));
-const bakBefore = await bakCount();
-const guardCase = async (label, setup, expect, cleanup) => ok(`GUARD: ${label}`, async () => {
-  await db.exec(setup);
-  let err = null;
-  try { await db.exec(APPLY); } catch (e) { err = e.message; }
-  await db.exec('rollback').catch(() => {});
-  assert.match(err || '', expect);
-  assert.equal(n(await q(`select count(*) n from pg_policies where tablename='iapp_queue_public_cache' and policyname='public_read_queue_cache'`)), 1, 'old policy kept');
-  assert.equal(await bakCount(), bakBefore, 'backup untouched');
-  assert.equal(n(await q(`select count(*) n from public.iapp_queue_public_cache where id in ('8001','8002','8003')`)), 1, 'stale row kept');
-  await db.exec(cleanup);
-});
+// ---- G1 aborts (precise counters, zero partial change) ----
 const d3 = `((now() at time zone 'Africa/Cairo')::date - 3)::text`, d2 = `((now() at time zone 'Africa/Cairo')::date - 2)`;
-await guardCase('cache date differs from the appointment date (cache 3 days ago, appointment 2 days ago)',
-  `insert into public.iapp_appointments values (8001,'G P','CLINIC-A','Dr X','done',${d2},'10:00',1,2,3,false);
-   insert into public.iapp_queue_public_cache (id,patient,clinic,doctor,wait_status,date,time,arrived_at,called_at,queue_number) values ('8001','G P','CLINIC-A','Dr X','done',${d3},'10:00','1','2','3')`,
-  /ABORT G1: stale=1 no_matching_appointment=0 date_mismatch=1 field_mismatch=0/,
-  `delete from public.iapp_queue_public_cache where id='8001'; delete from public.iapp_appointments where id=8001`);
-await guardCase('same date but a field differs (patient name edited after caching)',
-  `insert into public.iapp_appointments values (8002,'Edited Name','CLINIC-A','Dr X','done',${d2},'10:00',1,2,3,false);
-   insert into public.iapp_queue_public_cache (id,patient,clinic,doctor,wait_status,date,time,arrived_at,called_at,queue_number) values ('8002','Old Name','CLINIC-A','Dr X','done',${d2}::text,'10:00','1','2','3')`,
-  /ABORT G1: stale=1 no_matching_appointment=0 date_mismatch=0 field_mismatch=1/,
-  `delete from public.iapp_queue_public_cache where id='8002'; delete from public.iapp_appointments where id=8002`);
-await guardCase('appointment is cancelled (a rebuild would not recreate the row)',
-  `insert into public.iapp_appointments values (8003,'C P','CLINIC-A','Dr X','done',${d2},'10:00',1,2,3,true);
-   insert into public.iapp_queue_public_cache (id,patient,clinic,doctor,wait_status,date,time,arrived_at,called_at,queue_number) values ('8003','C P','CLINIC-A','Dr X','done',${d2}::text,'10:00','1','2','3')`,
-  /ABORT G1: stale=1 no_matching_appointment=1/,
-  `delete from public.iapp_queue_public_cache where id='8003'; delete from public.iapp_appointments where id=8003`);
+const ins = (id, patient, date, cancelled = false) => `insert into public.iapp_appointments values (${id},'${patient}','CLINIC-A','Dr X','done',${d2},'10:00',1,2,3,${cancelled});`;
+const cins = (id, patient, dateExpr) => `insert into public.iapp_queue_public_cache (id,patient,clinic,doctor,wait_status,date,time,arrived_at,called_at,queue_number) values ('${id}','${patient}','CLINIC-A','Dr X','done',${dateExpr},'10:00','1','2','3');`;
+const del = id => `delete from public.iapp_queue_public_cache where id='${id}'; delete from public.iapp_appointments where id=${id};`;
+await abortCase('G1: stale row with no appointment', APPLY, /ABORT G1: stale=1 no_matching_appointment=1/, cins('orphan1', 'Orphan', d3), del('orphan1').replace('delete from public.iapp_appointments where id=orphan1;', ''));
+await abortCase('G1: cache date differs from the appointment date', APPLY, /ABORT G1: stale=1 no_matching_appointment=0 date_mismatch=1 field_mismatch=0/, ins(8001, 'G P') + cins('8001', 'G P', d3), del(8001));
+await abortCase('G1: same date, a field differs', APPLY, /ABORT G1: stale=1 no_matching_appointment=0 date_mismatch=0 field_mismatch=1/, ins(8002, 'Edited Name') + cins('8002', 'Old Name', d2 + '::text'), del(8002));
+await abortCase('G1: appointment cancelled', APPLY, /ABORT G1: stale=1 no_matching_appointment=1/, ins(8003, 'C P', null, true) + cins('8003', 'C P', d2 + '::text'), del(8003));
 
-// ---- BACKUP + RESTORE WITHOUT ASSUMPTIONS ----
-await db.exec(APPLY); // back to the applied state (stale rows are gone; the backup holds them)
-await ok('BACKUP: holds all deleted rows, identical to the pre-change snapshot, and is invisible to anon/authenticated', async () => {
-  const b = await q(`select id,patient,clinic,doctor,wait_status,date,time,arrived_at,called_at,queue_number from public.iapp_queue_public_cache_bak_20261011 order by id`);
+// ---- backup as a trustworthy source: positive checks ----
+await ok('BACKUP: holds all deleted rows, identical to the snapshot; invisible to anon/authenticated; RLS on', async () => {
+  const b = await q(`select id,patient,clinic,doctor,wait_status,date,time,arrived_at,called_at,queue_number from ${BAK} order by id`);
   assert.deepEqual(b, snapshotStale);
-  assert.match(await asErr('anon', 'select * from public.iapp_queue_public_cache_bak_20261011'), /permission denied/);
-  assert.match(await asErr('authenticated', 'select * from public.iapp_queue_public_cache_bak_20261011'), /permission denied/);
+  assert.match(await asErr('anon', `select * from ${BAK}`), /permission denied/);
+  assert.match(await asErr('authenticated', `select * from ${BAK}`), /permission denied/);
   assert.equal(n(await q(`select count(*) n from pg_class where relname='iapp_queue_public_cache_bak_20261011' and relrowsecurity`)), 1);
 });
-await ok('RESTORE does not depend on appointments: delete/rename/cancel past appointments after the apply, restore is still exact', async () => {
-  await db.exec(`delete from public.iapp_appointments where id=1001; update public.iapp_appointments set patient='Renamed' where id=1002; update public.iapp_appointments set cancelled=true where id=1003; update public.iapp_appointments set date=date '2020-01-01' where id=1004`);
-  await db.exec(ROLLBACK);
+await ok('no hardcoded LOWER BOUND or date literal in the rollback; drift switch defaults to false', async () => {
+  assert.doesNotMatch(ROLLBACK, /LOWER BOUND|date '20\d\d-/);
+  assert.match(ROLLBACK, /allow_drift boolean := false/);
+});
+
+// ---- ROLLBACK negative tests ----
+await abortCase('ROLLBACK aborts, nothing changed, if the backup table is missing', ROLLBACK, /ABORT: backup table/,
+  `alter table ${BAK} rename to hidden_bak`, `alter table hidden_bak rename to iapp_queue_public_cache_bak_20261011`);
+await abortCase('ROLLBACK R3: a cache row with the same id but DIFFERENT content is a conflict (not counted as restored), nothing changed', ROLLBACK, /ABORT R3: not restored=0 content_conflict=1/,
+  `insert into public.iapp_queue_public_cache select * from ${BAK} where id='1009'; update public.iapp_queue_public_cache set patient='Changed' where id='1009'`,
+  `delete from public.iapp_queue_public_cache where id='1009'`);
+await abortCase('ROLLBACK R3: a conflict on updated_at alone is also detected', ROLLBACK, /ABORT R3: not restored=0 content_conflict=1/,
+  `insert into public.iapp_queue_public_cache select * from ${BAK} where id='1010'; update public.iapp_queue_public_cache set updated_at = updated_at + interval '1 second' where id='1010'`,
+  `delete from public.iapp_queue_public_cache where id='1010'`);
+await abortCase('ROLLBACK R2: old appointments edited/deleted/cancelled/moved after the apply => outdated backup is refused (drift=4)', ROLLBACK, /ABORT drift: 4 backup row/,
+  `delete from public.iapp_appointments where id=1001; update public.iapp_appointments set patient='Renamed' where id=1002; update public.iapp_appointments set cancelled=true where id=1003; update public.iapp_appointments set date=date '2020-01-01' where id=1004`, null);
+
+// deliberate restore of the old snapshot (allow_drift=true), data identical to the snapshot
+const ROLLBACK_FORCE = ROLLBACK.replace(/^(\s*allow_drift boolean := )false/m, '$1true');
+await ok('ROLLBACK with allow_drift=true (deliberate) restores the exact snapshot even though appointments changed', async () => {
+  assert.notEqual(ROLLBACK_FORCE, ROLLBACK);
+  await db.exec(ROLLBACK_FORCE);
+  const now = await q(`select id,patient,clinic,doctor,wait_status,date,time,arrived_at,called_at,queue_number from public.iapp_queue_public_cache where date < '${today}' order by id`);
+  assert.deepEqual(now, snapshotStale);
+  const p = await q(`select policyname, qual from pg_policies where tablename='iapp_queue_public_cache'`);
+  assert.equal(p.length, 1); assert.equal(p[0].policyname, 'public_read_queue_cache'); assert.equal(p[0].qual, 'true');
+});
+
+// ---- APPLY again after rollback, with the appointment edited in between: must not proceed silently ----
+await abortCase('RE-APPLY after rollback with edited old appointments: G1 stops it (drift=cache rows vs appointments), nothing changes', APPLY, /ABORT G1: stale=20 no_matching_appointment=\d+ date_mismatch=\d+ field_mismatch=\d+/, null, null);
+
+// restore the appointments to their original content (quietly, no trigger) and continue
+await quiet(`delete from public.iapp_appointments where id between 1001 and 1020; insert into public.iapp_appointments select * from json_populate_recordset(null::public.iapp_appointments, '${apptJson}')`);
+
+// ---- G2 negatives (old backup table that exists) ----
+await abortCase('G2a: existing backup row with the same id but a different field => content_conflict, nothing changed', APPLY, /ABORT G2a: 1 existing backup row.*content_conflict=1/,
+  `update ${BAK} set patient='TAMPERED' where id='1006'`, `update ${BAK} b set patient=c.patient from public.iapp_queue_public_cache c where c.id=b.id and b.id='1006'`);
+await abortCase('G2a: difference only in updated_at is also detected', APPLY, /ABORT G2a: 1 existing backup row/,
+  `update ${BAK} set updated_at = updated_at - interval '1 hour' where id='1011'`, `update ${BAK} b set updated_at=c.updated_at from public.iapp_queue_public_cache c where c.id=b.id and b.id='1011'`);
+await abortCase('G2b: backup has a leftover row that is not in the current stale set (old backup would be silently reused) => abort', APPLY, /ABORT G2b: backup table holds 1 row/,
+  `delete from public.iapp_queue_public_cache where id='1005'`, `insert into public.iapp_queue_public_cache select * from ${BAK} where id='1005'`);
+await ok('G2c: if the copy into the backup is not identical (simulated by a BEFORE INSERT trigger altering data) the apply aborts with nothing changed', async () => {
+  await db.exec(`delete from ${BAK} where id in ('1007','1008')`);
+  await db.exec(`create function public.tmp_alter() returns trigger language plpgsql as $f$ begin new.patient := upper(new.patient); return new; end $f$;
+    create trigger tmp_alter before insert on ${BAK} for each row execute function public.tmp_alter();`);
+  const s0 = await state(); let err = null;
+  try { await db.exec(APPLY); } catch (e) { err = e.message; }
+  await db.exec('rollback').catch(() => {});
+  const s1 = await state();
+  await db.exec(`drop trigger tmp_alter on ${BAK}; drop function public.tmp_alter(); insert into ${BAK} select * from public.iapp_queue_public_cache c where c.date < '${today}' and not exists (select 1 from ${BAK} b where b.id=c.id)`);
+  assert.match(err || '', /ABORT G2c: 2 stale row\(s\) have no identical backup row/);
+  assert.equal(s1, s0);
+});
+
+// ---- successful path after all negatives ----
+await ok('APPLY succeeds when backup and cache agree; second run is a no-op', async () => {
+  await db.exec(APPLY);
+  assert.equal(n(await as('anon', 'select count(*) n from public.iapp_queue_public_cache')), 4);
+  assert.equal(n(await q(`select count(*) n from public.iapp_queue_public_cache where date < '${today}'`)), 0);
+  const s0 = await state(); await db.exec(APPLY); assert.equal(await state(), s0);
+});
+await ok('ROLLBACK (normal, no drift) restores the exact snapshot, content-verified; running it twice is idempotent', async () => {
+  await db.exec(ROLLBACK); await db.exec(ROLLBACK);
   const now = await q(`select id,patient,clinic,doctor,wait_status,date,time,arrived_at,called_at,queue_number from public.iapp_queue_public_cache where date < '${today}' order by id`);
   assert.deepEqual(now, snapshotStale);
 });
-await ok('RESTORE covers an earliest date older than any assumed bound (no hardcoded LOWER BOUND in the file)', async () => {
-  assert.doesNotMatch(ROLLBACK, /LOWER BOUND|date '20\d\d-/);
-  const min = (await q(`select min(date) m from public.iapp_queue_public_cache_bak_20261011`))[0].m;
-  assert.equal(min, snapshotStale[0].date < min ? snapshotStale[0].date : min);
-  assert.equal((await q(`select min(date) m from public.iapp_queue_public_cache where date < '${today}'`))[0].m, min);
-});
-await ok('ROLLBACK aborts and changes nothing if the backup table is missing', async () => {
-  await db.exec('alter table public.iapp_queue_public_cache_bak_20261011 rename to hidden_bak');
-  await db.exec(`drop policy public_read_queue_cache on public.iapp_queue_public_cache; create policy public_read_queue_cache_today on public.iapp_queue_public_cache for select to anon, authenticated using (date = ((now() at time zone 'Africa/Cairo')::date)::text)`);
-  let err = null;
-  try { await db.exec(ROLLBACK); } catch (e) { err = e.message; }
-  await db.exec('rollback').catch(() => {});
-  await db.exec('alter table hidden_bak rename to iapp_queue_public_cache_bak_20261011');
-  assert.match(err || '', /ABORT: backup table/);
-  assert.equal(n(await q(`select count(*) n from pg_policies where tablename='iapp_queue_public_cache' and policyname='public_read_queue_cache_today'`)), 1, 'policy unchanged');
-});
+await db.exec(APPLY);
+await abortCase('OLD BACKUP REUSE: a later apply with NEW stale rows while the earlier backup still exists is refused (leftover=20)', APPLY, /ABORT G2b: backup table holds 20 row/,
+  ins(9001, 'Later Patient') + cins('9001', 'Later Patient', d2 + '::text'), del(9001));
 
 console.log(`\nRESULT: ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
