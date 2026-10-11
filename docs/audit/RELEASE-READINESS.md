@@ -13,7 +13,7 @@
 2. **F-05** Queue privacy — DONE in production: (1) archive reads closed + history removed (backup table kept, private), (2) today's names masked in the public cache (M1). (3) broadcast channel + TV voice: code ready on this branch (`mask-name.js`, `call-channel.js`, `queue-display.html`) but only takes effect after YOU merge and deploy it; until then the old client still broadcasts full names and the old TV script says the masked name.
 3. **F-06** Secretary can read/write clinical data and backups through `iapp_store` (product decision D).
 4. **F-08** Unsigned Cloudinary upload preset; image access mode unknown (UNVERIFIED).
-5. **F-18** Concurrent saves of the same blob key can lose a record (server CAS needed, §F). **F-12** Anonymous booking has no rate limit/uniqueness.
+5. **F-18** Concurrent saves of the same blob key can lose a record — FIXED IN CODE + SQL (store-cas.sql), awaiting approval to apply. **F-12** Anonymous booking has no rate limit/uniqueness.
 6. **F-11** Leaked-password protection off (dashboard toggle).
 7. **Live site verification UNVERIFIED** — run `node scripts/verify-live.mjs https://drsakr86-hash.github.io/I-App-lite/ 3` from a machine with internet (read-only GETs), or let the deploy workflow run it after approval.
 8. No E2E tests exist; 15 acceptance scenarios not executed end-to-end (WORKFLOW-ACCEPTANCE.md).

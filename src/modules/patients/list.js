@@ -45,6 +45,28 @@ export function listPatients(patients, search) {
 // Added within the last 24h (id is Date.now() at creation).
 export const isNewToday = (p, now = Date.now()) => !!(p && p.id && now - p.id < DAY_MS);
 
+// Highest file number in a list (P-0062-D1 counts as 62).
+export function maxPatientNumber(patients) {
+  const list = Array.isArray(patients) ? patients : [];
+  return Math.max(0, ...list.map(p => parseInt(String((p && p.patientCode) || '').replace('P-', ''), 10) || 0));
+}
+
+// Server counter (docs/sql/patient-code-seq.sql). Returns 'P-00NN' or null (no client, offline, timeout, RPC missing, bad answer) -> caller falls
+// back to nextPatientCode(). `sb` is the Supabase client; the call is abandoned after `ms`.
+export async function fetchServerPatientCode(sb, floor, ms = 3000) {
+  try {
+    if (!sb || typeof sb.rpc !== 'function') return null;
+    let timer;
+    const timeout = new Promise(res => { timer = setTimeout(() => res(null), ms); });
+    const r = await Promise.race([Promise.resolve(sb.rpc('iapp_next_patient_code', { p_floor: Math.max(0, Math.floor(Number(floor) || 0)) })), timeout]);
+    clearTimeout(timer);
+    const code = r && !r.error ? r.data : null;
+    return typeof code === 'string' && /^P-\d{4,}$/.test(code) ? code : null;
+  } catch {
+    return null;
+  }
+}
+
 // Next sequential file code: P-0001, P-0002, ...
 // `floor` = highest number ever seen on this device (code-floor.js): numbers of deleted/merged patients are never re-issued.
 export function nextPatientCode(patients, floor = 0) {

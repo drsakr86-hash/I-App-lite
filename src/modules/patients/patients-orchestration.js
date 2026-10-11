@@ -12,7 +12,7 @@ import { offlineNow } from '../sync/engine.js';
 import { getSB, iappRpc } from '../data-access/index.js';
 import { localISO } from '../constants/misc.js';
 import { finishQueueEntries } from '../appointments/queue.js';
-import { nextPatientCode } from './list.js';
+import { nextPatientCode, maxPatientNumber, fetchServerPatientCode } from './list.js';
 import { readCodeFloor, raiseCodeFloor } from './code-floor.js';
 import { createClinicalVisitCore } from '../visits/core.js';
 import { prescriptionParamsFromLegacy } from '../prescriptions/prescription.mapper.js';
@@ -45,11 +45,19 @@ export function usePatientsOrchestration({
   }, []);
 
   const updP = f => setPatients(patients.map(p => (p.id === f.id ? f : p)));
-  const addP = f => {
-    raiseCodeFloor(patients);
-    const newP = { ...f, id: Date.now(), patientCode: nextPatientCode(patients, readCodeFloor()) };
+  const patientsRef = useRef(patients);
+  patientsRef.current = patients;
+  // Audit F-19b: when online ask the server counter (iapp_next_patient_code, docs/sql/patient-code-seq.sql) for the file number; offline, on
+  // timeout or before that SQL exists, use the old local rule. The list is re-read from the ref AFTER the await (a render-time closure would
+  // be stale by then and would drop concurrent changes).
+  const addP = async f => {
+    raiseCodeFloor(patientsRef.current);
+    const floor = Math.max(readCodeFloor(), maxPatientNumber(patientsRef.current));
+    const code = (await fetchServerPatientCode(getSB(), floor)) || nextPatientCode(patientsRef.current, readCodeFloor());
+    const current = patientsRef.current;
+    const newP = { ...f, id: Date.now(), patientCode: code };
     raiseCodeFloor([newP]);
-    setPatients([newP, ...patients]);
+    setPatients([newP, ...current]);
   };
   const delP = async id => {
     raiseCodeFloor(patients); // the number of the patient about to be deleted must never be issued again
