@@ -28,6 +28,15 @@ None confirmed. (Nothing found that is silently losing patient data or corruptin
 - Impact: a secretary account can read/modify the same exams/prescriptions and full backups the core policies try to restrict. Today production has 1 admin + 3 secretaries and no doctor account, so this is the effective boundary.
 - Not fixed: tightening `iapp_store` keys would break secretary workflows (patients, appointments, visits are legitimately needed). Needs a per-key decision (see PERMISSIONS-MATRIX).
 
+**F-19 — Patient file numbers re-issued after deletion; 3 numbers held by 3 different patients each in production.** FIXED in code for new cases + OPEN for existing data (DATABASE-AND-MIGRATION-REVIEW §G).
+- Evidence: `nextPatientCode()` (src/modules/patients/list.js) = max(current list)+1, so deleting/merging the last patients re-issued their numbers. Production catalog: P-0062/63/64 each used by 3 distinct patients, 6 of the 9 rows are patients deleted through the app (all in trash and backups); `iapp_patients_core` has no unique index on `patient_code`.
+- Impact: wrong-patient risk (file number is the lookup key for `iapp_get_patient_file_by_code`, prints, and trash restore would create a second patient with the same number).
+- Fix: `src/modules/patients/code-floor.js` (monotonic per-device floor, kept across sign-out), wired into add/delete/merge. Tests: `tests/patient-code-floor.test.js` (5). Not fixed: existing duplicates (data decision), two devices issuing the same number at once (needs a server sequence).
+
+**F-18 — Concurrent saves of the same blob key can overwrite each other (lost update).** OPEN (reproduced, `todo` test; fix needs server-side compare-and-swap, §F).
+- Evidence: `src/modules/sync/store-io.js` `sbSetStore` = unconditional upsert after client merge (`flush.js`); `tests/sync-lost-update.test.js`.
+- Scope: keys not backed by row tables (patients, exams, prescriptions, imaging orders…). Appointments, visits and expenses use per-row tables.
+
 ## P2
 **F-01 — `test:smoke:screens` failed on baseline (Accounting).** FIXED. Cause: the smoke test did not pass the `session` prop; `Cash/Doctors/Expenses/Setup` read `session.name` (production `App.jsx` always passes it). Fixture corrected.
 

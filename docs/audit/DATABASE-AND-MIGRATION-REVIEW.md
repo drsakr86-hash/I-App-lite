@@ -56,3 +56,37 @@ Options: (1) accept: secretaries are trusted for all legacy keys, document it; (
 - Enable leaked-password protection in Supabase Auth (dashboard).
 - Anonymous booking (F-12): add a uniqueness/idempotency rule (e.g. one pending request per phone+date+clinic+time) and a rate limit (Edge Function or `pg_net`-free trigger count check). Needs design; not proposed as SQL here.
 - Record the finance v1 and any hardening scripts as tracked migrations.
+
+## F. Lost updates on blob keys of `iapp_store` (F-18) — proposal, NOT applied
+Problem: keys stored as one jsonb blob (patients, exams, prescriptions, imaging orders, …) are written by the client with an unconditional upsert after read+merge. Two devices flushing the same key concurrently: last writer wins and the other's new record is lost on the server. Reproduced in `tests/sync-lost-update.test.js` (reported as `todo`, it fails its assertion by design). `iapp_store.updated_at` exists but is NOT maintained on upsert (default only fires on INSERT; no update trigger on the table), so it cannot be used as a version today.
+Proposal (needs a branch test, then approval):
+```sql
+alter table public.iapp_store add column if not exists version bigint not null default 1;
+create or replace function public.iapp_store_bump() returns trigger language plpgsql as
+$$ begin new.version := coalesce(old.version, 0) + 1; new.updated_at := now(); return new; end $$;
+drop trigger if exists trg_iapp_store_bump on public.iapp_store;
+create trigger trg_iapp_store_bump before update on public.iapp_store for each row execute function public.iapp_store_bump();
+-- compare-and-swap writer, SECURITY INVOKER so RLS still applies:
+create or replace function public.iapp_store_cas(p_key text, p_value jsonb, p_expected bigint) returns bigint
+language plpgsql as $$ declare v bigint; begin
+  update public.iapp_store set value = p_value where key = p_key and version = p_expected returning version into v;
+  return v;  -- null = somebody else wrote first: caller re-reads, re-merges, retries
+end $$;
+```
+The client change (read `version`, call `iapp_store_cas`, loop on null) is small but touches the sync engine: do it only together with this SQL, behind a feature check so old servers keep working. Rollback: drop trigger/function/column.
+
+## G. Patient file numbers (F-19) — confirmed in production, DATA CLEANUP needs your decision
+Facts (aggregates only; no names read): `iapp_patients_core` has 60 rows and **no unique index on `patient_code`**. P-0062, P-0063 and P-0064 are each held by **3 different patients** (3 legacy ids, 3 different names, created 2026-09-26…28). Of those 9 rows, 3 are patients present in the app's working store; the other 6 belong to 7 core patients (7 in total with no counterpart in the store) that are all in the trash (`iapp_trash`) and in the backups — deleted through the app. Deleting a patient does not touch the core row, and the old client re-issued the number of the deleted last patient to the next new patient. Where the duplicate numbers are confusing: `iapp_get_patient_file_by_code` and every printed file number.
+Client fix on this branch (`code-floor.js`) prevents NEW reuse on a device. It does not fix the 3 existing duplicates and does not stop two devices from issuing the same number at once.
+Read-only query for you to run in the Supabase SQL editor to see who is affected (shows personal data, run it yourself):
+```sql
+select patient_code, id, legacy_id, full_name, created_at from public.iapp_patients_core
+where patient_code in (select patient_code from public.iapp_patients_core group by 1 having count(*) > 1)
+order by patient_code, created_at;
+```
+Decision needed for each pair: keep the code on the patient who is active in the app and give the deleted/trashed ones a new code, or merge if one person was entered twice. Do NOT delete clinical rows. After cleanup:
+```sql
+create unique index concurrently if not exists iapp_patients_core_code_uq on public.iapp_patients_core (patient_code);
+create sequence if not exists public.iapp_patient_code_seq;  -- then an RPC iapp_next_patient_code() the client calls when online
+```
+Also decide whether deleting a patient in the app should mark the core row (e.g. archived) instead of leaving it active.

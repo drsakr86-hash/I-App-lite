@@ -46,8 +46,9 @@ export function listPatients(patients, search) {
 export const isNewToday = (p, now = Date.now()) => !!(p && p.id && now - p.id < DAY_MS);
 
 // Next sequential file code: P-0001, P-0002, ...
-export function nextPatientCode(patients) {
+// `floor` = highest number ever seen on this device (code-floor.js): numbers of deleted/merged patients are never re-issued.
+export function nextPatientCode(patients, floor = 0) {
   const list = Array.isArray(patients) ? patients : [];
   const nums = list.map(p => parseInt((p.patientCode || 'P-0000').replace('P-', '')) || 0);
-  return 'P-' + String(Math.max(0, ...nums) + 1).padStart(4, '0');
+  return 'P-' + String(Math.max(0, Number(floor) || 0, ...nums) + 1).padStart(4, '0');
 }

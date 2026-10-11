@@ -13,6 +13,10 @@ Commits are small and independent; none touches `main`. Each commit message carr
 | 4 | `fa58588` | F-14 high advisory in `source-map-js` | transitive build-time dep at 1.2.1 | lockfile-only bump to 1.2.2 | `npm audit` (high → none), build + `verify:dist` green |
 
 Added tests: 5 (774 → 779 `npm test`). Smoke suites: 3 (all green).
+| 5 | (this commit) | F-19 file numbers re-issued after delete/merge | max(current list)+1 | monotonic floor `code-floor.js`, wired in addP/delP/mergePatients, kept by PHI purge | `tests/patient-code-floor.test.js` (5) |
+| 5 | (this commit) | F-18 lost update on blob keys | unconditional upsert | NOT fixed (needs server CAS); documented + `todo` test | `tests/sync-lost-update.test.js` (todo) |
+
+Tests now: 785 (784 pass, 1 todo, 0 fail).
 
 ## Deliberately NOT changed (and why)
 - `deploy.yml`: adding steps changes the production release path; propose adding the same two smoke steps after review.
