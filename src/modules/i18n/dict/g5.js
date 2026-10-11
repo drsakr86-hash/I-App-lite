@@ -13,6 +13,8 @@ export const ar = {
   'g5.sec.saveFailed': '❌ لم يتم الحفظ — تحقق من الاتصال وحاول مرة أخرى',
   'g5.sec.collectedToast': '✓ تم تحصيل {cost} ج.م',
   'g5.sec.feeSavedToast': 'تم حفظ قيمة الكشف',
+  'g5.sec.partialToast': '✓ تم تحصيل {paid} من {cost} ج.م · المتبقي {rest}',
+  'g5.sec.partialLabel': 'جزئي {paid}/{cost}',
   'g5.sec.requestsTab': 'طلبات الحجز',
   'g5.sec.waCardText': 'تذكير بموعدك في {clinic} يوم {date} الساعة {time}',
 
@@ -220,6 +222,8 @@ export const en = {
   'g5.sec.saveFailed': '❌ Not saved — check your connection and try again',
   'g5.sec.collectedToast': '✓ Collected {cost} EGP',
   'g5.sec.feeSavedToast': 'Consultation fee saved',
+  'g5.sec.partialToast': '✓ Collected {paid} of {cost} EGP · remaining {rest}',
+  'g5.sec.partialLabel': 'Partial {paid}/{cost}',
   'g5.sec.requestsTab': 'Booking requests',
   'g5.sec.waCardText': 'Reminder of your appointment at {clinic} on {date} at {time}',
 

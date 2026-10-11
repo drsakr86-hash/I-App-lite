@@ -19,7 +19,7 @@ import { getSB } from "../modules/data-access/index.js";
 import { logError } from "../services/logger.js";
 import { trashPut, logAudit } from "../modules/sync/index.js";
 import { newId } from "../modules/constants/misc.js";
-import { loadCollectionState, submitCollection, collectionSnapshot, selectableAccounts, newFinId, FinanceError } from "../modules/finance/index.js";
+import { loadCollectionState, submitCollection, collectionSnapshot, selectableAccounts, newFinId, fromMinor, FinanceError } from "../modules/finance/index.js";
 import { waOpen, waReminderText } from "../modules/notifications/index.js";
 import WaitingRoom from "./WaitingRoom.jsx";
 import { t, useLang, dirOf } from "../modules/i18n/index.js";
@@ -76,6 +76,8 @@ export default function SecretaryApp() {
   // Accounting state for the collection modal (null = accounting not set up yet → the modal keeps its legacy behaviour).
   const [finState, setFinState] = useState(null);
   const collectPayId = useRef(null);
+  const [balMap, setBalMap] = useState({});   // appointment id -> {paid, fee} in minor units, only for part payments
+  const fmtMinor = n => fromMinor(n).replace(/\.00$/, '');
   useEffect(() => {
     if (!collectApt) { setFinState(null); collectPayId.current = null; return undefined; }
     let live = true;
@@ -257,10 +259,33 @@ export default function SecretaryApp() {
     if (!r.ok) { alert(t("g8.collect.commitFailed", lang)); return; }
     await mirrorLegacy(apt, r.plan.mirror.cost, r.plan.mirror.paid);
     finishCollect(apt, r.plan.mirror.cost, r.plan.mirror.paid);
+    // a part payment: say so (the legacy flag is only true when everything is paid)
+    const snap = collectionSnapshot(r.plan.state, apt);
+    if (!r.plan.mirror.paid && snap.paid > 0) {
+      setToast(t("g5.sec.partialToast", lang, { paid: fmtMinor(snap.paid), cost: fmtMinor(snap.fee), rest: fmtMinor(snap.outstanding) }));
+      setBalMap(m => ({ ...m, [apt.id]: { paid: snap.paid, fee: snap.fee } }));
+    } else if (r.plan.mirror.paid) setBalMap(m => { const n = { ...m }; delete n[apt.id]; return n; });
   };
   const pendingFromPatient = countPendingFromPatient(apts);
   const waitingCount = countWaitingToday(apts, today);
   const filtered = filterSecretaryApts(apts, { filterDate, search, filterFromPatient, filterClinic });
+  const unpaidIds = filtered.filter(a => a.cost && !a.paid).slice(0, 20).map(a => String(a.id)).join(',');
+  useEffect(() => {
+    if (!unpaidIds) return undefined;
+    let live = true;
+    loadCollectionState(unpaidIds.split(',')).then(r => {
+      if (!live || r.offline) return;
+      const m = {};
+      for (const a of filtered) {
+        if (!a.cost || a.paid) continue;
+        const sn = collectionSnapshot(r.state, a);
+        if (sn.charge && sn.paid > 0 && sn.outstanding > 0) m[a.id] = { paid: sn.paid, fee: sn.fee };
+      }
+      setBalMap(m);
+    }).catch(() => {});
+    return () => { live = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [unpaidIds, collectApt]);
   const handleLogin = (u, remember) => {
     const s = {
       id: u.id,
@@ -410,7 +435,7 @@ export default function SecretaryApp() {
                   </div>
                   <div style={{ background: C.accent + "22", borderRadius: 8, padding: "4px 10px", textAlign: "center", flexShrink: 0, marginInlineStart: 8 }}>
                     <div style={{ color: C.accent, fontSize: 14, fontWeight: 800 }}>{a.time}</div>
-                    <div onClick={() => setCollectApt(a)} style={{ color: a.cost ? a.paid ? C.success : C.danger : C.muted, fontSize: 9, cursor: "pointer", fontWeight: 700, marginTop: 2 }}>{a.cost ? a.paid ? "✓ " + a.cost + t("g5.unit.egpShort", lang) : t("g5.sec.unpaid", lang) : t("g5.sec.collect", lang)}</div>
+                    <div onClick={() => setCollectApt(a)} style={{ color: a.cost ? a.paid ? C.success : C.danger : C.muted, fontSize: 9, cursor: "pointer", fontWeight: 700, marginTop: 2 }}>{a.cost ? a.paid ? "✓ " + a.cost + t("g5.unit.egpShort", lang) : balMap[a.id] ? t("g5.sec.partialLabel", lang, { paid: fmtMinor(balMap[a.id].paid), cost: fmtMinor(balMap[a.id].fee) }) : t("g5.sec.unpaid", lang) : t("g5.sec.collect", lang)}</div>
                   </div>
                 </div>
                 {a.notes && <div style={{ color: C.muted, fontSize: 11, marginBottom: 8 }}>{"📝 "}{a.notes}</div>}
@@ -419,7 +444,7 @@ export default function SecretaryApp() {
                   {a.date === today && !["waiting", "called", "in", "done"].includes(a.waitStatus) && <div onClick={() => updateApt({ ...a, waitStatus: "waiting", arrivedAt: Date.now() })} style={{ flex: "1 1 70px", background: C.gold + "22", border: "1px solid " + C.gold + "44", borderRadius: 8, padding: "7px 0", color: C.gold, fontSize: 11, fontWeight: 700, cursor: "pointer", textAlign: "center" }}>{t("g5.sec.arrived", lang)}</div>}
                   {a.phone && <a href={waCardHref(a, clinicLabel)} target="_blank" title={t("g5.sec.whatsapp", lang)} aria-label={t("g5.sec.whatsapp", lang)} style={{ background: "#25D36622", border: "1px solid #25D36633", borderRadius: 8, padding: "7px 12px", color: "#25D366", fontSize: 14, textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "center" }}>💬</a>}
                   {a.phone && <a href={"tel:" + a.phone} title={t("g5.sec.call", lang)} aria-label={t("g5.sec.call", lang)} style={{ background: C.teal + "22", border: "1px solid " + C.teal + "33", borderRadius: 8, padding: "7px 12px", color: C.teal, fontSize: 14, textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "center" }}>📞</a>}
-                  <div onClick={() => setCollectApt(a)} style={{ flex: "1 1 70px", background: a.paid ? C.success + "22" : C.gold + "22", border: "1px solid " + (a.paid ? C.success : C.gold), borderRadius: 8, padding: "7px 0", color: a.paid ? C.success : C.gold, fontSize: 11, fontWeight: 700, cursor: "pointer", textAlign: "center" }}>{"💰 "}{a.paid ? (a.cost || "") + t("g5.unit.egpShort", lang) : t("g5.sec.collect", lang)}</div>
+                  <div onClick={() => setCollectApt(a)} style={{ flex: "1 1 70px", background: a.paid ? C.success + "22" : C.gold + "22", border: "1px solid " + (a.paid ? C.success : C.gold), borderRadius: 8, padding: "7px 0", color: a.paid ? C.success : C.gold, fontSize: 11, fontWeight: 700, cursor: "pointer", textAlign: "center" }}>{"💰 "}{a.paid ? (a.cost || "") + t("g5.unit.egpShort", lang) : balMap[a.id] ? t("g5.sec.partialLabel", lang, { paid: fmtMinor(balMap[a.id].paid), cost: fmtMinor(balMap[a.id].fee) }) : t("g5.sec.collect", lang)}</div>
                   <div onClick={() => setModal({ edit: a })} title={t("g5.sec.edit", lang)} aria-label={t("g5.sec.edit", lang)} style={{ background: C.accent + "22", border: "1px solid " + C.accent + "33", borderRadius: 8, padding: "7px 12px", color: C.accent, fontSize: 14, cursor: "pointer" }}>✏️</div>
                   {session.role === "admin" && <div onClick={() => { if (window.confirm(t("g5.sec.deleteConfirm", lang, { name: a.patient }))) deleteApt(a.id); }} title={t("g5.sec.delete", lang)} aria-label={t("g5.sec.delete", lang)} style={{ background: C.danger + "22", border: "1px solid " + C.danger + "33", borderRadius: 8, padding: "7px 12px", color: C.danger, fontSize: 14, cursor: "pointer" }}>🗑️</div>}
                 </div>
