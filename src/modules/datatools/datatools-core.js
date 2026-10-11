@@ -11,6 +11,7 @@
 // aren't moved themselves -- duplicated here exactly, same approach as
 // normPhone was duplicated for the notifications module in batch 16.
 
+import { raiseCodeFloor } from '../patients/code-floor.js';
 import { sbGet, sbSet, sbMutate } from '../sync/wiring.js';
 import { trashPut, logAudit, saveAutoBackup } from '../sync/audit-trash-backup.js';
 import { GUARD_KEY, localISO } from '../constants/misc.js';
@@ -41,6 +42,7 @@ export async function mergePatients(keep, drop) {
     if (!touched) continue;
     await sbMutate(key, list => list.map(r => r && r.patientId === drop.id ? { ...r, patientId: keep.id, patient: keep.name } : r));
   }
+  raiseCodeFloor([drop, keep]); // merging removes drop's file number: it must not be issued again
   await trashPut('iapp_patients', drop, t('g4.audit.mergedPatient', 'ar') + ': ' + (drop.name || ''));
   const res = await sbMutate('iapp_patients', list => list.filter(p => p.id !== drop.id));
   await logAudit(t('g4.audit.mergeFiles', 'ar'), (drop.patientCode || drop.id) + ' ← ' + (keep.patientCode || keep.id) + ' · ' + (keep.name || ''));

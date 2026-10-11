@@ -80,7 +80,11 @@ export default function SecretaryApp() {
     if (!collectApt) { setFinState(null); collectPayId.current = null; return undefined; }
     let live = true;
     collectPayId.current = newFinId('pay');
-    loadCollectionState([collectApt.id]).then(r => { if (live && !r.offline && selectableAccounts(r.state.accounts).length) setFinState(r.state); }).catch(() => {});
+    loadCollectionState([collectApt.id]).then(r => {
+      if (!live) return;
+      if (r.unavailable) { setToast(t("g8.collect.serverUnavailable", lang)); return; }
+      if (!r.offline && selectableAccounts(r.state.accounts).length) setFinState(r.state);
+    }).catch(() => {});
     return () => { live = false; };
   }, [collectApt]);
   const [filterDate, setFilterDate] = useState(localISO());
@@ -415,6 +419,7 @@ export default function SecretaryApp() {
                   {a.date === today && !["waiting", "called", "in", "done"].includes(a.waitStatus) && <div onClick={() => updateApt({ ...a, waitStatus: "waiting", arrivedAt: Date.now() })} style={{ flex: "1 1 70px", background: C.gold + "22", border: "1px solid " + C.gold + "44", borderRadius: 8, padding: "7px 0", color: C.gold, fontSize: 11, fontWeight: 700, cursor: "pointer", textAlign: "center" }}>{t("g5.sec.arrived", lang)}</div>}
                   {a.phone && <a href={waCardHref(a, clinicLabel)} target="_blank" title={t("g5.sec.whatsapp", lang)} aria-label={t("g5.sec.whatsapp", lang)} style={{ background: "#25D36622", border: "1px solid #25D36633", borderRadius: 8, padding: "7px 12px", color: "#25D366", fontSize: 14, textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "center" }}>💬</a>}
                   {a.phone && <a href={"tel:" + a.phone} title={t("g5.sec.call", lang)} aria-label={t("g5.sec.call", lang)} style={{ background: C.teal + "22", border: "1px solid " + C.teal + "33", borderRadius: 8, padding: "7px 12px", color: C.teal, fontSize: 14, textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "center" }}>📞</a>}
+                  <div onClick={() => setCollectApt(a)} style={{ flex: "1 1 70px", background: a.paid ? C.success + "22" : C.gold + "22", border: "1px solid " + (a.paid ? C.success : C.gold), borderRadius: 8, padding: "7px 0", color: a.paid ? C.success : C.gold, fontSize: 11, fontWeight: 700, cursor: "pointer", textAlign: "center" }}>{"💰 "}{a.paid ? (a.cost || "") + t("g5.unit.egpShort", lang) : t("g5.sec.collect", lang)}</div>
                   <div onClick={() => setModal({ edit: a })} title={t("g5.sec.edit", lang)} aria-label={t("g5.sec.edit", lang)} style={{ background: C.accent + "22", border: "1px solid " + C.accent + "33", borderRadius: 8, padding: "7px 12px", color: C.accent, fontSize: 14, cursor: "pointer" }}>✏️</div>
                   {session.role === "admin" && <div onClick={() => { if (window.confirm(t("g5.sec.deleteConfirm", lang, { name: a.patient }))) deleteApt(a.id); }} title={t("g5.sec.delete", lang)} aria-label={t("g5.sec.delete", lang)} style={{ background: C.danger + "22", border: "1px solid " + C.danger + "33", borderRadius: 8, padding: "7px 12px", color: C.danger, fontSize: 14, cursor: "pointer" }}>🗑️</div>}
                 </div>

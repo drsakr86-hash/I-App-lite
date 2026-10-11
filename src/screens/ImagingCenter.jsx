@@ -7,6 +7,7 @@ import { Modal, Btn } from "../components/common.jsx";
 import { C } from "../modules/theme/index.js";
 import { Field, inp, SecHead, Tag } from "../modules/ui/atoms.jsx";
 import { printDoc } from "../modules/print/index.js";
+import { buildStudyPrintHTML } from "../modules/print/study-print.js";
 import { sbGet, sbSet } from "../modules/sync/wiring.js";
 import { getSB, iappRpc } from "../modules/data-access/index.js";
 import { offlineNow } from "../modules/sync/engine.js";
@@ -806,7 +807,7 @@ export default function ImagingCenter({ patients, primary, clinic }) {
                 full
                 onClick={() =>
                   printDoc(
-                    `<!DOCTYPE html><html dir="${dirOf(getLang())}"><head><meta charset="UTF-8"><title>${tv(view.typeName)}</title><style>body{font-family:Arial;padding:20px}img{max-width:100%;max-height:500px}pre{white-space:pre-wrap;line-height:1.7}</style></head><body><h2>${tv(view.typeName)}</h2><p>${view.patient} · ${view.patientCode || ""} · ${view.date}</p>${(view.files || []).map((f) => (f.src && f.resource_type !== "raw" ? `<img src="${f.src}"/>` : f.src ? `<p><a href="${f.src}">${t('g6.img.openFileLabel')}: ${f.name || "file"}</a></p>` : "")).join("")}<h3>${t('g6.img.reportHeading')}</h3><pre>${view.report || ""}</pre><p>${view.notes || ""}</p></body></html>`,
+                    buildStudyPrintHTML(view, { typeName: tv(view.typeName), openFile: t('g6.img.openFileLabel'), reportHeading: t('g6.img.reportHeading') }, dirOf(getLang())),
                   )
                 }
               >

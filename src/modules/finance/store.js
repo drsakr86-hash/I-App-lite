@@ -115,7 +115,13 @@ export async function loadCollectionState(aptIds) {
   const local = { charges: Array.isArray(lc) ? lc : [], payments: Array.isArray(lp) ? lp : [] };
   try {
     const { data, error } = await tq(sb.rpc('iapp_fin_collection_state', { p_apt_ids: aptIds.map(String), p_pending_ids: [...idsOf(local.charges), ...idsOf(local.payments)].slice(0, 200) }));
-    if (error || !data) { if (error) console.warn('collection state', error.message); return { state: emptyState(), offline: true }; }
+    if (error || !data) {
+      if (error) console.warn('collection state', error.message);
+      // PGRST202 / "Could not find the function": the server schema does not have iapp_fin_collection_state yet (hardening SQL not applied).
+      // The caller must tell the secretary instead of silently falling back to the legacy collection path.
+      const unavailable = !!error && (error.code === 'PGRST202' || /could not find the function/i.test(String(error.message || '')));
+      return { state: emptyState(), offline: true, unavailable };
+    }
     return { state: stateFromCollectionRpc(data, local), offline: false };
   } catch (e) {
     console.warn('collection state', e);

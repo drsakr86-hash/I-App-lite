@@ -19,7 +19,8 @@
 // documented as a known residual in docs/SECURITY-RELEASE-CHECKLIST.md.
 export const PHI_KEEP_KEYS = new Set([
   'iapp_theme', 'iapp_users', 'iapp_login_guard', 'iapp_custom_drugs', 'iapp_rx_templates',
-  'iapp_alerts_day', 'queue_clinic', 'iapp_exam_coresync'
+  'iapp_alerts_day', 'queue_clinic', 'iapp_exam_coresync',
+  'iapp_patient_code_floor' // a bare number (highest file number seen); keeping it stops numbers of deleted patients being re-issued
 ]);
 const DIRTY = 'iapp_dirty_';
 const BASE = 'iapp_base_';

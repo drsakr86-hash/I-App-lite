@@ -13,6 +13,7 @@ import { getSB, iappRpc } from '../data-access/index.js';
 import { localISO } from '../constants/misc.js';
 import { finishQueueEntries } from '../appointments/queue.js';
 import { nextPatientCode } from './list.js';
+import { readCodeFloor, raiseCodeFloor } from './code-floor.js';
 import { createClinicalVisitCore } from '../visits/core.js';
 import { prescriptionParamsFromLegacy } from '../prescriptions/prescription.mapper.js';
 import { logError } from '../../services/logger.js';
@@ -45,10 +46,13 @@ export function usePatientsOrchestration({
 
   const updP = f => setPatients(patients.map(p => (p.id === f.id ? f : p)));
   const addP = f => {
-    const newP = { ...f, id: Date.now(), patientCode: nextPatientCode(patients) };
+    raiseCodeFloor(patients);
+    const newP = { ...f, id: Date.now(), patientCode: nextPatientCode(patients, readCodeFloor()) };
+    raiseCodeFloor([newP]);
     setPatients([newP, ...patients]);
   };
   const delP = async id => {
+    raiseCodeFloor(patients); // the number of the patient about to be deleted must never be issued again
     const rec = patients.find(p => p.id === id);
     await trashPut('iapp_patients', rec, 'مريض: ' + ((rec && rec.name) || id));
     setPatients(patients.filter(p => p.id !== id));

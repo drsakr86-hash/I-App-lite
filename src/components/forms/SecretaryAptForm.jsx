@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   SECRETARY_APT_TYPES, SECRETARY_DEFAULT_CLINIC, initialSecretaryAptState, initialSecretaryAptMode, initialCostTouched,
   matchSecretaryPrice, withSecretaryAptType, withNewPatientMode, withExistingPatientMode, findPickedPatient,
-  withPickedPatient, toggleSecretaryPaid, secretaryAptError, buildSecretaryAptPayload
+  withPickedPatient, secretaryAptError, buildSecretaryAptPayload
 } from './secretary-forms-model.js';
 import { C } from '../../modules/theme/index.js';
 import { inp } from '../../modules/ui/atoms.jsx';
@@ -15,7 +15,11 @@ import { tv } from '../../modules/i18n/tv.js';
 export default function SecretaryAptForm({ initial, patients, appointments = [], prices = [], onSave, onClose }) {
   const lang = useLang();
   const [mode, setMode] = useState(() => initialSecretaryAptMode(initial));
-  const [f, setF] = useState(() => initialSecretaryAptState(initial, localISO()));
+  const [f, setF] = useState(() => {
+    const base = initialSecretaryAptState(initial, localISO());
+    // a NEW appointment starts with the clinic's listed price for the default type (was empty, so the cost was typed by hand)
+    return initial ? base : withSecretaryAptType(base, base.type, matchSecretaryPrice(prices, base.type, base.clinic), false);
+  });
   const [costTouched, setCostTouched] = useState(() => initialCostTouched(initial));
   const [err, setErr] = useState('');
   const s = k => e => setF(v => ({ ...v, [k]: e.target.value }));
@@ -125,7 +129,7 @@ export default function SecretaryAptForm({ initial, patients, appointments = [],
         <label style={label}>{t('g3.apt.doctor', lang)}</label>
         <input style={inp()} value={tv(f.doctor, lang)} onChange={s('doctor')} />
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 10 }}>
         <div>
           <label style={label}>{t('g3.collect.cost', lang)}</label>
           <input
@@ -138,37 +142,6 @@ export default function SecretaryAptForm({ initial, patients, appointments = [],
             }}
             placeholder="0"
           />
-        </div>
-        <div
-          onClick={() => setF(toggleSecretaryPaid)}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            background: C.card,
-            border: '1px solid ' + (f.paid ? C.success : C.border),
-            borderRadius: 10,
-            padding: '0 12px',
-            cursor: 'pointer',
-            marginTop: 19
-          }}
-        >
-          <div
-            style={{
-              width: 18,
-              height: 18,
-              borderRadius: 5,
-              background: f.paid ? C.success : C.bg,
-              border: '2px solid ' + (f.paid ? C.success : C.border),
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: 11,
-              color: C.bg,
-              fontWeight: 700
-            }}
-          >{f.paid ? '✓' : ''}</div>
-          <span style={{ color: f.paid ? C.success : C.muted, fontSize: 12, fontWeight: 600 }}>{t('g3.sec.collected', lang)}</span>
         </div>
       </div>
       <div>

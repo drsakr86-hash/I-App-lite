@@ -11,6 +11,7 @@
 
 import { getSB } from '../data-access/index.js';
 import { logError } from '../../services/logger.js';
+import { maskPatientName } from './mask-name.js';
 
 let _callCh = null;
 let _callReady = null;
@@ -47,7 +48,7 @@ export async function broadcastCall(a, repeat) {
         id: a.id,
         calledAt: a.calledAt || '',
         repeat: repeat || '',
-        patient: a.patient || '',
+        patient: maskPatientName(a.patient), // never the full name: this channel is public (audit F-05 / M1)
         clinic: a.clinic || '',
         doctor: a.doctor || ''
       }
