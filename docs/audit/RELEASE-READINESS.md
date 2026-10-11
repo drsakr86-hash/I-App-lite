@@ -4,7 +4,7 @@
 **The branch is safe to review and merge by a human** (only code/test/doc changes, no schema or workflow behavior change besides CI steps). **The production system is NOT declared fully production-ready**: open blockers below need production SQL or product decisions that require your approval. Nothing was merged, pushed or deployed.
 
 ## Passed (on branch HEAD, real runs)
-- `npm ci` ok · `npm test` 785 tests: 784 pass, 1 known-limitation `todo`, 0 fail · `test:smoke` ok · `test:smoke:screens` ok (120 checks) · `test:smoke:accounting` ok · `npm run build` ok · `npm run verify:dist` ok (build 79c5455dcb38) · `npm audit`: 2 moderate (react-router) remain, high cleared.
+- `npm ci` ok · `npm test` 785 tests: 784 pass, 1 known-limitation `todo`, 0 fail · `test:smoke` ok · `test:smoke:screens` ok (120 checks) · `test:smoke:accounting` ok · `npm run build` ok · `npm run verify:dist` ok (build ec677955430e) · `npm audit`: 2 moderate (react-router) remain, high cleared.
 - Production catalog: RLS on all tables; anon limited to booking INSERT + queue/slots reads; finance v1 unique indexes and append-only triggers present.
 
 ## Blockers / open items (priority order)

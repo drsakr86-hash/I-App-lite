@@ -11,10 +11,10 @@ Commits are small and independent; none touches `main`. Each commit message carr
 | 3 | `be372e4` | F-04 stored XSS in imaging print | raw string interpolation of stored values into HTML written with `document.write` (same-origin) | new `src/modules/print/study-print.js` (`escHTML`, `safeUrl`); `ImagingCenter` uses it | `tests/study-print.test.js` (3) |
 | 3 | `be372e4` | F-13 `innerHTML` with error text in queue display | `e.message` concatenated into HTML | DOM + `textContent` in `public/queue-display.html` | covered by review only (no DOM test harness for this static page) |
 | 4 | `fa58588` | F-14 high advisory in `source-map-js` | transitive build-time dep at 1.2.1 | lockfile-only bump to 1.2.2 | `npm audit` (high → none), build + `verify:dist` green |
+| 5 | `2fa783b` | F-19 file numbers re-issued after delete/merge | max(current list)+1 | monotonic floor `code-floor.js`, wired in addP/delP/mergePatients, kept by PHI purge | `tests/patient-code-floor.test.js` (5) |
+| 5 | `2fa783b` | F-18 lost update on blob keys | unconditional upsert | NOT fixed (needs server CAS); documented + `todo` test | `tests/sync-lost-update.test.js` (todo) |
 
-Added tests: 5 (774 → 779 `npm test`). Smoke suites: 3 (all green).
-| 5 | (this commit) | F-19 file numbers re-issued after delete/merge | max(current list)+1 | monotonic floor `code-floor.js`, wired in addP/delP/mergePatients, kept by PHI purge | `tests/patient-code-floor.test.js` (5) |
-| 5 | (this commit) | F-18 lost update on blob keys | unconditional upsert | NOT fixed (needs server CAS); documented + `todo` test | `tests/sync-lost-update.test.js` (todo) |
+Tests: 774 on baseline → 785 now (784 pass, 1 `todo` known limitation, 0 fail). Smoke suites: 3, all green.
 
 Tests now: 785 (784 pass, 1 todo, 0 fail).
 
