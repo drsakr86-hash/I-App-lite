@@ -8,14 +8,31 @@
 --     the same date AND the same value in every mapped field, i.e. the row equals what a rebuild would produce;
 --  G2 exactly those rows are first copied into a private backup table (RLS on, no policy, all grants revoked);
 --     a pre-existing backup is never trusted by id: any content difference (G2a) or leftover rows from an earlier run (G2b)
---     abort; and before any delete every stale row must have a backup row identical in ALL columns (G2c);
---  G3 after the delete no stale row remains.
+--     abort; before any delete every stale row must have a backup row identical in ALL columns (G2c); no API role (anon, authenticated,
+--     service_role, authenticator) may hold any privilege on the backup (G2d);
+--  G3 after the delete no stale row remains (so nothing was deleted without a verified backup, and nothing new slipped in).
+-- Concurrency design (analysis + real-PostgreSQL tests: QUEUE-POLICY-FINAL-REVIEW.md, section 3):
+--  L0 transaction advisory lock: serialises only runs of THESE two scripts.
+--  L1 SHARE lock on iapp_appointments, then ACCESS EXCLUSIVE on iapp_queue_public_cache, in the SAME order the app trigger uses
+--     (write appointment, then write cache) => no lock cycle with any app transaction. Every check, the backup copy, the policy change and
+--     the delete then run on frozen data. Held for the script's run time only (milliseconds for ~100 rows). While held: saving/editing
+--     appointments and the TV's cache reads wait; nothing fails. If an in-flight transaction does not finish within lock_timeout=1s the script
+--     gives up with SQLSTATE 55P03 and changes nothing (reception waits at most that second, then continues).
+--  Defence in depth that does not rely on the locks: the DELETE only removes rows proven identical to their backup row and G3 aborts if any
+--  stale row is left.
 -- The rollback restores from the backup table (no date range, no assumption about appointments).
 -- Side effect: creates ONE new table public.iapp_queue_public_cache_bak_20261011 (same data the cache already exposed, now private). Drop it after the retention period.
 -- Does NOT change: grants of the cache, the view, the trigger iapp_refresh_queue_public_cache, queue-display.html.
 begin;
 set local lock_timeout = '5s';
 set local statement_timeout = '30s';
+
+-- L0 + L1: serialise our own scripts, then take the two table locks in the app's own order (appointments, then cache)
+select pg_advisory_xact_lock(hashtext('iapp_queue_public_cache_today_only'));
+set local lock_timeout = '1s';
+lock table public.iapp_appointments in share mode;            -- blocks writers of appointments (readers unaffected)
+lock table public.iapp_queue_public_cache in access exclusive mode;   -- required anyway by CREATE/DROP POLICY
+set local lock_timeout = '5s';
 
 -- G1
 do $$
@@ -55,7 +72,19 @@ end $$;
 create table if not exists public.iapp_queue_public_cache_bak_20261011
   (like public.iapp_queue_public_cache including defaults);
 alter table public.iapp_queue_public_cache_bak_20261011 enable row level security;
-revoke all on public.iapp_queue_public_cache_bak_20261011 from public, anon, authenticated;
+revoke all on public.iapp_queue_public_cache_bak_20261011 from public;
+do $$
+declare r text;
+begin
+  foreach r in array array['anon','authenticated','service_role','authenticator'] loop
+    if exists (select 1 from pg_roles where rolname = r) then
+      execute format('revoke all on table public.iapp_queue_public_cache_bak_20261011 from %I', r);
+      if has_table_privilege(r, 'public.iapp_queue_public_cache_bak_20261011', 'select,insert,update,delete,truncate,references,trigger') then
+        raise exception 'ABORT G2d: role % still has a privilege on the backup table. Nothing was changed.', r;
+      end if;
+    end if;
+  end loop;
+end $$;
 
 -- G2a/G2b: an existing backup must agree with the rows about to be deleted
 do $$
@@ -111,8 +140,11 @@ create policy public_read_queue_cache_today on public.iapp_queue_public_cache
   for select to anon, authenticated
   using (date = ((now() at time zone 'Africa/Cairo')::date)::text);
 
-delete from public.iapp_queue_public_cache
-  where date < ((now() at time zone 'Africa/Cairo')::date)::text;
+-- delete ONLY rows that are byte-identical to their backup row (a row written after the checks is left alone, and G3 then aborts)
+delete from public.iapp_queue_public_cache c
+  using public.iapp_queue_public_cache_bak_20261011 b
+  where b.id = c.id and row(b.*) is not distinct from row(c.*)
+    and c.date < ((now() at time zone 'Africa/Cairo')::date)::text;
 
 -- G3
 do $$

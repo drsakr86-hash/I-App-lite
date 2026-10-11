@@ -108,6 +108,8 @@ const abortCase = async (label, file, expect, setup, cleanup) => ok(label, async
 });
 
 // ---- APPLY ----
+// mimic Supabase: tables created later in public get ALL privileges for the API roles (the apply script must close them on the backup table)
+await db.exec('alter default privileges in schema public grant all on tables to anon, authenticated, service_role');
 await abortCase('FRESH ABORT: a failing guard on a first run leaves no backup table, no policy change, no deleted row', APPLY, /ABORT G1: stale=21 no_matching_appointment=1/,
   `insert into public.iapp_queue_public_cache (id,patient,clinic,date) values ('orphan0','Orphan','CLINIC-A', ((now() at time zone 'Africa/Cairo')::date - 3)::text)`,
   `delete from public.iapp_queue_public_cache where id='orphan0'`);
@@ -212,6 +214,10 @@ await ok('BACKUP: holds all deleted rows, identical to the snapshot; invisible t
   assert.deepEqual(b, snapshotStale);
   assert.match(await asErr('anon', `select * from ${BAK}`), /permission denied/);
   assert.match(await asErr('authenticated', `select * from ${BAK}`), /permission denied/);
+  for (const r of ['anon', 'authenticated', 'service_role', 'public'])
+    for (const priv of ['select', 'insert', 'update', 'delete', 'truncate', 'references', 'trigger'])
+      assert.equal((await q(`select has_table_privilege('${r}', '${BAK}', '${priv}') b`))[0].b, false, `${r} must not have ${priv}`);
+  assert.match(await asErr('service_role', `delete from ${BAK}`), /permission denied/);
   assert.equal(n(await q(`select count(*) n from pg_class where relname='iapp_queue_public_cache_bak_20261011' and relrowsecurity`)), 1);
 });
 await ok('no hardcoded LOWER BOUND or date literal in the rollback; drift switch defaults to false', async () => {
@@ -283,6 +289,21 @@ await ok('ROLLBACK (normal, no drift) restores the exact snapshot, content-verif
 await db.exec(APPLY);
 await abortCase('OLD BACKUP REUSE: a later apply with NEW stale rows while the earlier backup still exists is refused (leftover=20)', APPLY, /ABORT G2b: backup table holds 20 row/,
   ins(9001, 'Later Patient') + cins('9001', 'Later Patient', d2 + '::text'), del(9001));
+
+await ok('G3 + delete-only-identical: a row that appears during the delete is never removed unbacked; the script aborts and rolls everything back', async () => {
+  await db.exec(ROLLBACK); // back to the open policy with the stale rows restored
+  await db.exec(`create function public.tmp_late() returns trigger language plpgsql as $f$ begin
+      insert into public.iapp_queue_public_cache (id,patient,clinic,date) values ('late9','Late','CLINIC-A', ((now() at time zone 'Africa/Cairo')::date - 1)::text) on conflict do nothing; return null; end $f$;
+    create trigger tmp_late after delete on public.iapp_queue_public_cache for each statement execute function public.tmp_late();`);
+  const s0 = await state(); let err = null;
+  try { await db.exec(APPLY); } catch (e) { err = e.message; }
+  await db.exec('rollback').catch(() => {});
+  const s1 = await state();
+  await db.exec('drop trigger tmp_late on public.iapp_queue_public_cache; drop function public.tmp_late()');
+  assert.match(err || '(no error)', /ABORT G3: 1 stale row/);
+  assert.equal(s1, s0);
+  await db.exec(APPLY);
+});
 
 console.log(`\nRESULT: ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

@@ -1,6 +1,7 @@
 -- Rollback of queue-public-today-only.sql. Safe to run more than once. Not applied to production.
 -- Restores from public.iapp_queue_public_cache_bak_20261011 (created by the apply script from exactly the rows it deleted). No date range.
 -- All-or-nothing: any ABORT leaves the policy and the data exactly as they were.
+-- Locks: same as the apply script (advisory lock, SHARE on iapp_appointments, then ACCESS EXCLUSIVE on the cache; 1 s timeout => 55P03, nothing changed).
 --  R1 backup table must exist;
 --  R2 DRIFT check: each backup row must still equal its appointment (exists, not cancelled, same date and fields). If an old appointment
 --     was edited/deleted/cancelled since the apply, the backup is an outdated snapshot and is NOT restored silently.
@@ -9,6 +10,10 @@
 --     content is a conflict (content_conflict=N) and aborts, it is never counted as restored.
 -- After you are sure no rollback is needed, drop the backup:  drop table public.iapp_queue_public_cache_bak_20261011;
 begin;
+select pg_advisory_xact_lock(hashtext('iapp_queue_public_cache_today_only'));   -- serialises with the apply script
+set local lock_timeout = '1s';
+lock table public.iapp_appointments in share mode;                    -- same order as the apply script and the app trigger
+lock table public.iapp_queue_public_cache in access exclusive mode;
 set local lock_timeout = '5s';
 
 -- R1
