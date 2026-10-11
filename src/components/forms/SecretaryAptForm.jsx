@@ -15,7 +15,11 @@ import { tv } from '../../modules/i18n/tv.js';
 export default function SecretaryAptForm({ initial, patients, appointments = [], prices = [], onSave, onClose }) {
   const lang = useLang();
   const [mode, setMode] = useState(() => initialSecretaryAptMode(initial));
-  const [f, setF] = useState(() => initialSecretaryAptState(initial, localISO()));
+  const [f, setF] = useState(() => {
+    const base = initialSecretaryAptState(initial, localISO());
+    // a NEW appointment starts with the clinic's listed price for the default type (was empty, so the cost was typed by hand)
+    return initial ? base : withSecretaryAptType(base, base.type, matchSecretaryPrice(prices, base.type, base.clinic), false);
+  });
   const [costTouched, setCostTouched] = useState(() => initialCostTouched(initial));
   const [err, setErr] = useState('');
   const s = k => e => setF(v => ({ ...v, [k]: e.target.value }));

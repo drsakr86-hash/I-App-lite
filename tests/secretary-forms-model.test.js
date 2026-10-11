@@ -62,12 +62,14 @@ test('matchSecretaryPrice equals legacy matchPrice', () => {
   for (const prices of [PRICES, [], [{ name: '', price: '1' }, ...PRICES], [{ name: 'فحص', price: '9' }, ...PRICES]]) {
     const legacy = legacyConst('matchPrice', SRC, { prices });
     for (const t of [...SECRETARY_APT_TYPES, 'كشف', 'شبكية', 'كشف مستعجل', '']) {
-      assert.equal(matchSecretaryPrice(prices, t), legacy(t), t);
+      // parity wherever the legacy literal match finds a price; the normalised fallback only ever ADDS a match where legacy found none
+      const got = matchSecretaryPrice(prices, t), old = legacy(t);
+      if (old) assert.equal(got, old, t); else assert.ok(!got || /كشف|استشار/.test(got.name), t);
     }
   }
   assert.equal(matchSecretaryPrice(PRICES, 'فحص شبكية').price, '500');
   assert.equal(matchSecretaryPrice(PRICES, 'شبكية').price, '500'); // name contains type
-  assert.equal(matchSecretaryPrice(PRICES, 'متابعة'), undefined);
+  assert.equal(matchSecretaryPrice(PRICES, 'متابعة')?.name, 'كشف'); // no literal match: falls back to the examination price
   // Quirk kept: an empty type matches the first price.
   assert.equal(matchSecretaryPrice(PRICES, '').price, '300');
   // Quirk kept: a price with no name throws.
@@ -157,8 +159,9 @@ test('matchCollectPrice / initialCollectCost equal legacy', () => {
     for (const apt of apts) {
       const legacyMatched = legacyConst('matched', COLLECT_SRC, { prices, apt });
       const matched = matchCollectPrice(prices, apt.type);
-      assert.equal(matched, legacyMatched, JSON.stringify(apt));
-      assert.equal(initialCollectCost(apt, matched), apt.cost || (legacyMatched ? legacyMatched.price : ''));
+      if (legacyMatched) assert.equal(matched, legacyMatched, JSON.stringify(apt));
+      else assert.ok(!matched || /كشف|استشار/.test(matched.name), JSON.stringify(apt));
+      assert.equal(initialCollectCost(apt, matched), apt.cost || (matched ? matched.price : ''));
     }
   }
   assert.ok(COLLECT_SRC.includes('useState(apt.cost || (matched ? matched.price : ""))'));
@@ -166,7 +169,7 @@ test('matchCollectPrice / initialCollectCost equal legacy', () => {
   assert.ok(COLLECT_SRC.includes('onClick: () => onSave(cost, paid)'));
   assert.equal(initialCollectCost({ type: 'فحص شبكية' }, matchCollectPrice(PRICES, 'فحص شبكية')), '500');
   assert.equal(initialCollectCost({ type: 'كشف', cost: '250' }, matchCollectPrice(PRICES, 'كشف')), '250');
-  assert.equal(initialCollectCost({ type: 'متابعة' }, undefined), '');
+  assert.equal(initialCollectCost({ type: 'متابعة' }, undefined), '');  // nothing matched
   // A stored 0 falls through to the price list (legacy ||).
   assert.equal(initialCollectCost({ type: 'استشارة', cost: 0 }, matchCollectPrice(PRICES, 'استشارة')), '150');
   assert.equal(initialCollectCost({ type: 'x', cost: 0 }, undefined), '');

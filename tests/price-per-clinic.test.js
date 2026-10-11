@@ -37,3 +37,15 @@ test('visit type options per clinic are unique and the reference price follows t
   assert.equal(referencePriceText(prices, 'كشف', 'دمنهور'), '300');
   assert.ok(referencePriceShown(prices, 'كشف', 'الرحمانية'));
 });
+
+test('fixed appointment types find the free-text price names (kashf / istishara spelling variants)', () => {
+  const list = [
+    { id: 1, name: 'كشف', price: '300', clinic: 'دمنهور' }, { id: 2, name: 'استشاره', price: '100', clinic: 'دمنهور' },
+    { id: 3, name: 'كشف', price: '150', clinic: 'الرحمانية' }, { id: 4, name: 'استشاره', price: '50', clinic: 'الرحمانية' }
+  ];
+  assert.equal(matchSecretaryPrice(list, 'فحص روتيني', 'دمنهور').price, '300');
+  assert.equal(matchSecretaryPrice(list, 'فحص روتيني', 'الرحمانية').price, '150');
+  assert.equal(matchSecretaryPrice(list, 'استشارة', 'دمنهور').price, '100');
+  assert.equal(matchCollectPrice(list, 'متابعة', 'الرحمانية').price, '150');
+  assert.equal(matchSecretaryPrice(list, 'عملية', 'دمنهور'), undefined);
+});
