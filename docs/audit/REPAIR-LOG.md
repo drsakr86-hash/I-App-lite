@@ -24,3 +24,11 @@ Tests: 774 on baseline → 791 now (790 pass, 1 `todo` known limitation, 0 fail)
 - Clinical RLS, `iapp_store` policies, queue-cache policy, grants, finance hardening: need production SQL → proposals only (DATABASE-AND-MIGRATION-REVIEW.md).
 - Cloudinary signed uploads, anonymous booking rate limiting: need new server-side components.
 - Service Worker minor items (F-16): no confirmed user-visible defect; kept to avoid destabilizing the recent stale-chunk fix.
+
+## F-03 accounting hardening — APPLIED to production (2026-10-11, by the owner in the SQL editor)
+- Script: `docs/sql/accounting-hardening-apply.sql` (guarded single transaction). A second run aborts with `ABORT G0` by design (proof it is applied).
+- Verified read-only afterwards: all 17 `iapp_fin_*` functions match the locally tested v2 set (combined md5 identical to the PG16 test DB); guards are SECURITY DEFINER;
+  `iapp_fin_collection_state` executable by `authenticated` only (not `anon`); unique index `iapp_entries_source_ref_uq` and trigger `iapp_fin_audit_guard_trg` present;
+  secretary policies are INSERT-only (4), no SELECT policy; pre-change snapshot `iapp_fin_hardening_pre_20261011` (23 rows, no anon access).
+- Row counts untouched: 32 charges, 23 payments, 61 entries. Rollback: `accounting-hardening-rollback.sql`.
+- NOT verified: a real secretary session on the live site (no network / no secretary credentials here).
