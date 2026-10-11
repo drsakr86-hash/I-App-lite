@@ -10,7 +10,7 @@
 ## Blockers / open items (priority order)
 0. **F-19** Three file numbers (P-0062/63/64) each belong to 3 different patients in the core tables — clinic must decide the cleanup (DATABASE-AND-MIGRATION-REVIEW §G) before a unique index can be added. New cases are prevented on a device by this branch.
 1. **F-03** Apply finance hardening (needs backup, branch test, approval) — until then secretaries collect through the legacy path and the ledger can diverge from real collections; the app now warns when this happens.
-2. **F-05** Public queue cache exposes full names and past days to anyone with the public key (SQL B1 ready for approval).
+2. **F-05** Public queue cache exposes full names and past days to anyone with the public key (ready-to-run `docs/sql/queue-public-today-only.sql` + rollback; two attempts to apply it through the assistant were cancelled, so it is NOT applied — run it yourself in the SQL editor).
 3. **F-06** Secretary can read/write clinical data and backups through `iapp_store` (product decision D).
 4. **F-08** Unsigned Cloudinary upload preset; image access mode unknown (UNVERIFIED).
 5. **F-18** Concurrent saves of the same blob key can lose a record (server CAS needed, §F). **F-12** Anonymous booking has no rate limit/uniqueness.
