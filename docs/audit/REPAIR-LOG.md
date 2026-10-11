@@ -32,3 +32,11 @@ Tests: 774 on baseline → 791 now (790 pass, 1 `todo` known limitation, 0 fail)
   secretary policies are INSERT-only (4), no SELECT policy; pre-change snapshot `iapp_fin_hardening_pre_20261011` (23 rows, no anon access).
 - Row counts untouched: 32 charges, 23 payments, 61 entries. Rollback: `accounting-hardening-rollback.sql`.
 - NOT verified: a real secretary session on the live site (no network / no secretary credentials here).
+
+## F-06 iapp_store role boundary — READY, NOT APPLIED (2026-10-12)
+- Finding (read-only, production): `iapp_store` had two policies (`staff_read`, `staff_write`) giving ANY staff account — including the 3 secretary accounts — read/write on every key: exams, prescriptions, imaging orders/metadata, injections, the rolling full backups (`iapp_backups`), users, clinic settings. Roles on the server: 1 admin, 3 secretary (no doctor account). The clinical `*_core` tables are already admin/doctor-only in production.
+- Fix: `docs/sql/store-role-rls.sql` (+ `-rollback.sql`): admin everything; secretary read+write only `iapp_appointments, iapp_patients, iapp_prices, iapp_visits, iapp_audit, iapp_trash`, read-only `iapp_users, iapp_doctors, iapp_clinic`; every other/future key default-deny. Guarded single transaction (3 s lock timeout, G0 exact-policy check, private snapshot of old policies, G1).
+- Key list verified from the secretary client code (SecretaryApp, sync wiring, finance store, staff login). Client companion: the daily auto-backup now runs for admin sessions only (`UnifiedRouter.jsx`).
+- Tested on PostgreSQL 16 with the production policies replicated: `docs/sql/tests/store-role-rls.{setup,assertions}.sql` (secretary RW/RO/denied keys incl. upsert `ON CONFLICT`, admin, unknown user, anon, snapshot privacy), second apply aborts at G0, rollback restores the two original policies.
+- Residual (not fixed): `iapp_trash` (deleted records of any kind) stays readable and `iapp_audit` rewritable by a secretary because they are whole-array blobs; needs per-record tables or append-only RPCs. A secretary device that previously cached clinical data keeps that local cache.
+- NOT verified: a real secretary session on the live site after applying.
