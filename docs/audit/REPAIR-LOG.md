@@ -40,3 +40,9 @@ Tests: 774 on baseline → 791 now (790 pass, 1 `todo` known limitation, 0 fail)
 - Tested on PostgreSQL 16 with the production policies replicated: `docs/sql/tests/store-role-rls.{setup,assertions}.sql` (secretary RW/RO/denied keys incl. upsert `ON CONFLICT`, admin, unknown user, anon, snapshot privacy), second apply aborts at G0, rollback restores the two original policies.
 - Residual (not fixed): `iapp_trash` (deleted records of any kind) stays readable and `iapp_audit` rewritable by a secretary because they are whole-array blobs; needs per-record tables or append-only RPCs. A secretary device that previously cached clinical data keeps that local cache.
 - NOT verified: a real secretary session on the live site after applying.
+
+## F-18 — lost update on whole-blob `iapp_store` keys (code ready, SQL NOT applied)
+- Cause: read → client merge → unconditional upsert; two devices flushing the same key at once overwrite each other.
+- Fix: `docs/sql/store-cas.sql` (+ rollback) adds `iapp_store.rev` (metadata-only column add, 23 rows), a BEFORE UPDATE bump trigger and the SECURITY INVOKER RPC `iapp_store_cas(key, value, rev)` (RLS from store-role-rls.sql still applies). Client (`flush.js`, `wiring.js`, `store-io.js`) reads with a token and writes through the RPC; on `conflict` it re-reads, re-merges, retries up to 5 times, then reports a write error and keeps the data dirty. Without the SQL the client falls back to the old upsert, so SQL and client can be deployed in either order.
+- Tests: real PG16 (assertions + two concurrent sessions: one ok, one conflict; rollback verified) and `tests/sync-lost-update.test.js` (was `todo`, now 4 passing tests) + 3 store-io tests.
+- Status: tested, NOT applied in production, awaiting owner approval.

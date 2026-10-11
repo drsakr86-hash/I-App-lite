@@ -13,7 +13,8 @@ import { SyncStore } from '../src/modules/sync/engine.js';
 // would have no effect on the already-cached client.
 
 let fromImpl = () => { throw new Error('fromImpl not set for this test'); };
-const wrapperClient = { from: (...args) => fromImpl(...args) };
+let rpcImpl = () => { throw new Error('rpcImpl not set for this test'); };
+const wrapperClient = { from: (...args) => fromImpl(...args), rpc: (...args) => rpcImpl(...args) };
 
 function selectReturning(result) {
   return () => ({
@@ -90,4 +91,39 @@ test('sbSetStore: a thrown exception marks reachable=false and returns false', a
   assert.equal(await sbSetStore('k', 1), false);
   assert.equal(SyncStore.st.reachable, false);
   SyncStore.set({ reachable: null });
+});
+
+const rpcReturning = (result, calls) => (name, args) => {
+  calls.push([name, args]);
+  return { abortSignal: () => ({ retry: () => Promise.resolve(result) }) };
+};
+
+test('F-18: sbGetStore with a token records the revision; sbSetStore sends it to iapp_store_cas', async () => {
+  globalThis.__IAppSupabaseClient = wrapperClient;
+  fromImpl = selectReturning({ data: { value: [1], rev: 7 }, error: null });
+  const token = {};
+  assert.deepEqual(await sbGetStore('cas_key', token), [1]);
+  assert.equal(token.rev, 7);
+  assert.equal(token.cas, true);
+  const calls = [];
+  rpcImpl = rpcReturning({ data: { ok: true, rev: 8 }, error: null }, calls);
+  assert.equal(await sbSetStore('cas_key', [1, 2], token), true);
+  assert.deepEqual(calls[0], ['iapp_store_cas', { p_key: 'cas_key', p_value: [1, 2], p_rev: 7 }]);
+});
+
+test("F-18: a revision mismatch is reported as 'conflict' (not as a failure)", async () => {
+  fromImpl = selectReturning({ data: { value: [1], rev: 7 }, error: null });
+  const token = {};
+  await sbGetStore('cas_key', token);
+  rpcImpl = rpcReturning({ data: { ok: false, conflict: true }, error: null }, []);
+  assert.equal(await sbSetStore('cas_key', [1, 2], token), 'conflict');
+});
+
+test('F-18: missing function in the database -> plain upsert fallback (client deployed before the SQL)', async () => {
+  fromImpl = selectReturning({ data: { value: [1], rev: 7 }, error: null });
+  const token = {};
+  await sbGetStore('cas_key', token);
+  rpcImpl = rpcReturning({ data: null, error: { code: 'PGRST202', message: 'Could not find the function public.iapp_store_cas' } }, []);
+  fromImpl = upsertReturning({ error: null });
+  assert.equal(await sbSetStore('cas_key', [1, 2], token), true);
 });
