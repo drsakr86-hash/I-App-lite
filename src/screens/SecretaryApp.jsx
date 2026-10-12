@@ -19,7 +19,7 @@ import { getSB } from "../modules/data-access/index.js";
 import { logError } from "../services/logger.js";
 import { trashPut, logAudit } from "../modules/sync/index.js";
 import { newId } from "../modules/constants/misc.js";
-import { loadCollectionState, submitCollection, collectionSnapshot, selectableAccounts, newFinId, fromMinor, FinanceError } from "../modules/finance/index.js";
+import { loadCollectionState, submitCollection, collectionSnapshot, selectableAccounts, accountsForClinic, newFinId, fromMinor, FinanceError } from "../modules/finance/index.js";
 import { waOpen, waReminderText } from "../modules/notifications/index.js";
 import WaitingRoom from "./WaitingRoom.jsx";
 import { t, useLang, dirOf } from "../modules/i18n/index.js";
@@ -544,7 +544,7 @@ export default function SecretaryApp() {
       )}
       {collectApt && (
         <Modal title={t("g5.sec.modalCollect", lang)} onClose={() => setCollectApt(null)}>
-          <CollectModal apt={collectApt} prices={prices} finance={finState ? { accounts: selectableAccounts(finState.accounts), snapshot: collectionSnapshot(finState, collectApt) } : null} onSave={finState ? handleSaveFinanceCollect : handleSaveCollect} onClose={() => setCollectApt(null)} />
+          <CollectModal apt={collectApt} prices={prices} finance={finState ? { accounts: accountsForClinic(finState.accounts, collectApt.clinic), snapshot: collectionSnapshot(finState, collectApt) } : null} onSave={finState ? handleSaveFinanceCollect : handleSaveCollect} onClose={() => setCollectApt(null)} />
         </Modal>
       )}
       {toast && <Toast msg={toast} onDone={() => setToast(null)} />}

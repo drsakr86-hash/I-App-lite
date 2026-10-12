@@ -133,3 +133,18 @@ test('permissions: every finance permission is explicit; only admin has all; doc
   assert.equal(canDo('admin', 'nodot'), false);
   assert.ok(PERMISSIONS.admin.accounting.includes('*'));
 });
+
+test('accountsForClinic: secretary sees only her clinic cashbox (and clinic-less accounts); falls back to all if nothing matches', async () => {
+  const { accountsForClinic } = await import('../src/modules/finance/index.js');
+  const accs = [
+    { id: 'd', name: 'دمنهور', clinic: 'دمنهور', active: true },
+    { id: 'r', name: 'الرحمانية', clinic: 'الرحمانية', active: true },
+    { id: 'c', name: 'مركز دمنهور للعيون', clinic: 'مركز دمنهور للعيون', active: true },
+    { id: 'old', name: 'x', clinic: 'دمنهور', active: false },
+    { id: 'leg', name: 'Legacy', clinic: '', isLegacy: true, active: true }
+  ];
+  assert.deepEqual(accountsForClinic(accs, 'دمنهور').map(a => a.id), ['d']);
+  assert.deepEqual(accountsForClinic(accs, 'الرحمانية').map(a => a.id), ['r']);
+  assert.deepEqual(accountsForClinic(accs, 'غير معروف').map(a => a.id), ['d', 'r', 'c'], 'no match -> all selectable (never blocked)');
+  assert.deepEqual(accountsForClinic(accs.concat({ id: 'g', name: 'عام', clinic: '', active: true }), 'دمنهور').map(a => a.id), ['d', 'g']);
+});
