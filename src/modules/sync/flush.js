@@ -20,9 +20,11 @@ export function createFlusher(deps) {
     setError = () => {}, clearError = () => {}, markSynced = () => {}, emitChange = () => {}
   } = deps;
   const flushing = {};
+  const MAX_CONFLICTS = 5;
 
   async function run(key, job) {
     let ok = false;
+    let conflicts = 0;
     do {
       job.again = false;
       const stamp = storage.get(dirtyPrefix + key);
@@ -39,14 +41,21 @@ export function createFlusher(deps) {
         break;
       }
 
-      const remote = await readRemote(key);
+      // `token` ties this read to the write below: the server can then refuse the write if the row changed in between (compare-and-swap, F-18)
+      const token = {};
+      const remote = await readRemote(key, token);
       if (remote === undefined) { ok = false; setError(key, t('g4.sync.errRead')); break; }
 
       let base = null;
       try { const b = storage.get(basePrefix + key); base = b ? JSON.parse(b) : null; } catch { /* ignore */ }
 
       const merged = remote === null ? local : merge(base, local, remote);
-      const saved = await writeRemote(key, merged);
+      const saved = await writeRemote(key, merged, token);
+      if (saved === 'conflict') {
+        // another device wrote this key after we read it: read again, merge again (bounded)
+        if (++conflicts <= MAX_CONFLICTS) { job.again = true; continue; }
+        ok = false; setError(key, t('g4.sync.errWrite')); break;
+      }
       if (!saved) { ok = false; setError(key, t('g4.sync.errWrite')); break; }
 
       const mergedStr = JSON.stringify(merged);

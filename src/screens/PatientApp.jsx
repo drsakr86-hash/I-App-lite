@@ -4,7 +4,7 @@ import {
   RATING_STARS,
   initialTab, patientTabs, blankBookForm, myAppointments, ownRecords,
   upcomingAppointments, pastAppointments, isAptSoon as aptSoon, findUnratedVisit, shouldAutoPromptRating,
-  bookFormError, buildBookingRow, isDuplicateBookingError, clearBookTime, bookDoneSummary,
+  bookFormError, buildBookingRow, isDuplicateBookingError, isBookingRateLimitError, clearBookTime, bookDoneSummary,
   markVisitRatedIn, canSubmitRating, buildRatingRecord, appendRating,
   headerAvatar, headerName, headerSub, firstName, nextAptPlace, clinicWaHref, rxMedicineLines, examVitals
 } from "../modules/patient-app/model.js";
@@ -164,6 +164,8 @@ export default function PatientApp({ patient, onLogout }) {
           alert(t('g6.pa.dupMsg', lang));
           setBookForm(clearBookTime);
           setSlotsVersion(x => x + 1);
+        } else if (isBookingRateLimitError(error)) {
+          alert(t('g6.pa.rateMsg', lang));
         } else {
           alert(t('g6.pa.failedMsg', lang));
         }

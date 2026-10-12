@@ -37,3 +37,22 @@ test('unavailable / corrupt storage degrades to the old behaviour instead of thr
 test('the floor survives sign-out (it is not patient data)', () => {
   assert.ok(PHI_KEEP_KEYS.has(FLOOR_KEY));
 });
+
+import { fetchServerPatientCode, maxPatientNumber } from '../src/modules/patients/list.js';
+
+test('F-19b: server patient code is used when valid, otherwise null (caller falls back to the local rule)', async () => {
+  const ok = { rpc: (n, a) => Promise.resolve({ data: 'P-0065', error: null, _a: [n, a] }) };
+  assert.equal(await fetchServerPatientCode(ok, 64), 'P-0065');
+  assert.equal(await fetchServerPatientCode({ rpc: () => Promise.resolve({ data: null, error: { code: 'PGRST202' } }) }, 1), null);
+  assert.equal(await fetchServerPatientCode({ rpc: () => Promise.resolve({ data: 'garbage', error: null }) }, 1), null);
+  assert.equal(await fetchServerPatientCode({ rpc: () => { throw new Error('offline'); } }, 1), null);
+  assert.equal(await fetchServerPatientCode(null, 1), null);
+  assert.equal(await fetchServerPatientCode({ rpc: () => new Promise(() => {}) }, 1, 20), null, 'timeout');
+  let seen; await fetchServerPatientCode({ rpc: (n, a) => { seen = [n, a]; return Promise.resolve({ data: 'P-0010', error: null }); } }, 9.7);
+  assert.deepEqual(seen, ['iapp_next_patient_code', { p_floor: 9 }]);
+});
+
+test('maxPatientNumber counts archived suffix codes by their number', () => {
+  assert.equal(maxPatientNumber([{ patientCode: 'P-0007' }, { patientCode: 'P-0062-D1' }, {}]), 62);
+  assert.equal(maxPatientNumber(null), 0);
+});

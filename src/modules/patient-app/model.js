@@ -176,6 +176,9 @@ export function buildBookingRow(f, clinicCode) {
 // Unique-slot violation from the insert → "slot just taken" recovery path.
 export const isDuplicateBookingError = error => /duplicate|unique/i.test(error.message || '');
 
+// The server-side flood guard (docs/sql/booking-rate-limit.sql) rejects with a message containing 'booking_rate_limit'.
+export const isBookingRateLimitError = error => /booking_rate_limit/i.test((error && error.message) || '');
+
 // Duplicate recovery: only the time is cleared.
 export const clearBookTime = v => ({
   ...v,

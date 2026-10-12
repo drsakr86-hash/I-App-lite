@@ -38,24 +38,24 @@ import { APT_KEY } from '../appointments/appointment.mapper.js';
 // generic ROW_TABLES, or the generic iapp_store key/value table) and
 // reads/writes it there.
 
-export async function sbGetRaw(key) {
+export async function sbGetRaw(key, token) {
   if (offlineNow()) {
     SyncStore.set({ reachable: false });
     return undefined;
   }
   if (key === APT_KEY) return await aptList();
   if (ROW_TABLES[key]) return await rowList(key);
-  return await sbGetStore(key);
+  return await sbGetStore(key, token);
 }
 
-export async function sbSetRaw(key, value) {
+export async function sbSetRaw(key, value, token) {
   if (offlineNow()) {
     SyncStore.set({ reachable: false });
     return false;
   }
   if (key === APT_KEY) return await aptSetAll(Array.isArray(value) ? value : []);
   if (ROW_TABLES[key]) return (await rowMutate(key, () => Array.isArray(value) ? value : [])).ok;
-  return await sbSetStore(key, value);
+  return await sbSetStore(key, value, token);
 }
 
 let _rawIO = { readRemote: sbGetRaw, writeRemote: sbSetRaw };
@@ -73,8 +73,8 @@ function getFlusher() {
     basePrefix: BASE_PREFIX,
     noCacheKeys: NOCACHE_KEYS,
     ensureAuthed,
-    readRemote: key => _rawIO.readRemote(key),
-    writeRemote: (key, value) => _rawIO.writeRemote(key, value),
+    readRemote: (key, token) => _rawIO.readRemote(key, token),
+    writeRemote: (key, value, token) => _rawIO.writeRemote(key, value, token),
     merge: mergeData,
     setError: (key, msg) => SyncStore.set({ errors: { ...SyncStore.st.errors, [key]: msg } }),
     clearError: key => {
