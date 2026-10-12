@@ -5,6 +5,16 @@ import { DEFAULT_ACCOUNT_ID } from './constants.js';
 // Accounts a user can pick for NEW money: active, and never the migration-only legacy account.
 export const selectableAccounts = accounts => (accounts || []).filter(a => a.active !== false && !a.isLegacy);
 
+// Accounts the SECRETARY may collect into for an appointment of `clinic`: the clinic's own cashbox (account.clinic === clinic) plus any
+// account that belongs to no clinic. Other clinics' cashboxes and the "center" account (collected in a lump sum by the admin) are hidden.
+// If that leaves nothing (names do not match), fall back to every selectable account so collection is never blocked.
+export function accountsForClinic(accounts, clinic) {
+  const all = selectableAccounts(accounts);
+  const c = String(clinic || '').trim();
+  const mine = all.filter(a => !a.clinic || String(a.clinic).trim() === c);
+  return mine.length ? mine : all;
+}
+
 const TYPE_FOR_METHOD = { cash: 'cash', pos: 'pos', bank_transfer: 'bank', wallet: 'wallet' };
 
 // Best default account for a method: the account of the matching type, else the main cash account, else the first.
