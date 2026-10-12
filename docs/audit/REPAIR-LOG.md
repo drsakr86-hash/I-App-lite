@@ -53,3 +53,6 @@ Tests: 774 on baseline → 791 now (790 pass, 1 `todo` known limitation, 0 fail)
 - `docs/sql/patient-code-unique-index.sql`: OPTIONAL unique index, apply later (a code issued offline that collides would become a sync error instead of a silent duplicate). Tested on PG16.
 
 ## F-11 / F-08 — dashboard-only; exact steps in `DASHBOARD-STEPS.md`. Not changed from here.
+
+## Status 2026-10-12 (evening) — F-12, F-18, F-19b APPLIED in production by the owner
+Verified read-only: `iapp_store.rev` present (23 rows, none null) + `trg_iapp_store_rev` beside the two existing triggers + `iapp_store_cas` (SECURITY INVOKER, anon cannot execute); `iapp_booking_rate_limit_trg` on `iapp_booking_requests`; `iapp_patient_code_counter` = 78 and `iapp_next_patient_code` (staff only); `iapp_store` still has exactly 3 policies. Client merged and deployed (main 81ad9cc). Not yet done: `patient-code-unique-index.sql` (deliberately later), F-11 and F-08 (dashboard, see DASHBOARD-STEPS.md). UNVERIFIED: a two-device live concurrency test and a real secretary session (no network access from the audit sandbox).
