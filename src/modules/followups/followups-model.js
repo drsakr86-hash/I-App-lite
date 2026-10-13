@@ -42,12 +42,22 @@ export function addDaysISO(iso, days) {
   return localISO(d);
 }
 
+// A hidden follow-up is listed in the "hidden" tab for one week, then it is DROPPED for good (state 'expired': never listed anywhere again,
+// so it does not come back as overdue either). A later visit with a NEW nextVisit date is a different follow-up and shows normally.
+//  - 'snoozed'   : reminded; listed until `until` (7 days after the reminder), then expired
+//  - 'dismissed' : not expected; listed for 7 days after `at`, then expired
+export const HIDDEN_KEEP_DAYS = 7;
 export function hiddenState(rec, today) {
   if (!rec) return null;
-  if (rec.type === 'dismissed') return 'dismissed';
-  if (rec.type === 'snoozed' && String(rec.until || '') > today) return 'snoozed';
-  return null; // expired snooze: shows again
+  if (rec.type === 'snoozed') return String(rec.until || '') > today ? 'snoozed' : 'expired';
+  if (rec.type === 'dismissed') {
+    if (!rec.at) return 'expired';
+    return addDaysISO(localISO(new Date(rec.at)), HIDDEN_KEEP_DAYS) > today ? 'dismissed' : 'expired';
+  }
+  return null;
 }
+// states that are still shown in the "hidden" tab
+export const isListedHidden = state => state === 'snoozed' || state === 'dismissed';
 
 export function hiddenMap(records) {
   const m = {};
