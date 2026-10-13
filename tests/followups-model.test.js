@@ -93,16 +93,19 @@ test('hidden follow-ups: dismissed stays hidden, snoozed hides until its date, a
   const visits = [{ id: 1, patientId: 7, date: '2000-01-01', nextVisit: '2000-02-01' }];
   const key = followUpKey(7, '2000-02-01');
   assert.equal(overdueFollowUps(visits, [], []).length, 1);
-  assert.equal(overdueFollowUps(visits, [], [{ key, type: 'dismissed' }]).length, 0);
+  assert.equal(overdueFollowUps(visits, [], [{ key, type: 'dismissed', at: Date.now() }]).length, 0);
   assert.equal(overdueFollowUps(visits, [], [{ key, type: 'snoozed', until: '2999-01-01' }]).length, 0);
-  assert.equal(overdueFollowUps(visits, [], [{ key, type: 'snoozed', until: '2000-03-01' }]).length, 1); // expired
+  assert.equal(overdueFollowUps(visits, [], [{ key, type: 'snoozed', until: '2000-03-01' }]).length, 0); // week passed after the reminder: dropped for good, does NOT come back
   const next = [{ id: 2, patientId: 7, date: '2000-01-01', nextVisit: '2000-05-01' }];
   assert.equal(overdueFollowUps(next, [], [{ key, type: 'dismissed' }]).length, 1); // different due date
 });
 
 test('hiddenState / addDaysISO', () => {
   assert.equal(hiddenState(null, '2026-10-04'), null);
-  assert.equal(hiddenState({ type: 'snoozed', until: '2026-10-04' }, '2026-10-04'), null);
+  assert.equal(hiddenState({ type: 'snoozed', until: '2026-10-04' }, '2026-10-04'), 'expired');
+  assert.equal(hiddenState({ type: 'dismissed', at: new Date('2026-10-01T10:00:00').getTime() }, '2026-10-07'), 'dismissed');
+  assert.equal(hiddenState({ type: 'dismissed', at: new Date('2026-10-01T10:00:00').getTime() }, '2026-10-08'), 'expired');
+  assert.equal(hiddenState({ type: 'dismissed' }, '2026-10-08'), 'expired');
   assert.equal(hiddenState({ type: 'snoozed', until: '2026-10-05' }, '2026-10-04'), 'snoozed');
   assert.equal(addDaysISO('2026-10-28', 7), '2026-11-04');
 });

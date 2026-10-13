@@ -9,7 +9,7 @@ import { C } from '../modules/theme/index.js';
 import { sbGet } from '../modules/sync/index.js';
 import { localISO } from '../modules/constants/misc.js';
 import { waOpen, waFollowUpText } from '../modules/notifications/index.js';
-import { INJ_KEY, dueInjections, overdueFollowUps, followUpKey, hiddenMap, hiddenState, SNOOZE_DAYS } from '../modules/followups/index.js';
+import { INJ_KEY, dueInjections, overdueFollowUps, followUpKey, hiddenMap, hiddenState, isListedHidden, SNOOZE_DAYS } from '../modules/followups/index.js';
 import { loadHidden, hideFollowUp, unhideFollowUp } from '../modules/followups/hide.js';
 import { t, useLang } from '../modules/i18n/index.js';
 import { tv } from '../modules/i18n/tv.js';
@@ -32,7 +32,7 @@ export default function FollowUpCentre({ visits, patients, onClose, onPatientCli
   const due = dueInjections(injections, 7);
   const today = localISO();
   const hmap = hiddenMap(hidden);
-  const hiddenRows = overdueFollowUps(visits, patients, []).filter(v => hiddenState(hmap[followUpKey(v.patientId, v.nextVisit)], today));
+  const hiddenRows = overdueFollowUps(visits, patients, []).filter(v => isListedHidden(hiddenState(hmap[followUpKey(v.patientId, v.nextVisit)], today)));
   const rows = tab === 'late' ? late : tab === 'hidden' ? hiddenRows : due;
 
   // Never retried automatically: on failure the card stays and a message is shown.
