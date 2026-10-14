@@ -12,6 +12,7 @@
 
 import { t } from '../../modules/i18n/index.js';
 import { pricesForClinic, fallbackPrice } from './price-clinic.js';
+import { hasValidAptDate } from './apt-form-model.js';
 
 export const SECRETARY_APT_TYPES = ['فحص روتيني', 'متابعة', 'استشارة', 'قياس نظر', 'فحص شبكية', 'عملية'];
 export const SECRETARY_DEFAULT_CLINIC = 'دمنهور';
@@ -78,6 +79,7 @@ export const secretaryAptConflict = (appointments, f) =>
 // name first, then the conflict check. (f.patient must be a string.)
 export const secretaryAptError = (f, appointments) => {
   if (!f.patient.trim()) return t('g3.sec.nameError');
+  if (!hasValidAptDate(f.date)) return t('g3.apt.dateRequired');
   if (secretaryAptConflict(appointments, f)) return t('g3.apt.conflict');
   return null;
 };

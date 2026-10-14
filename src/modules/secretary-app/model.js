@@ -33,7 +33,8 @@ export const aptConflict = (list, f) =>
 
 // The alert text mutateApts shows for a failed save.
 export const mutateErrorMessage = error =>
-  error === 'offline' || error === 'conflict' ? t('g5.sec.saveFailed') : error;
+  error === 'invalid-date' ? t('g3.apt.dateRequired')
+    : error === 'offline' || error === 'conflict' ? t('g5.sec.saveFailed') : error;
 
 // ---- List transforms used as sbMutate mutators -----------------------------
 

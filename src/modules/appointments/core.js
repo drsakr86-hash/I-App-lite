@@ -70,6 +70,8 @@ export async function aptMutate(mutator, verify) {
   const next = mutator(base);
   if (next && !Array.isArray(next) && next.abort) return { ok: false, error: next.abort, data: base };
   const { changed, removed } = _apt().diff(base, next);
+  // iapp_appointments.date is NOT NULL: refuse before any request and say so (it is not an offline problem).
+  if (changed.some(a => !a || typeof a.date !== 'string' || !a.date)) return { ok: false, error: 'invalid-date', data: base };
   let ok = true;
   for (const a of changed) {
     if (!(await aptUpsert(a))) ok = false;

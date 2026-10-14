@@ -176,3 +176,10 @@ test('requestsTabLabel and waCardHref', () => {
   const href = waCardHref({ phone: '01012345678', clinic: 'دمنهور', date: TODAY, time: '10:00' }, clinicLabel);
   assert.equal(href, 'https://wa.me/21012345678?text=' + encodeURIComponent('تذكير بموعدك في عيادة دمنهور يوم 2026-09-27 الساعة 10:00'));
 });
+
+test('regression: mutateErrorMessage gives a readable text for invalid-date (not the raw code)', () => {
+  const m = mutateErrorMessage('invalid-date');
+  assert.notEqual(m, 'invalid-date');
+  assert.notEqual(m, SAVE_FAILED_MSG);
+  assert.ok(m.length > 0);
+});

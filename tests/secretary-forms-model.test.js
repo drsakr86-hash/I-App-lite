@@ -184,3 +184,13 @@ test('initialCollectPaid', () => {
   assert.equal(initialCollectPaid({ paid: true }), true);
   assert.equal(initialCollectPaid({ paid: 'yes' }), true);
 });
+
+test('regression: secretaryAptError refuses a missing or invalid date (patient name still checked first)', () => {
+  const f = { ...blankSecretaryApt(TODAY), patient: 'منى' };
+  for (const date of ['', undefined, null, '2026-02-31', 'غدا']) {
+    const e = secretaryAptError({ ...f, date }, []);
+    assert.ok(e && e !== SECRETARY_CONFLICT_ERROR, JSON.stringify(date));
+  }
+  assert.equal(secretaryAptError({ ...f, patient: '', date: '' }, []), SECRETARY_NAME_ERROR);
+  assert.equal(secretaryAptError(f, []), null);
+});
