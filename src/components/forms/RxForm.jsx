@@ -6,6 +6,7 @@ import { tv } from '../../modules/i18n/tv.js';
 import { Field, inp } from '../../modules/ui/atoms.jsx';
 import { localISO } from '../../modules/constants/index.js';
 import MedicinesStep from './MedicinesStep.jsx';
+import { rxAllergyAlert } from '../../modules/prescriptions/allergy.js';
 import { DEFAULT_DOCTOR_NAMES } from './visit-form-model.js';
 import {
   RX_EYES, RX_LAST_STEP, SPH_OPTIONS, CYL_OPTIONS, AXIS_OPTIONS, ADD_OPTIONS, IPD_OPTIONS,
@@ -28,6 +29,7 @@ export default function RxForm({ initial, patients, onSave, onClose, doctorNames
   const [f, setF] = useState(() => initialRxState(initial, autoPatient, localISO()));
   const [step, setStep] = useState(() => initialRxStep(autoPatient, initial));
   const [errors, setErrors] = useState({});
+  const allergyAlert = rxAllergyAlert(patients, f);
   const s = k => e => setF(v => ({ ...v, [k]: e.target.value }));
   const validate = () => {
     const e = validateRx(f);
@@ -65,6 +67,26 @@ export default function RxForm({ initial, patients, onSave, onClose, doctorNames
           <span style={{ fontSize: 16 }}>👤</span>
           <span style={{ color: C.accent, fontWeight: 700, fontSize: 13 }}>{autoPatient.name}</span>
           <span style={{ color: C.muted, fontSize: 11, marginInlineStart: 'auto' }}>{autoPatient.patientCode || ''}</span>
+        </div>
+      )}
+      {allergyAlert && (
+        <div
+          role={allergyAlert.matches.length ? 'alert' : 'note'}
+          style={{
+            background: (allergyAlert.matches.length ? C.danger : C.gold) + '22',
+            border: '1px solid ' + (allergyAlert.matches.length ? C.danger : C.gold) + '66',
+            borderRadius: 10,
+            padding: '8px 14px',
+            marginBottom: 12,
+            fontSize: 12,
+            lineHeight: 1.6,
+            color: C.text
+          }}
+        >
+          <div style={{ fontWeight: 700 }}>{t('g2.rx.allergy', lang, { a: tv(allergyAlert.allergy) })}</div>
+          {allergyAlert.matches.length > 0 && (
+            <div style={{ color: C.danger, fontWeight: 700 }}>{t('g2.rx.allergyMatch', lang, { m: allergyAlert.matches.join('، ') })}</div>
+          )}
         </div>
       )}
       <div style={{ display: 'flex', marginBottom: 18, background: C.card, borderRadius: 12, padding: 4 }}>
