@@ -211,3 +211,18 @@ test('aptSetAll: replaces the whole list via aptMutate and returns its ok flag',
   assert.equal(calls.deletes, 1);
   assert.equal(calls.upserts, 0);
 });
+
+test('regression: aptMutate refuses a row without a date, reports it honestly and writes nothing', async () => {
+  const calls = { upserts: 0 };
+  fromImpl = () => ({
+    select: () => ({ gte: () => ({ order: () => ({ abortSignal: () => ({ retry: () => Promise.resolve({ data: [row1], error: null }) }) }) }) }),
+    upsert: () => { calls.upserts++; return { abortSignal: () => ({ retry: () => Promise.resolve({ error: { message: 'null value in column "date" violates not-null constraint' } }) }) }; }
+  });
+  for (const date of ['', undefined, null]) {
+    const bad = { id: 7, patientId: null, patient: 'Sara', phone: '', date, time: '11:00', type: '', doctor: '', clinic: '', notes: '' };
+    const res = await aptMutate(list => [...list, bad]);
+    assert.equal(res.ok, false);
+    assert.equal(res.error, 'invalid-date', 'must not be reported as "offline"');
+  }
+  assert.equal(calls.upserts, 0, 'no request may reach the database');
+});

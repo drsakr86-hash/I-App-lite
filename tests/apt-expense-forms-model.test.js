@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  DEFAULT_APT_DOCTOR_NAMES, blankApt, initialAptState, hasSchedulingConflict, aptSaveOutcome, APT_CONFLICT_MESSAGE
+  DEFAULT_APT_DOCTOR_NAMES, blankApt, initialAptState, hasSchedulingConflict, aptSaveOutcome, APT_CONFLICT_MESSAGE, hasValidAptDate
 } from '../src/components/forms/apt-form-model.js';
 import {
   blankExpense, initialExpenseState, blankRecurringExpense, initialRecurringExpenseState,
@@ -47,6 +47,16 @@ test('aptSaveOutcome: a real conflict blocks the save with the legacy message', 
   const appointments = [{ id: 1, doctor: 'د. سلمى', time: '10:00', date: '2026-10-01' }];
   const f = { id: 2, patient: 'أحمد', doctor: 'د. سلمى', time: '10:00', date: '2026-10-01' };
   assert.deepEqual(aptSaveOutcome(appointments, f, '2026-10-01'), { type: 'error', message: APT_CONFLICT_MESSAGE });
+});
+
+test('regression: an appointment without a date is refused before it can reach the database (NOT NULL "date")', () => {
+  for (const date of ['', undefined, null, '2026-13-45', 'tomorrow']) {
+    const out = aptSaveOutcome([], { patient: 'أحمد', date, time: '09:00', doctor: 'د. سلمى' }, '2026-10-01');
+    assert.equal(out.type, 'error', JSON.stringify(date));
+    assert.ok(out.message && out.message.length > 0);
+  }
+  assert.equal(hasValidAptDate('2026-10-14'), true);
+  assert.equal(hasValidAptDate(''), false);
 });
 
 test('aptSaveOutcome: no conflict and a patient name saves', () => {
