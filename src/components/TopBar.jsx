@@ -6,7 +6,6 @@
 import React from 'react';
 import { C } from '../modules/theme/index.js';
 import { useSyncStatus, dirtyKeys, syncKeyLabel, flushAll } from '../modules/sync/index.js';
-import { ThemeToggle, LangToggle } from './common.jsx';
 import { topBarSyncView, sessionDisplayText } from './topbar-model.js';
 import { t, useLang } from '../modules/i18n/index.js';
 
@@ -70,24 +69,11 @@ export default function TopBar({ backLabel, onBack, primary, onSearch, syncing, 
         </div>
       </div>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-        {!backLabel && <LangToggle />}
-        {!backLabel && <ThemeToggle />}
         {!backLabel && onSearch && (
           <div onClick={onSearch} title={t('g3.topbar.search', lang)} aria-label={t('g3.topbar.search', lang)} style={{
             width: 34, height: 34, borderRadius: 10, background: C.card, border: `1px solid ${C.border}`,
             display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 15
           }}>🔍</div>
-        )}
-        {!backLabel && session && (
-          <div
-            onClick={() => window.dispatchEvent(new CustomEvent('iapp-open-settings'))}
-            title={t('g3.topbar.settings', lang)}
-            aria-label={t('g3.topbar.settings', lang)}
-            style={{
-              width: 34, height: 34, borderRadius: 10, background: C.card, border: `1px solid ${C.border}`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 16, color: C.accent
-            }}
-          >⚙️</div>
         )}
         {!backLabel && onLogout && (
           <div onClick={onLogout} title={t('g3.topbar.logout', lang)} aria-label={t('g3.topbar.logout', lang)} style={{
