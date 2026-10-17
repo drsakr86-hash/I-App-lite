@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { C } from '../modules/theme/index.js';
-import { Chip } from './accounting/parts.jsx';
+import { TabBar, Segmented } from './accounting/parts.jsx';
 import { Modal } from '../components/common.jsx';
 import { CLINIC_FILTERS, localISO } from '../modules/constants/index.js';
 import { t, useLang, dirOf } from '../modules/i18n/index.js';
@@ -48,7 +48,12 @@ export default function Accounting({ visits, expenses, recurringExpenses, appoin
 
   return (
     <div style={{ padding: '16px 16px 90px', direction: dirOf(lang) }}>
-      <div style={{ color: C.text, fontWeight: 700, fontSize: 16, marginBottom: 12 }}>{t('g4.acc.title', lang)}</div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+        <div style={{ color: C.text, fontWeight: 700, fontSize: 17 }}>{t('g4.acc.title', lang)}</div>
+        {ready && tab === 'overview' && (
+          <div onClick={doPrint} style={{ color: C.accent, fontSize: 12, fontWeight: 700, cursor: 'pointer', padding: '4px 2px' }}>{t('g4.acc.printReport', lang)}</div>
+        )}
+      </div>
 
       {status.loading && <div style={{ color: C.muted, fontSize: 12, textAlign: 'center', padding: 20 }}>{t('g8.common.loading', lang)}</div>}
       {!status.loading && status.offline && <div style={{ color: C.gold, fontSize: 11, marginBottom: 8 }}>{t('g8.common.offline', lang)}</div>}
@@ -59,25 +64,22 @@ export default function Accounting({ visits, expenses, recurringExpenses, appoin
 
       {!status.loading && ready && (
         <>
-          <div style={{ display: 'flex', gap: 6, marginBottom: 10, overflowX: 'auto' }}>
-            {tabs.map(([id, k]) => <Chip key={id} active={tab === id} onClick={() => setTab(id)}>{t(k, lang)}</Chip>)}
-          </div>
+          <TabBar tabs={tabs.map(([id, k]) => [id, t(k, lang)])} value={tab} onChange={setTab} />
           {tab !== 'setup' && tab !== 'cash' && (
-            <>
-              <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-                {[['today', 'g4.acc.tabToday'], ['month', 'g4.acc.tabMonth'], ['all', 'g4.acc.tabAll']].map(([id, k]) => (
-                  <div key={id} onClick={() => setPeriod(id)} style={{
-                    flex: 1, textAlign: 'center', padding: '8px 6px', borderRadius: 10, cursor: 'pointer', fontSize: 12, fontWeight: 700,
-                    background: period === id ? C.accent : C.card, color: period === id ? C.bg : C.muted, border: `1px solid ${period === id ? C.accent : C.border}`
-                  }}>{t(k, lang)}</div>
-                ))}
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 14 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <Segmented value={period} onChange={setPeriod}
+                  options={[['today', t('g4.acc.tabToday', lang)], ['month', t('g4.acc.tabMonth', lang)], ['all', t('g4.acc.tabAll', lang)]]} />
               </div>
-              <div style={{ display: 'flex', gap: 6, marginBottom: 14, overflowX: 'auto', paddingBottom: 2 }}>
-                {CLINIC_FILTERS.map(c => <Chip key={c.v} color={C.teal} active={clinicFilter === c.v} onClick={() => setClinicFilter(c.v)}>{c.v === '' ? '🏥 ' : '📍 '}{tv(c.l)}</Chip>)}
-              </div>
-            </>
+              <select value={clinicFilter} onChange={e => setClinicFilter(e.target.value)} aria-label={t('g8.common.clinicFilter', lang)} style={{
+                flexShrink: 0, maxWidth: '42%', height: 38, padding: '0 8px', borderRadius: 10, fontSize: 12, fontWeight: 700,
+                background: C.card, color: clinicFilter ? C.teal : C.muted, border: `1px solid ${clinicFilter ? C.teal : C.border}`
+              }}>
+                {CLINIC_FILTERS.map(c => <option key={c.v} value={c.v}>{c.v === '' ? '🏥 ' : '📍 '}{tv(c.l)}</option>)}
+              </select>
+            </div>
           )}
-          {tab === 'overview' && <Overview state={state} filters={filters} onPrint={doPrint} />}
+          {tab === 'overview' && <Overview state={state} filters={filters} />}
           {tab === 'expenses' && <Expenses state={state} filters={filters} session={session} run={run} notify={notify} />}
           {tab === 'doctors' && <Doctors state={state} doctors={doctors} session={session} run={run} notify={notify} />}
           {tab === 'cash' && <Cash state={state} session={session} run={run} notify={notify} />}
