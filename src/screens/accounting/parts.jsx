@@ -50,12 +50,12 @@ export const Segmented = ({ options, value, onChange }) => (
 
 // One card holding many rows separated by hairlines, with an optional share bar under each row
 // (rows: [{key, label, minor}]). Replaces "one boxed card per row".
-export function RowList({ rows, color, limit = 5, moreLabel, lessLabel }) {
+export function RowList({ rows, color, limit = 5, moreLabel, lessLabel, bare }) {
   const [all, setAll] = useState(false);
   const shown = all ? rows : rows.slice(0, limit);
   const top = Math.max(1, ...rows.map(r => Math.abs(r.minor)));
   return (
-    <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, overflow: 'hidden' }}>
+    <div style={bare ? { borderTop: `1px solid ${C.border}` } : { background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, overflow: 'hidden' }}>
       {shown.map((r, i) => (
         <div key={r.key} style={{ padding: '9px 12px', borderTop: i ? `1px solid ${C.border}` : 'none' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
@@ -74,6 +74,26 @@ export function RowList({ rows, color, limit = 5, moreLabel, lessLabel }) {
           {all ? lessLabel : moreLabel}
         </div>
       )}
+    </div>
+  );
+}
+
+// Collapsible groups inside ONE card: every group is a single line (title + count + chevron) until tapped,
+// so a long list of breakdowns takes the space of a few lines.
+export function FoldList({ groups }) {
+  const [open, setOpen] = useState(null);
+  return (
+    <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, overflow: 'hidden' }}>
+      {groups.map((g, i) => (
+        <div key={g.id} style={{ borderTop: i ? `1px solid ${C.border}` : 'none' }}>
+          <div onClick={() => setOpen(open === g.id ? null : g.id)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '13px 14px', cursor: 'pointer' }}>
+            <span style={{ flex: 1, color: C.text, fontSize: 13, fontWeight: 700 }}>{g.title}</span>
+            <span style={{ color: C.muted, fontSize: 11 }}>{g.count}</span>
+            <span style={{ color: C.muted, fontSize: 11, transform: open === g.id ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }}>▾</span>
+          </div>
+          {open === g.id && g.body}
+        </div>
+      ))}
     </div>
   );
 }
