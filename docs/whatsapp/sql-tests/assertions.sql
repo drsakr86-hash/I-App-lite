@@ -249,11 +249,18 @@ do $t$ declare n int; c bigint; begin
   perform public.wa_staff_mark_read(c);
   perform pg_temp.eq((select unread_count from public.wa_conversations where id = c)::int, 0, 'mark read');
   update public.wa_config set enabled = not enabled; get diagnostics n = row_count; perform pg_temp.eq(n, 0, 'secretary update of config touches 0 rows (RLS)');
+  -- FAQ: secretary reads, cannot write; admin writes; doctor/anon see nothing
+  perform pg_temp.fails($$ insert into public.wa_faq (topic, answer) values ('تحضير', 'x') $$, 'row-level security', 'secretary cannot write FAQ');
   -- admin: config + audit
   perform set_config('test.jwt', '{"email":"admin@x.com"}', true);
   select count(*) into n from public.wa_config; perform pg_temp.eq(n, 1, 'admin reads config');
   select count(*) into n from public.wa_audit where actor in ('admin@x.com','sec@x.com') ; perform pg_temp.eq(n >= 2, true, 'staff actions are audited');
   update public.wa_config set ai_enabled = false;
+  insert into public.wa_faq (topic, answer, updated_by) values ('تحضير الفحص', 'احضر معك النظارة الطبية الحالية.', 'admin@x.com');
+  perform set_config('test.jwt', '{"email":"sec@x.com"}', true);
+  select count(*) into n from public.wa_faq; perform pg_temp.eq(n, 1, 'secretary reads FAQ');
+  perform set_config('test.jwt', '{"email":"doc@x.com"}', true);
+  select count(*) into n from public.wa_faq; perform pg_temp.eq(n, 0, 'doctor does not see FAQ admin data');
   reset role; perform set_config('test.jwt', '', true);
 end $t$;
 

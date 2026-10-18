@@ -17,7 +17,7 @@ drop function if exists
   public.wa_set_consent(text, boolean, boolean, text), public.wa_retry_pending_statuses(), public.wa_record_status_event(text, text, timestamptz, text, text),
   public.wa_apply_status(text, text, timestamptz, text, text), public.wa_ingest_echo(text, text, text, text, timestamptz),
   public.wa_ingest_inbound(text, text, text, text, text, timestamptz), public.wa_audit_add(text, text, bigint, bigint, jsonb), public.wa_norm_phone(text);
-drop table if exists public.wa_audit, public.wa_webhook_events, public.wa_messages, public.wa_conversations, public.wa_contacts, public.wa_config cascade;
+drop table if exists public.wa_faq, public.wa_audit, public.wa_webhook_events, public.wa_messages, public.wa_conversations, public.wa_contacts, public.wa_config cascade;
 drop function if exists public.wa_messages_after_insert();
 do $$ begin
   if to_regclass('public.wa_messages') is not null or to_regclass('public.wa_config') is not null then raise exception 'ABORT G1: tables still present. Nothing was changed.'; end if;

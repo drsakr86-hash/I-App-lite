@@ -44,10 +44,21 @@ create table public.wa_config (
   reminder_template     text,                                    -- approved UTILITY template name (3 body params: date, time, clinic)
   reminder_template_lang text   not null default 'ar',
   handoff_notice        text    not null default 'تم تحويل محادثتك للسكرتارية وسيتم الرد عليك في أقرب وقت.',
+  urgent_message        text,                                    -- clinic-approved urgent-symptom escalation text (sent as-is, never model-written)
   retention_days        int     not null default 180 check (retention_days between 30 and 3650),
   updated_at            timestamptz not null default now()
 );
 insert into public.wa_config (id) values (1);
+
+-- Clinic-approved answers (preparation instructions, policies, FAQs). The assistant answers ONLY from these + the live schedule/prices/doctors.
+create table public.wa_faq (
+  id          bigint generated always as identity primary key,
+  topic       text not null check (char_length(topic) between 2 and 80),
+  answer      text not null check (char_length(answer) between 2 and 1200),
+  active      boolean not null default true,
+  updated_by  text,
+  updated_at  timestamptz not null default now()
+);
 
 create table public.wa_contacts (
   id                 bigint generated always as identity primary key,
@@ -141,16 +152,18 @@ create index wa_audit_at_ix on public.wa_audit (at desc);
 
 -- ---------------------------------------------------------------------------------------------------------------- RLS
 alter table public.wa_config         enable row level security;
+alter table public.wa_faq            enable row level security;
 alter table public.wa_contacts       enable row level security;
 alter table public.wa_conversations  enable row level security;
 alter table public.wa_messages       enable row level security;
 alter table public.wa_webhook_events enable row level security;
 alter table public.wa_audit          enable row level security;
 
-revoke all on public.wa_config, public.wa_contacts, public.wa_conversations, public.wa_messages, public.wa_webhook_events, public.wa_audit
+revoke all on public.wa_config, public.wa_faq, public.wa_contacts, public.wa_conversations, public.wa_messages, public.wa_webhook_events, public.wa_audit
   from public, anon, authenticated;
 grant select on public.wa_contacts, public.wa_conversations, public.wa_messages to authenticated;
 grant select, update on public.wa_config to authenticated;
+grant select, insert, update, delete on public.wa_faq to authenticated;
 grant select on public.wa_audit to authenticated;
 
 create policy wa_contacts_staff      on public.wa_contacts      for select to authenticated using (public.iapp_has_role(array['admin', 'secretary']));
@@ -158,6 +171,10 @@ create policy wa_conversations_staff on public.wa_conversations for select to au
 create policy wa_messages_staff      on public.wa_messages      for select to authenticated using (public.iapp_has_role(array['admin', 'secretary']));
 create policy wa_config_admin_sel    on public.wa_config       for select to authenticated using (public.iapp_has_role(array['admin']));
 create policy wa_config_admin_upd    on public.wa_config       for update to authenticated using (public.iapp_has_role(array['admin'])) with check (public.iapp_has_role(array['admin']));
+create policy wa_faq_read            on public.wa_faq          for select to authenticated using (public.iapp_has_role(array['admin', 'secretary']));
+create policy wa_faq_admin_ins       on public.wa_faq          for insert to authenticated with check (public.iapp_has_role(array['admin']));
+create policy wa_faq_admin_upd       on public.wa_faq          for update to authenticated using (public.iapp_has_role(array['admin'])) with check (public.iapp_has_role(array['admin']));
+create policy wa_faq_admin_del       on public.wa_faq          for delete to authenticated using (public.iapp_has_role(array['admin']));
 create policy wa_audit_admin         on public.wa_audit        for select to authenticated using (public.iapp_has_role(array['admin']));
 -- wa_webhook_events: no policy => invisible to every client role (service_role bypasses RLS).
 

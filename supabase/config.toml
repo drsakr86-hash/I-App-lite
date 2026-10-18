@@ -1,0 +1,8 @@
+# Edge Function settings. The webhook is called by Meta (no Supabase JWT) and the worker by pg_cron: both authenticate themselves
+# (HMAC signature / shared secret). whatsapp-send keeps JWT verification and also re-checks the staff role.
+[functions.whatsapp-webhook]
+verify_jwt = false
+[functions.whatsapp-worker]
+verify_jwt = false
+[functions.whatsapp-send]
+verify_jwt = true
