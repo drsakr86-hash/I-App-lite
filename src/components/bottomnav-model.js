@@ -8,6 +8,7 @@ export const NAV = [
   { id: 'appointments', labelKey: 'g3.nav.appointments', label: 'المواعيد', icon: '📋' },
   { id: 'radiology', labelKey: 'g3.nav.radiology', label: 'Investigation Orders', icon: 'xray', inMore: true },
   { id: 'imaging', labelKey: 'g3.nav.imaging', label: 'مركز الصور', icon: '🖼️', inMore: true },
+  { id: 'whatsapp', labelKey: 'g9.wa.title', label: 'واتساب', icon: '💬', inMore: true, adminOnly: true },
   { id: 'accounting', labelKey: 'g3.nav.accounting', label: 'المحاسبة', icon: '💰', adminOnly: true }
 ];
 

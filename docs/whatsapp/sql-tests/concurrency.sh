@@ -19,7 +19,7 @@ ROWS=$($P -c "select count(*) from public.iapp_appointments where phone='0109999
 $P -c "truncate public.iapp_appointments; update public.wa_config set enabled=true, reminders_enabled=true, reminder_template='apt_reminder';
  select public.wa_ingest_inbound('201055555555','Test','wamid.C3','text','hi',now());
  select public.wa_set_consent('201055555555', true, false, 'chat');
- insert into public.iapp_appointments(id,patient,phone,date,time,clinic,doctor) values (9001,'اختبار','01055555555',(now() at time zone 'Africa/Cairo')::date, to_char((now() at time zone 'Africa/Cairo') + interval '90 minutes','HH24:MI'),'دمنهور','د. عبدالستار');" >/dev/null
+ insert into public.iapp_appointments(id,patient,phone,date,time,clinic,doctor) values (9001,'اختبار','01055555555',((now() at time zone 'Africa/Cairo') + interval '90 minutes')::date, to_char((now() at time zone 'Africa/Cairo') + interval '90 minutes','HH24:MI'),'دمنهور','د. عبدالستار');" >/dev/null
 for i in $(seq 1 8); do ( $P -c "set role service_role; select public.wa_enqueue_reminders()" > "$D/c3_$i" ) & done; wait
 Q=$($P -c "select count(*) from public.wa_messages where purpose='reminder'")
 [ "$Q" = 1 ] && echo "NOTICE:  C3 8 overlapping reminder runs -> exactly 1 reminder queued: ok" || { echo "ERROR:  C3 reminders=$Q"; exit 1; }

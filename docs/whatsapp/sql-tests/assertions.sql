@@ -174,7 +174,7 @@ do $$ declare n int; apt bigint := 7001; t text; begin
   perform pg_temp.eq((select kind || '/' || template_name || '/' || (template_params ->> 2) from public.wa_messages where purpose = 'reminder'), 'template/apt_reminder/دمنهور', 'template message with clinic param');
   perform pg_temp.eq((select template_params ->> 1 from public.wa_messages where purpose = 'reminder'), t, 'time param');
   -- moved appointment: the queued reminder is withdrawn, a new one is created for the new time
-  update public.iapp_appointments set time = to_char((now() at time zone 'Africa/Cairo') + interval '110 minutes', 'HH24:MI') where id = apt;
+  update public.iapp_appointments set date = ((now() at time zone 'Africa/Cairo') + interval '110 minutes')::date, time = to_char((now() at time zone 'Africa/Cairo') + interval '110 minutes', 'HH24:MI') where id = apt;
   set local role service_role; perform public.wa_enqueue_reminders(); reset role;
   perform pg_temp.eq((select count(*) from public.wa_messages where purpose = 'reminder' and status = 'cancelled')::int, 1, 'moved appointment => old reminder cancelled');
   perform pg_temp.eq((select count(*) from public.wa_messages where purpose = 'reminder' and status = 'queued')::int, 1, 'moved appointment => one new reminder');

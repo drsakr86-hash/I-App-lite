@@ -22,6 +22,7 @@ import WaitingRoom from "./WaitingRoom.jsx";
 import Prescriptions from "./Prescriptions.jsx";
 import { retryImport } from '../app/chunk-recovery.js';
 const Radiology = lazy(() => retryImport(() => import("./Radiology.jsx")));
+const WhatsAppInbox = lazy(() => retryImport(() => import("./WhatsAppInbox.jsx")));
 const ImagingCenter = lazy(() => retryImport(() => import("./ImagingCenter.jsx")));
 const Accounting = lazy(() => retryImport(() => import("./Accounting.jsx")));
 const Settings = lazy(() => retryImport(() => import("./Settings.jsx")));
@@ -178,7 +179,7 @@ export default function App() {
     } catch { /* storage unavailable (private mode / quota): non-fatal */ }
   };
   if (!session) return <LoginScreen onLogin={handleLogin} />;
-  const effectiveTab = tab === "accounting" && session.role !== "admin" ? "dashboard" : tab;
+  const effectiveTab = (tab === "accounting" || tab === "whatsapp") && session.role !== "admin" ? "dashboard" : tab;
   if (!pR || !aR || !rR || !eR || !vR || !dR || !prR || !ctR || !clR || !exR || !reR) {
     return (
       <div style={{ minHeight: "100vh", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center", direction: dirOf(lang), fontFamily: "'Segoe UI','Tahoma',Arial,sans-serif" }}>
@@ -238,6 +239,7 @@ export default function App() {
     radiology: React.createElement(Radiology, {
       patients, customTests, setCustomTests, setExams, primary, clinic
     }),
+    whatsapp: session && session.role === 'admin' ? React.createElement(WhatsAppInbox, { session }) : null,
     imaging: React.createElement(ImagingCenter, {
       patients, primary, clinic
     }),
