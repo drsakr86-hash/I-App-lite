@@ -3,7 +3,7 @@
 import { getSB } from '../data-access/index.js';
 import { isNotInstalled } from './model.js';
 
-const functionsUrl = () => String(sb().supabaseUrl || '').replace(/\/$/, '') + '/functions/v1/whatsapp-send';
+const functionsUrl = () => String(sb().supabaseUrl || '').replace(/\/$/, '') + '/functions/v1/hyper-responder';
 const sb = () => { const c = getSB(); if (!c) throw new Error('offline'); return c; };
 const wrap = r => { if (r.error) { const e = new Error(r.error.message); e.code = r.error.code; throw e; } return r.data; };
 

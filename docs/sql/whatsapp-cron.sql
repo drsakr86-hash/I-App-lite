@@ -4,7 +4,7 @@
 -- Step 2: replace <PROJECT_REF> below, then run.
 select cron.schedule('wa-worker', '* * * * *', $$
   select net.http_post(
-    url := 'https://<PROJECT_REF>.supabase.co/functions/v1/whatsapp-worker',
+    url := 'https://<PROJECT_REF>.supabase.co/functions/v1/quick-task',
     headers := jsonb_build_object('x-worker-secret', (select decrypted_secret from vault.decrypted_secrets where name = 'wa_worker_secret')),
     timeout_milliseconds := 55000);
 $$);

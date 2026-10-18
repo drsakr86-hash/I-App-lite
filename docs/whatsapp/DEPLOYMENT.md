@@ -26,3 +26,12 @@
 5. حذف الوظائف: `supabase functions delete whatsapp-webhook whatsapp-worker whatsapp-send`.
 6. إزالة البيانات: `docs/sql/whatsapp-assistant-rollback.sql` (يحذف كائنات `wa_*` فقط؛ **لا يلمس المواعيد** — الحجوزات التي أنشأها المساعد تبقى مواعيد عادية). مُختبر محلياً: «rollback: clean».
 7. الواجهة: إرجاع الفرع/الـ commit على GitHub Pages.
+
+## أسماء الوظائف الفعلية على الإنتاج (النشر من لوحة Supabase يولّد أسماء عشوائية)
+| الاسم على Supabase | الدور | Verify JWT |
+|---|---|---|
+| `swift-worker` | whatsapp-webhook (استقبال Meta) | OFF |
+| `quick-task` | whatsapp-worker (معالجة + إرسال) | OFF |
+| `hyper-responder` | whatsapp-send (رد السكرتارية؛ يتحقق من المستخدم والدور داخل الكود) | OFF |
+* رابط الـ Webhook: `https://mofdveiwlaymlabvsypu.supabase.co/functions/v1/swift-worker`
+* سر إضافي: `WORKER_FUNCTION=quick-task` (لتسريع المعالجة؛ الـ cron يغطي لو غاب).

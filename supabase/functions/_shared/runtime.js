@@ -13,6 +13,6 @@ export const makeLlm = () => env('ANTHROPIC_API_KEY') ? createAnthropicClient({ 
 export const log = (event, data) => console.log(JSON.stringify({ event, ...data }));
 // Fire-and-forget call to the worker so a reply does not wait for the next cron tick (the cron run is the safety net).
 export function kickWorker() {
-  const p = fetch(env('SUPABASE_URL') + '/functions/v1/whatsapp-worker', { method: 'POST', headers: { 'x-worker-secret': env('WORKER_SECRET') } }).catch(() => {});
+  const p = fetch(env('SUPABASE_URL') + '/functions/v1/' + (env('WORKER_FUNCTION') || 'whatsapp-worker') + '', { method: 'POST', headers: { 'x-worker-secret': env('WORKER_SECRET') } }).catch(() => {});
   try { (globalThis.EdgeRuntime && EdgeRuntime.waitUntil) ? EdgeRuntime.waitUntil(p) : void p; } catch { /* ignore */ }
 }
