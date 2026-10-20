@@ -24,6 +24,7 @@ import { waOpen, waReminderText } from "../modules/notifications/index.js";
 import WaitingRoom from "./WaitingRoom.jsx";
 import { t, useLang, dirOf } from "../modules/i18n/index.js";
 import { tv } from "../modules/i18n/tv.js";
+import WhatsAppInbox from "./WhatsAppInbox.jsx";
 
 const clinicName = c => tv(clinicLabel(c));
 
@@ -352,7 +353,8 @@ export default function SecretaryApp() {
           { id: "apts", icon: "📋", label: t("g5.sec.tabApts", lang) },
           { id: "requests", icon: "📨", label: requestsTabLabel(requests.length) },
           { id: "waiting", icon: "⏳", label: t("g5.sec.tabWaiting", lang) },
-          { id: "stats", icon: "📊", label: t("g5.sec.tabStats", lang) }
+          { id: "stats", icon: "📊", label: t("g5.sec.tabStats", lang) },
+          { id: "whatsapp", icon: "💬", label: t("g9.wa.title", lang) }
         ].map(tb => (
           <div key={tb.id} onClick={() => setTab(tb.id)} style={{ flex: 1, textAlign: "center", padding: "9px 4px", cursor: "pointer", borderBottom: tab === tb.id ? "2px solid " + C.accent : "2px solid transparent", color: tab === tb.id ? C.accent : C.muted, fontSize: 10, fontWeight: tab === tb.id ? 700 : 400, transition: "all 0.2s" }}>
             <div style={{ fontSize: 15 }}>{tb.icon}</div>
@@ -494,6 +496,7 @@ export default function SecretaryApp() {
         </div>
       )}
 
+      {tab === "whatsapp" && <WhatsAppInbox session={session} />}
       {tab === "stats" && (
         <div style={{ flex: 1, overflowY: "auto", padding: "16px 16px 80px" }}>
           <div style={{ color: C.text, fontWeight: 700, fontSize: 16, marginBottom: 16 }}>{t("g5.sec.statsTitle", lang)}</div>
