@@ -35,3 +35,7 @@
 | `hyper-responder` | whatsapp-send (رد السكرتارية؛ يتحقق من المستخدم والدور داخل الكود) | OFF |
 * رابط الـ Webhook: `https://mofdveiwlaymlabvsypu.supabase.co/functions/v1/swift-worker`
 * سر إضافي: `WORKER_FUNCTION=quick-task` (لتسريع المعالجة؛ الـ cron يغطي لو غاب).
+
+
+## تنبيه: تغيير رقم الإرسال
+عند تغيير الرقم يجب تحديث **ثلاثة** أشياء معاً: `wa_config.phone_number_id` (فلتر الاستقبال)، وSecret `META_PHONE_NUMBER_ID` (الإرسال)، وتعيين حساب واتساب (WABA) الجديد لمستخدم النظام صاحب التوكن. نسيان الثاني يسبّب `131030` عند الإرسال (حدث فعلاً 2026-10-21).
