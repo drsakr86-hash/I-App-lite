@@ -8,6 +8,7 @@ import {
   filterConversations, FILTERS, ownerOf, windowOpen, windowLeftMin, deliveryKey, canRetry, isUncertain, bookingState, newClientId, maskWa
 } from '../modules/whatsapp/model.js';
 import * as svc from '../modules/whatsapp/service.js';
+import { QUICK_REPLIES, applyQuickReply } from '../modules/whatsapp/quickReplies.js';
 
 const POLL_MS = 5000;
 const pill = (color, text, key) => <span key={key} style={{ background: color + '22', color, border: '1px solid ' + color + '44', borderRadius: 20, padding: '2px 8px', fontSize: 10, fontWeight: 700, whiteSpace: 'nowrap' }}>{text}</span>;
@@ -136,6 +137,9 @@ export default function WhatsAppInbox({ session }) {
 
           {err && <div role="alert" style={{ color: C.danger, fontSize: 12 }}>{err}</div>}
           {!open && owner !== 'closed' && <div style={{ color: C.muted, fontSize: 12, lineHeight: 1.7 }}>{t('g9.wa.windowClosed', lang)}</div>}
+          {open && <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2 }} aria-label="ردود جاهزة">
+            {QUICK_REPLIES.map(q => <button key={q.id} type="button" disabled={busy} onClick={() => setDraft(d => applyQuickReply(d, q.text))} style={btn({ whiteSpace: 'nowrap', padding: '4px 10px', fontSize: 11, borderRadius: 20 })}>{q.label}</button>)}
+          </div>}
           <div style={{ display: 'flex', gap: 6 }}>
             <textarea value={draft} onChange={e => setDraft(e.target.value)} rows={2} maxLength={4000} disabled={!open || busy} placeholder={t('g9.wa.placeholder', lang)} aria-label={t('g9.wa.placeholder', lang)} style={{ flex: 1, background: C.card, border: '1px solid ' + C.border, borderRadius: 10, padding: '8px 10px', color: C.text, fontFamily: 'inherit', fontSize: 13, resize: 'none' }} />
             <button onClick={send} disabled={!open || busy || !draft.trim()} style={btn({ background: C.accent, color: C.bg, borderColor: C.accent, opacity: (!open || busy || !draft.trim()) ? 0.5 : 1 })}>{busy ? t('g9.wa.sending', lang) : t('g9.wa.send', lang)}</button>
