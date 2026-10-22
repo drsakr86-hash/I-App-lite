@@ -9,3 +9,7 @@ select cron.schedule('wa-worker', '* * * * *', $$
     timeout_milliseconds := 55000);
 $$);
 -- Rollback: select cron.unschedule('wa-worker');
+
+-- Daily retention purge (applied on production 2026-10-22). Deletes wa_messages older than wa_config.retention_days (180),
+-- webhook events older than 14 days, orphan conversations. The privacy policy (public/privacy.html) promises this deletion.
+select cron.schedule('wa-purge', '30 1 * * *', $$ select public.wa_purge() $$);
