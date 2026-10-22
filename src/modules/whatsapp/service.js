@@ -41,3 +41,11 @@ export async function sendManual(conversationId, text, clientId) {
   if (!res.ok) { const e = new Error(body.message || body.error || 'send failed'); e.status = res.status; e.code = body.error; throw e; }
   return body;
 }
+
+// Cheap poll for the unread badge: only conversations that have unread patient messages. Never throws (the badge is best-effort).
+export async function loadUnreadCount() {
+  try {
+    const rows = wrap(await sb().from('wa_conversations').select('id,unread_count').gt('unread_count', 0).limit(200)) || [];
+    return rows.length;
+  } catch { return 0; }
+}

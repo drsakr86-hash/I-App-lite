@@ -43,3 +43,10 @@ export function maskWa(wa) { const s = String(wa || ''); return s.length > 6 ? s
 
 // The tables may not exist yet (migration not applied): treat these errors as "feature not enabled", not as a failure.
 export const isNotInstalled = e => !!e && (e.code === '42P01' || e.code === 'PGRST205' || /relation .*wa_.* does not exist|Could not find the table/i.test(String(e.message || '')));
+
+// Unread badge: number of conversations that have unread patient messages, and the tab label that shows it.
+export const unreadConversationCount = rows => (Array.isArray(rows) ? rows : []).filter(c => c && c.unread_count > 0).length;
+export const waTabLabel = (base, n) => String(base) + (n > 0 ? ' (' + n + ')' : '');
+export const withTitleBadge = (title, n) => (n > 0 ? '(' + n + ') ' : '') + String(title).replace(/^\(\d+\)\s*/, '');
+// First reading never alerts (the page just opened); later readings alert only when the count goes up.
+export const unreadIncreased = (prev, next) => prev !== null && next > prev;
