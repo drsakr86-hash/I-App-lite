@@ -7,7 +7,7 @@ const POLL_MS = 15000;
 export function useWaUnread(enabled) {
   const [count, setCount] = useState(0);
   const prev = useRef(null);
-  const baseTitle = useRef(typeof document !== 'undefined' ? document.title.replace(/^\(\d+\)\s*/, '') : '');
+  const baseTitle = useRef(typeof document !== 'undefined' ? String(document.title || '').replace(/^\(\d+\)\s*/, '') : '');
   useEffect(() => {
     if (!enabled) { prev.current = null; setCount(0); return undefined; }
     let alive = true;
@@ -23,8 +23,8 @@ export function useWaUnread(enabled) {
   }, [enabled]);
   useEffect(() => {
     if (typeof document === 'undefined') return undefined;
-    document.title = withTitleBadge(baseTitle.current, count);
-    return () => { document.title = baseTitle.current; };
+    try { document.title = withTitleBadge(baseTitle.current, count); } catch { /* no DOM */ }
+    return () => { try { document.title = baseTitle.current; } catch { /* no DOM */ } };
   }, [count]);
   return count;
 }
