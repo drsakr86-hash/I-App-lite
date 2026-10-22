@@ -25,6 +25,7 @@ import WaitingRoom from "./WaitingRoom.jsx";
 import { t, useLang, dirOf } from "../modules/i18n/index.js";
 import { tv } from "../modules/i18n/tv.js";
 import WhatsAppInbox from "./WhatsAppInbox.jsx";
+import ClinicChatIcon from "../components/ClinicChatIcon.jsx";
 import { useWaUnread } from "../modules/whatsapp/useWaUnread.js";
 import { waTabLabel } from "../modules/whatsapp/model.js";
 
@@ -357,7 +358,7 @@ export default function SecretaryApp() {
           { id: "requests", icon: "📨", label: requestsTabLabel(requests.length) },
           { id: "waiting", icon: "⏳", label: t("g5.sec.tabWaiting", lang) },
           { id: "stats", icon: "📊", label: t("g5.sec.tabStats", lang) },
-          { id: "whatsapp", icon: "💬", label: waTabLabel(t("g9.wa.title", lang), waUnread) }
+          { id: "whatsapp", icon: <ClinicChatIcon size={16} color={tab === "whatsapp" ? C.accent : C.muted} />, label: waTabLabel(t("g9.wa.title", lang), waUnread) }
         ].map(tb => (
           <div key={tb.id} onClick={() => setTab(tb.id)} style={{ flex: 1, textAlign: "center", padding: "9px 4px", cursor: "pointer", borderBottom: tab === tb.id ? "2px solid " + C.accent : "2px solid transparent", color: tab === tb.id ? C.accent : C.muted, fontSize: 10, fontWeight: tab === tb.id ? 700 : 400, transition: "all 0.2s" }}>
             <div style={{ fontSize: 15 }}>{tb.icon}</div>

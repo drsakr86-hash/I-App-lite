@@ -4,6 +4,7 @@
 import React from 'react';
 import { C } from '../modules/theme/index.js';
 import { XRAY_ICON } from '../modules/ui/atoms.jsx';
+import ClinicChatIcon from './ClinicChatIcon.jsx';
 import { primaryNavItems, moreNavItems, isMoreActive, MORE_ID } from './bottomnav-model.js';
 import { ThemeToggle, LangToggle } from './common.jsx';
 import { t, useLang } from '../modules/i18n/index.js';
@@ -11,6 +12,7 @@ import { t, useLang } from '../modules/i18n/index.js';
 const NAV_HEIGHT = 64;
 
 function NavIcon({ item, on }) {
+  if (item.icon === 'clinicchat') return <ClinicChatIcon size={24} color={on ? C.accent : C.muted} />;
   return item.icon === 'xray' ? (
     <img
       src={XRAY_ICON}
