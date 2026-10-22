@@ -21,6 +21,7 @@ import Appointments from "./Appointments.jsx";
 import WaitingRoom from "./WaitingRoom.jsx";
 import Prescriptions from "./Prescriptions.jsx";
 import { retryImport } from '../app/chunk-recovery.js';
+import { useWaUnread } from '../modules/whatsapp/useWaUnread.js';
 const Radiology = lazy(() => retryImport(() => import("./Radiology.jsx")));
 const WhatsAppInbox = lazy(() => retryImport(() => import("./WhatsAppInbox.jsx")));
 const ImagingCenter = lazy(() => retryImport(() => import("./ImagingCenter.jsx")));
@@ -54,6 +55,7 @@ export default function App() {
     setUsersState(list);
   };
   const [tab, setTab] = useState("dashboard");
+  useWaUnread(!!session && session.role === "admin"); // WhatsApp unread count in the browser tab title (admin only)
   const [patOpenId, setPatOpenId] = useState(null);
   const [patNewName, setPatNewName] = useState("");
   const [showAlerts, setShowAlerts] = useState(false);
