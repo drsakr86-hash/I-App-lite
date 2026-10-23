@@ -11,7 +11,12 @@ export function createAnthropicClient({ apiKey, model = 'claude-haiku-5-5', fetc
           headers: { 'content-type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
           body: JSON.stringify({ model, max_tokens: maxTokens, temperature: 0.2, system, messages, tools })
         });
-        if (!res.ok) throw new Error('llm http ' + res.status);
+        if (!res.ok) {
+          // Add Anthropic's error type + message (never the key or the request) so a 400 can be diagnosed from wa_messages.process_error.
+          let detail = '';
+          try { const j = JSON.parse(await res.text()); const e = j && j.error; if (e) detail = ': ' + [e.type, e.message].filter(Boolean).join(' - ').replace(/\s+/g, ' ').slice(0, 220); } catch { /* body not JSON */ }
+          throw new Error('llm http ' + res.status + detail);
+        }
         const json = await res.json();
         if (!json || !Array.isArray(json.content)) throw new Error('llm: unexpected response');
         return { content: json.content, stop_reason: json.stop_reason };
