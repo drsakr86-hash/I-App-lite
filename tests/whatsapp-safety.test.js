@@ -38,3 +38,15 @@ test('chunkText never exceeds the limit', () => { for (const c of chunkText('ك�
 test('normArabic stays in sync with the app (patients/list.js)', () => {
   for (const s of ['أحمد  إبراهيم', 'مَنَى', 'فاطمة', 'علي']) assert.equal(normArabic(s), appNorm(s));
 });
+
+import { createAnthropicClient } from '../supabase/functions/_shared/llm.js';
+test('llm client: API error body is surfaced (type + message) without the key', async () => {
+  const fetchImpl = async () => ({ ok: false, status: 400, text: async () => JSON.stringify({ type: 'error', error: { type: 'invalid_request_error', message: 'temperature is not supported' } }) });
+  const c = createAnthropicClient({ apiKey: 'sk-test-secret', fetchImpl });
+  await assert.rejects(() => c.complete({ system: 's', messages: [], tools: [] }), e => e.message === 'llm http 400: invalid_request_error - temperature is not supported' && !e.message.includes('sk-test-secret'));
+});
+test('llm client: non-JSON error body still gives the status only', async () => {
+  const fetchImpl = async () => ({ ok: false, status: 502, text: async () => '<html>bad gateway</html>' });
+  const c = createAnthropicClient({ apiKey: 'k', fetchImpl });
+  await assert.rejects(() => c.complete({ system: 's', messages: [], tools: [] }), e => e.message === 'llm http 502');
+});
