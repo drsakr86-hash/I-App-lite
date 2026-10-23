@@ -9,7 +9,7 @@ export function createAnthropicClient({ apiKey, model = 'claude-haiku-5-5', fetc
         const res = await fetchImpl('https://api.anthropic.com/v1/messages', {
           method: 'POST', signal: ctl.signal,
           headers: { 'content-type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-          body: JSON.stringify({ model, max_tokens: maxTokens, temperature: 0.2, system, messages, tools })
+          body: JSON.stringify({ model, max_tokens: maxTokens, system, messages, tools })
         });
         if (!res.ok) {
           // Add Anthropic's error type + message (never the key or the request) so a 400 can be diagnosed from wa_messages.process_error.
