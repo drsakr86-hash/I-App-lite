@@ -22,6 +22,8 @@ import WaitingRoom from "./WaitingRoom.jsx";
 import Prescriptions from "./Prescriptions.jsx";
 import { retryImport } from '../app/chunk-recovery.js';
 import { useWaUnread } from '../modules/whatsapp/useWaUnread.js';
+import { useWaWaiting } from '../modules/whatsapp/useWaWaiting.js';
+import WaWaitingBanner from '../components/WaWaitingBanner.jsx';
 const Radiology = lazy(() => retryImport(() => import("./Radiology.jsx")));
 const WhatsAppInbox = lazy(() => retryImport(() => import("./WhatsAppInbox.jsx")));
 const ImagingCenter = lazy(() => retryImport(() => import("./ImagingCenter.jsx")));
@@ -56,6 +58,7 @@ export default function App() {
   };
   const [tab, setTab] = useState("dashboard");
   useWaUnread(!!session && session.role === "admin"); // WhatsApp unread count in the browser tab title (admin only)
+  const waWaiting = useWaWaiting(!!session && session.role === "admin");
   const [patOpenId, setPatOpenId] = useState(null);
   const [patNewName, setPatNewName] = useState("");
   const [showAlerts, setShowAlerts] = useState(false);
@@ -257,6 +260,7 @@ export default function App() {
     <div style={{ minHeight: "100vh", background: C.bg, display: "flex", justifyContent: "center", alignItems: "flex-start" }}>
       <div style={{ width: "100%", maxWidth: "none", minHeight: "100vh", background: C.bg, direction: dirOf(lang), fontFamily: "'Segoe UI','Tahoma',Arial,sans-serif", position: "relative", overflowX: "hidden" }}>
         <TopBar primary={primary} onSearch={() => setShowSearch(true)} syncing={syncing} session={session} onLogout={handleLogout} />
+        {session.role === "admin" && effectiveTab !== "whatsapp" && <WaWaitingBanner summary={waWaiting} onOpen={() => setTab("whatsapp")} />}
         <div style={{ overflowY: "auto", maxHeight: "calc(100vh - 128px)", animation: "slideUp 0.25s ease" }}>
           <Suspense fallback={<LazyFallback />}>{screens[effectiveTab]}</Suspense>
         </div>

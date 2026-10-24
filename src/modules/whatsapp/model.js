@@ -50,3 +50,23 @@ export const waTabLabel = (base, n) => String(base) + (n > 0 ? ' (' + n + ')' : 
 export const withTitleBadge = (title, n) => (n > 0 ? '(' + n + ') ' : '') + String(title).replace(/^\(\d+\)\s*/, '');
 // First reading never alerts (the page just opened); later readings alert only when the count goes up.
 export const unreadIncreased = (prev, next) => prev !== null && next > prev;
+
+// Chats waiting for a person: handed over to staff (or assistant off) and the patient has unread messages. Oldest wait in whole minutes.
+export function waitingSummary(rows, now = Date.now()) {
+  const w = (Array.isArray(rows) ? rows : []).filter(c => c && c.status === 'handoff' && c.unread_count > 0);
+  const times = w.map(c => new Date(c.last_inbound_at || c.last_message_at || now).getTime()).filter(Number.isFinite);
+  return { count: w.length, oldestMin: times.length ? Math.max(0, Math.floor((now - Math.min(...times)) / 60000)) : 0 };
+}
+// Banner text: count + oldest wait (Arabic, short).
+export const waitingBannerText = ({ count, oldestMin }) => count > 0
+  ? (count === 1 ? 'محادثة واتساب واحدة تنتظر السكرتارية' : count + ' محادثات واتساب تنتظر السكرتارية') + (oldestMin >= 1 ? ' — أقدمها من ' + oldestMin + ' دقيقة' : '')
+  : '';
+
+// Admin error panel: merges the three places failures are recorded into one newest-first list (no secrets, no message text).
+export function buildErrorRows({ audits = [], failed = [], retrying = [] } = {}) {
+  const rows = [];
+  for (const a of audits) { const d = a && a.detail || {}; rows.push({ key: 'a' + a.id, at: a.at, kind: 'ai', conv: a.conversation_id, text: String(d.error || 'ai_error') + (d.attempts ? ' (' + d.attempts + ')' : '') }); }
+  for (const m of failed) rows.push({ key: 'f' + m.id, at: m.created_at, kind: 'meta', conv: m.conversation_id, text: [m.error_code, m.error_detail].filter(Boolean).join(' — ') || 'failed' });
+  for (const m of retrying) rows.push({ key: 'r' + m.id, at: m.created_at, kind: 'process', conv: m.conversation_id, text: String(m.process_error || '') });
+  return rows.sort((x, y) => new Date(y.at) - new Date(x.at)).slice(0, 50);
+}
