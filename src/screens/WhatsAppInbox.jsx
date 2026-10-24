@@ -50,6 +50,15 @@ export default function WhatsAppInbox({ session }) {
   const shown = useMemo(() => filterConversations(state.rows, { filter, search, me, failedIds: state.failedIds }), [state.rows, state.failedIds, filter, search, me]);
   const act = async fn => { setErr(''); try { await fn(); await loadList(); await loadThread(); } catch (e) { logError('whatsapp.act', e); setErr(e.message || t('g9.wa.error', lang)); } };
 
+  const removeConv = async () => {
+    if (!sel) return;
+    if (owner === 'ai') { setErr(t('g9.wa.deleteActive', lang)); return; }
+    if (!window.confirm(t('g9.wa.deleteConfirm', lang))) return;
+    setErr('');
+    try { await svc.deleteConv(sel.id); setSelId(null); await loadList(); }
+    catch (e) { logError('whatsapp.delete', e); setErr(/conversation_active/.test(String(e && e.message)) ? t('g9.wa.deleteActive', lang) : (e.message || t('g9.wa.error', lang))); }
+  };
+
   const send = async () => {
     const text = draft.trim(); if (!text || !sel || busy) return;
     setBusy(true); setErr('');
@@ -114,6 +123,7 @@ export default function WhatsAppInbox({ session }) {
             {owner === 'human' && <button style={btn({ borderColor: C.teal, color: C.teal })} onClick={() => act(() => svc.returnToAi(sel.id))}>{t('g9.wa.returnAi', lang)}</button>}
             {sel.assigned_to !== me ? <button style={btn()} onClick={() => act(() => svc.assign(sel.id, me))}>{t('g9.wa.assign', lang)}</button> : <button style={btn()} onClick={() => act(() => svc.assign(sel.id, null))}>{t('g9.wa.unassign', lang)}</button>}
             {owner !== 'closed' && <button style={btn()} onClick={() => act(() => svc.closeConv(sel.id))}>{t('g9.wa.close', lang)}</button>}
+            {session && session.role === 'admin' && <button style={btn({ borderColor: C.danger, color: C.danger })} onClick={removeConv}>{'🗑 ' + t('g9.wa.delete', lang)}</button>}
           </div>
           <div style={{ fontSize: 11, color: C.muted }}>{owner === 'ai' ? t('g9.wa.aiOn', lang) : t('g9.wa.aiOff', lang)}{sel.assigned_to ? ' · ' + t('g9.wa.assignedTo', lang, { n: sel.assigned_to.split('@')[0] }) : ''}{open ? ' · ' + t('g9.wa.windowLeft', lang, { m: windowLeftMin(sel) }) : ''}</div>
 

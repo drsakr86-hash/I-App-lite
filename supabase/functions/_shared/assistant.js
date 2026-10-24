@@ -202,7 +202,7 @@ export async function processConversation(env) {
     }
   } catch (e) {
     env.log && env.log('llm_error', { err: String(e && e.message || e).slice(0, 120), attempts: env.attempts });
-    if ((env.attempts || 1) >= 3) { await store.handoff(conv.id, 'ai_error', false); await send(MSG.aiProblem, 'system', 'handoff', 'e'); return done(); }
+    if ((env.attempts || 1) >= 3) { try { await store.audit('ai', 'ai_error', conv.id, { error: String(e && e.message || e).slice(0, 220), attempts: env.attempts }); } catch (_) { /* never block the handoff */ } await store.handoff(conv.id, 'ai_error', false); await send(MSG.aiProblem, 'system', 'handoff', 'e'); return done(); }
     await store.markProcessed(conv.id, last.id, 'llm: ' + String(e && e.message || e).slice(0, 200));   // released for a retry by the worker
     return { ok: false, retry: true };
   }
