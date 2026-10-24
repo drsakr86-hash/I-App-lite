@@ -16,7 +16,7 @@ export function fakeStore(over = {}) {
     async setConsent(...a) { s.consent.push(a); },
     async enqueueText(a) { if (s.out.some(o => o.idem === a.idem)) return null; s.out.push(a); return s.out.length; },
     async markProcessed(c, upTo, err) { s.processed.push({ c, upTo, err }); },
-    async audit(a, b, c) { s.audits.push([a, b, c]); },
+    async audit(a, b, c, d) { s.audits.push([a, b, c, d]); },
     async handoff(c, reason, notify) { s.handoffs.push({ c, reason, notify }); },
     async setFlowState(c, f) { s.flow = JSON.parse(JSON.stringify(f)); },
     async getReferenceData() { return s.reference; },

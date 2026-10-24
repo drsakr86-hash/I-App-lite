@@ -165,6 +165,8 @@ test('model/provider errors: retried, then handed over after 3 attempts (no sile
   assert.equal(r.r.ok, false); assert.equal(st.processed.at(-1).err.startsWith('llm:'), true); assert.equal(st.out.length, 0);
   const st3 = fakeStore(); await run(st3, scriptedLlm([new Error('overloaded')]), 'مرحبا', { attempts: 3 });
   assert.equal(st3.handoffs[0].reason, 'ai_error'); assert.equal(sent(st3)[0], MSG.aiProblem);
+  const au = st3.audits.find(a => a[1] === 'ai_error'); assert.ok(au, 'failure reason is kept in the audit log'); assert.equal(au[3].error, 'overloaded'); assert.equal(au[3].attempts, 3);
+  assert.equal(st.audits.some(a => a[1] === 'ai_error'), false);
 });
 
 test('duplicate processing is idempotent: the same inbound id produces the same idempotency keys', async () => {

@@ -30,6 +30,7 @@ export const returnToAi = id => rpc('wa_staff_return_to_ai', { p_conv: id });
 export const assign = (id, who) => rpc('wa_staff_assign', { p_conv: id, p_assignee: who || null });
 export const markRead = id => rpc('wa_staff_mark_read', { p_conv: id });
 export const closeConv = id => rpc('wa_staff_close', { p_conv: id });
+export const deleteConv = id => rpc('wa_staff_delete_conversation', { p_conv: id });
 export const setReminderConsent = (contactId, v) => rpc('wa_staff_set_reminder_consent', { p_contact: contactId, p_value: v });
 export const retryMessage = id => rpc('wa_staff_retry', { p_msg: id });
 
