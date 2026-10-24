@@ -50,3 +50,11 @@ test('llm client: non-JSON error body still gives the status only', async () => 
   const c = createAnthropicClient({ apiKey: 'k', fetchImpl });
   await assert.rejects(() => c.complete({ system: 's', messages: [], tools: [] }), e => e.message === 'llm http 502');
 });
+
+test('toWhatsAppBold turns Markdown ** into WhatsApp * and drops heading marks', async () => {
+  const { toWhatsAppBold } = await import('../supabase/functions/_shared/text.js');
+  assert.equal(toWhatsAppBold('من **4 مساءً** لـ **6 مساءً**'), 'من *4 مساءً* لـ *6 مساءً*');
+  assert.equal(toWhatsAppBold('## عنوان\nنص'), 'عنوان\nنص');
+  assert.equal(toWhatsAppBold('*already*'), '*already*');
+  assert.equal(toWhatsAppBold(null), '');
+});

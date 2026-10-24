@@ -4,7 +4,7 @@
 //   3. the model, restricted to the read/propose tools in tools.js
 //   4. output guard (a model text that claims a booking/cancellation happened is never sent)
 // Success messages for appointment writes are composed HERE after the database confirmed the result, never by the model.
-import { isAffirmative, isNegative, isUrgent, sanitizeIncoming, wantsHuman, chunkText, normArabic } from './text.js';
+import { isAffirmative, isNegative, isUrgent, sanitizeIncoming, wantsHuman, chunkText, normArabic, toWhatsAppBold } from './text.js';
 import { CLINICS, DEFAULT_DOCTOR, WEEK_DAY_NAMES, availableSlots, clinicNow, findClinic, addDaysISO, clinicDays, isoDow, isScheduledSlot, normTime } from './schedule.js';
 import { buildClinicInfo } from './clinicinfo.js';
 import { createToolRuntime, describeSlot } from './tools.js';
@@ -196,7 +196,7 @@ export async function processConversation(env) {
   }
   // 4) output guard
   if (flow.handedOff) return done();
-  reply = sanitizeIncoming(reply, LIMITS.maxReplyChars + 200).slice(0, LIMITS.maxReplyChars);
+  reply = toWhatsAppBold(sanitizeIncoming(reply, LIMITS.maxReplyChars + 200)).slice(0, LIMITS.maxReplyChars);
   if (!reply) { await store.handoff(conv.id, 'unsure', true); return done(); }
   if (claimsSuccess(reply)) { env.log && env.log('blocked_false_success', {}); reply = flow.pending ? MSG.noFalseSuccess + '\nلو عايز تكمل رد بـ "تأكيد".' : MSG.noFalseSuccess; }
   await send(reply, 'ai', 'reply', 'a');

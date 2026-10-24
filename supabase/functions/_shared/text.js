@@ -68,3 +68,6 @@ export function chunkText(s, max = 3800) {
   if (rest) out.push(rest);
   return out;
 }
+
+// WhatsApp bold is a single asterisk; models write **bold** (Markdown), which shows literal stars.
+export const toWhatsAppBold = s => String(s || '').replace(/\*\*([^*\n]+?)\*\*/g, '*$1*').replace(/^#{1,6}\s+/gm, '');
