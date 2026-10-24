@@ -49,6 +49,13 @@ export function buildSystemPrompt({ info, now, config, flow }) {
 }
 
 // history rows -> Anthropic messages: patient text is wrapped as untrusted data; consecutive same-role rows are merged; must start with 'user'.
+// Guarantees the request ends with a user turn (the current patient message) — Haiku returns 400 on assistant prefill.
+export function ensureEndsWithUser(messages, text) {
+  if (messages.length && messages[messages.length - 1].role === 'user') return messages;
+  const safe = String(text == null ? '' : text).replace(/</g, '‹').replace(/>/g, '›');
+  return [...messages, { role: 'user', content: `<patient_message>${safe}</patient_message>` }];
+}
+
 export function toModelMessages(rows) {
   const out = [];
   for (const r of rows) {
@@ -172,7 +179,8 @@ export async function processConversation(env) {
   const runtime = createToolRuntime({ store, conv, waId: env.waId, config, now: env.now, flow, latestMsgId: last.id, info });
   const history = toModelMessages(await store.getRecent(conv.id, LIMITS.history));
   const system = buildSystemPrompt({ info, now, config, flow });
-  let messages = history.length ? history : [{ role: 'user', content: `<patient_message>${text.replace(/</g, '‹')}</patient_message>` }];
+  // The model rejects a conversation that ends with an assistant turn (no prefill): always end with the patient's message.
+  let messages = ensureEndsWithUser(history, text);
   let reply = '', rounds = 0;
   try {
     for (; rounds < LIMITS.maxToolRounds; rounds++) {
