@@ -9,7 +9,7 @@ import { CLINICS, DEFAULT_DOCTOR, DEFAULT_VISIT_TYPE, WEEK_DAY_NAMES, addDaysISO
 import { getInfo, INFO_TOPICS } from './clinicinfo.js';
 
 export const VISIT_TYPES = ['فحص روتيني', 'متابعة', 'استشارة', 'قياس نظر', 'فحص شبكية'];
-export const PENDING_TTL_MIN = 15;
+export const PENDING_TTL_MIN = 120;   // was 15: a real patient confirmed after 15 min and lost her request. The slot is re-validated at execution time anyway.
 const MAX_REFS = 10;
 
 export const TOOL_DEFINITIONS = [
