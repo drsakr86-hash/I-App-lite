@@ -50,3 +50,19 @@ export async function loadUnreadCount() {
     return rows.length;
   } catch { return 0; }
 }
+
+// Conversations waiting for staff (banner). Never throws.
+export async function loadWaiting() {
+  try { return wrap(await sb().from('wa_conversations').select('id,status,unread_count,last_inbound_at,last_message_at').eq('status', 'handoff').gt('unread_count', 0).limit(200)) || []; }
+  catch { return []; }
+}
+// Admin: recent system failures. RLS decides who can read (wa_audit is admin only); a secretary simply gets empty lists.
+export async function loadSystemErrors() {
+  const since = new Date(Date.now() - 7 * 86400000).toISOString();
+  const [audits, failed, retrying] = await Promise.all([
+    sb().from('wa_audit').select('id,at,conversation_id,detail').eq('action', 'ai_error').gte('at', since).order('at', { ascending: false }).limit(30),
+    sb().from('wa_messages').select('id,conversation_id,created_at,error_code,error_detail').eq('direction', 'out').eq('status', 'failed').gte('created_at', since).order('created_at', { ascending: false }).limit(30),
+    sb().from('wa_messages').select('id,conversation_id,created_at,process_error').eq('direction', 'in').not('process_error', 'is', null).neq('process_error', '').gte('created_at', since).order('created_at', { ascending: false }).limit(30)
+  ]);
+  return { audits: wrap(audits) || [], failed: wrap(failed) || [], retrying: wrap(retrying) || [] };
+}

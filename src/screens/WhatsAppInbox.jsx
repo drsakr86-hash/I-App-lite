@@ -5,7 +5,7 @@ import { C } from '../modules/theme/index.js';
 import { t, useLang, dirOf } from '../modules/i18n/index.js';
 import { logError } from '../services/logger.js';
 import {
-  filterConversations, FILTERS, ownerOf, windowOpen, windowLeftMin, deliveryKey, canRetry, isUncertain, bookingState, newClientId, maskWa
+  filterConversations, FILTERS, ownerOf, windowOpen, windowLeftMin, deliveryKey, canRetry, isUncertain, bookingState, newClientId, maskWa, buildErrorRows
 } from '../modules/whatsapp/model.js';
 import * as svc from '../modules/whatsapp/service.js';
 import { QUICK_REPLIES, applyQuickReply } from '../modules/whatsapp/quickReplies.js';
@@ -28,6 +28,7 @@ export default function WhatsAppInbox({ session }) {
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const [errPanel, setErrPanel] = useState(null);   // null = closed, array = rows (admin only)
   const clientId = useRef(newClientId());
   const endRef = useRef(null);
 
@@ -49,6 +50,11 @@ export default function WhatsAppInbox({ session }) {
 
   const shown = useMemo(() => filterConversations(state.rows, { filter, search, me, failedIds: state.failedIds }), [state.rows, state.failedIds, filter, search, me]);
   const act = async fn => { setErr(''); try { await fn(); await loadList(); await loadThread(); } catch (e) { logError('whatsapp.act', e); setErr(e.message || t('g9.wa.error', lang)); } };
+
+  const toggleErrors = async () => {
+    if (errPanel) { setErrPanel(null); return; }
+    try { setErrPanel(buildErrorRows(await svc.loadSystemErrors())); } catch (e) { logError('whatsapp.errors', e); setErr(e.message || t('g9.wa.error', lang)); }
+  };
 
   const removeConv = async () => {
     if (!sel) return;
@@ -80,10 +86,26 @@ export default function WhatsAppInbox({ session }) {
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('g9.wa.search', lang)} aria-label={t('g9.wa.search', lang)} style={{ flex: 1, background: C.card, border: '1px solid ' + C.border, borderRadius: 10, padding: '9px 12px', color: C.text, fontFamily: 'inherit', fontSize: 13 }} />
             <button onClick={loadList} aria-label={t('g9.wa.refresh', lang)} style={btn()}>🔄</button>
+            {session && session.role === 'admin' && <button onClick={toggleErrors} aria-label={t('g9.wa.errors', lang)} title={t('g9.wa.errors', lang)} style={btn(errPanel ? { borderColor: C.danger, color: C.danger } : {})}>⚠️</button>}
           </div>
           <div style={{ display: 'flex', gap: 6, overflowX: 'auto' }}>
             {FILTERS.map(f => <button key={f} onClick={() => setFilter(f)} style={btn({ background: filter === f ? C.accent + '22' : 'transparent', color: filter === f ? C.accent : C.muted, borderColor: filter === f ? C.accent : C.border, whiteSpace: 'nowrap' })}>{t('g9.wa.f.' + f, lang)}</button>)}
           </div>
+          {errPanel && (
+            <div style={{ background: C.card, border: '1px solid ' + C.danger + '66', borderRadius: 12, padding: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div style={{ fontWeight: 700, color: C.text, fontSize: 13 }}>{'⚠️ ' + t('g9.wa.errors', lang)}</div>
+              {!errPanel.length && <div style={{ color: C.muted, fontSize: 12 }}>{t('g9.wa.errors.empty', lang)}</div>}
+              {errPanel.map(r => (
+                <div key={r.key} style={{ borderTop: '1px solid ' + C.border, paddingTop: 6, fontSize: 12 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, color: C.muted, fontSize: 11 }}>
+                    <span>{t('g9.wa.errors.k.' + r.kind, lang)}{r.conv ? ' · ' + t('g9.wa.errors.conv', lang) + ' ' + r.conv : ''}</span>
+                    <span>{new Date(r.at).toLocaleString(lang === 'en' ? 'en-GB' : 'ar-EG', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}</span>
+                  </div>
+                  <div style={{ color: C.text, direction: 'ltr', textAlign: 'left', wordBreak: 'break-word' }}>{r.text}</div>
+                </div>
+              ))}
+            </div>
+          )}
           {state.error && <div style={{ color: C.danger, fontSize: 12 }}>{t('g9.wa.error', lang)}</div>}
           {!shown.length && <div style={{ color: C.muted, padding: 20, textAlign: 'center' }}>{t('g9.wa.empty', lang)}</div>}
           {shown.map(c => {

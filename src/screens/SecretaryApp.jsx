@@ -26,6 +26,8 @@ import { t, useLang, dirOf } from "../modules/i18n/index.js";
 import { tv } from "../modules/i18n/tv.js";
 import WhatsAppInbox from "./WhatsAppInbox.jsx";
 import { useWaUnread } from "../modules/whatsapp/useWaUnread.js";
+import { useWaWaiting } from "../modules/whatsapp/useWaWaiting.js";
+import WaWaitingBanner from "../components/WaWaitingBanner.jsx";
 import { waTabLabel } from "../modules/whatsapp/model.js";
 
 const clinicName = c => tv(clinicLabel(c));
@@ -71,6 +73,7 @@ export default function SecretaryApp() {
   const [showReminders, setShowReminders] = useState(false);
   const [requests, setRequests] = useState([]);
   const waUnread = useWaUnread(!!session);
+  const waWaiting = useWaWaiting(!!session);
   const [reqBusy, setReqBusy] = useState(null);
   const [apts, setAptsState] = useState([]);
   const [patients, setPatients] = useState([]);
@@ -350,6 +353,7 @@ export default function SecretaryApp() {
         </div>
       </div>
 
+      {tab !== "whatsapp" && <WaWaitingBanner summary={waWaiting} onOpen={() => setTab("whatsapp")} />}
       {/* Tab bar */}
       <div style={{ background: C.surface, borderBottom: "1px solid " + C.border, display: "flex", flexShrink: 0 }}>
         {[
