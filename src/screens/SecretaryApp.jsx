@@ -499,7 +499,7 @@ export default function SecretaryApp() {
         </div>
       )}
 
-      {tab === "whatsapp" && <WhatsAppInbox session={session} />}
+      {tab === "whatsapp" && <div style={{ flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch", paddingBottom: 90 }}><WhatsAppInbox session={session} /></div>}
       {tab === "stats" && (
         <div style={{ flex: 1, overflowY: "auto", padding: "16px 16px 80px" }}>
           <div style={{ color: C.text, fontWeight: 700, fontSize: 16, marginBottom: 16 }}>{t("g5.sec.statsTitle", lang)}</div>
