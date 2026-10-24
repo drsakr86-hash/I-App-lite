@@ -48,7 +48,9 @@ export const isUrgent = text => { const n = normArabic(sanitizeIncoming(text)); 
 const YES = ['ايوه', 'ايوا', 'أيوه', 'اه', 'آه', 'نعم', 'تمام', 'موافق', 'موافقه', 'اكد', 'أكد', 'اكدي', 'أكدي', 'تأكيد', 'تاكيد', 'اكيد', 'أكيد', 'ماشي', 'ماشى', 'اوكي', 'اوك', 'ok', 'okay', 'yes', 'y', 'اه تمام', 'ايوه تمام', 'تمام اكد', 'تمام أكد', 'اكد الحجز', 'أكد الحجز', 'اه اكد', 'ايوه اكد', 'يلا', 'برافو', 'صح', 'مظبوط', 'ينفع', 'عظيم', 'حاضر', 'اتفقنا'];
 const NO = ['لا', 'لأ', 'لاا', 'مش عايز', 'مش عاوز', 'مش عايزه', 'الغي', 'الغاء', 'إلغاء', 'بلاش', 'مش موافق', 'غير موافق', 'no', 'n', 'cancel', 'مش مناسب', 'مش مظبوط', 'غلط', 'لا شكرا', 'لا شكرًا', 'مش تمام', 'خلاص مش عايز', 'مش دلوقتي', 'ارفض', 'رفض'];
 const clean = s => normArabic(sanitizeIncoming(s)).replace(/[.!؟?،,؛;:"'()]/g, ' ').replace(/\s+/g, ' ').trim();
-export const isAffirmative = text => { const n = clean(text); if (!n || n.length > 30) return false; return YES.some(w => n === normArabic(w)) || (n.split(' ').length <= 3 && n.split(' ').every(t => YES.some(w => t === normArabic(w)))); };
+// Filler words patients put in front of a yes ("طب ماشي", "خلاص تمام"); they are ignored, but a filler alone is NOT a yes.
+const FILLERS = ['طب', 'طيب', 'خلاص', 'بقا', 'بقى', 'يا', 'كده'].map(normArabic);
+export const isAffirmative = text => { let n = clean(text); if (!n || n.length > 30) return false; const core = n.split(' ').filter(t => !FILLERS.includes(t)); if (core.length && core.length < n.split(' ').length) n = core.join(' '); return YES.some(w => n === normArabic(w)) || (n.split(' ').length <= 3 && n.split(' ').every(t => YES.some(w => t === normArabic(w)))); };
 export const isNegative = text => { const n = clean(text); if (!n || n.length > 40) return false; return NO.some(w => n === normArabic(w) || n.startsWith(normArabic(w) + ' ')); };
 
 // Names typed by a patient: letters/spaces only, 2..60 chars, at least two letters. Never trusted for authorisation (the phone is).
