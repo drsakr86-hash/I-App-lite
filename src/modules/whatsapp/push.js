@@ -16,9 +16,11 @@ export async function pushStatus() {
 // serviceWorker.ready never settles when no worker is active: give up after a while instead of hanging silently.
 const swReady = (ms = 8000) => Promise.race([navigator.serviceWorker.ready, new Promise((_, rej) => setTimeout(() => rej(new Error('sw-not-ready')), ms))]);
 export async function enablePush() {
+  // Ask for the permission FIRST, straight from the tap: browsers (Chrome on Android) drop or auto-dismiss a permission request that comes after a network wait.
+  const perm = await Notification.requestPermission();
+  if (perm !== 'granted') throw new Error(perm === 'denied' ? 'permission-denied' : 'permission-default');
   const key = await rpc('wa_push_public_key', {});
   if (!key) throw new Error('push-not-configured');
-  if ((await Notification.requestPermission()) !== 'granted') throw new Error('permission-denied');
   const reg = await swReady();
   const sub = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64uToBytes(key) });
   const j = sub.toJSON();

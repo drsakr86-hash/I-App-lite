@@ -62,7 +62,7 @@ export default function WhatsAppInbox({ session }) {
     catch (e) {
       logError('whatsapp.push', e);
       const m = String(e && e.message || '');
-      setErr(m === 'push-not-configured' ? t('g9.wa.push.notConfigured', lang) : m === 'permission-denied' ? t('g9.wa.push.denied', lang) : m === 'sw-not-ready' ? t('g9.wa.push.swNotReady', lang) : t('g9.wa.push.fail', lang) + (m ? ' (' + m.slice(0, 80) + ')' : ''));
+      setErr(m === 'push-not-configured' ? t('g9.wa.push.notConfigured', lang) : m === 'permission-denied' ? t('g9.wa.push.denied', lang) : m === 'permission-default' ? t('g9.wa.push.dismissed', lang) : m === 'sw-not-ready' ? t('g9.wa.push.swNotReady', lang) : t('g9.wa.push.fail', lang) + (m ? ' (' + m.slice(0, 80) + ')' : ''));
     }
     finally { setPushBusy(false); try { setPush(await pushStatus()); } catch { /* keep the old state */ } }
   };
