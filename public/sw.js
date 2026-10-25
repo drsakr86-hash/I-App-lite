@@ -137,3 +137,15 @@ self.addEventListener("fetch", event => {
     event.respondWith(otherHandler(request));
   }
 });
+
+// Web Push (WhatsApp chats waiting for staff). The push carries NO data: the text below is fixed, so nothing about a patient reaches the push service.
+self.addEventListener("push", event => {
+  event.waitUntil(self.registration.showNotification("واتساب العيادة", { body: "محادثة تنتظر السكرتارية", tag: "wa-waiting", renotify: true, requireInteraction: true, dir: "rtl", lang: "ar", data: { url: "./" } }));
+});
+self.addEventListener("notificationclick", event => {
+  event.notification.close();
+  event.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(list => {
+    for (const c of list) if ("focus" in c) return c.focus();
+    return self.clients.openWindow((event.notification.data && event.notification.data.url) || "./");
+  }));
+});

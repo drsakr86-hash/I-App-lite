@@ -8,6 +8,7 @@ import {
   filterConversations, FILTERS, ownerOf, windowOpen, windowLeftMin, deliveryKey, canRetry, isUncertain, bookingState, newClientId, maskWa, buildErrorRows
 } from '../modules/whatsapp/model.js';
 import * as svc from '../modules/whatsapp/service.js';
+import { pushStatus, enablePush, disablePush } from '../modules/whatsapp/push.js';
 import { QUICK_REPLIES, applyQuickReply } from '../modules/whatsapp/quickReplies.js';
 
 const POLL_MS = 5000;
@@ -28,6 +29,7 @@ export default function WhatsAppInbox({ session }) {
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const [push, setPush] = useState('unsupported');
   const [errPanel, setErrPanel] = useState(null);   // null = closed, array = rows (admin only)
   const clientId = useRef(newClientId());
   const endRef = useRef(null);
@@ -42,6 +44,7 @@ export default function WhatsAppInbox({ session }) {
     try { setMsgs(await svc.loadMessages(selId)); } catch (e) { logError('whatsapp.thread', e); }
   }, [selId]);
 
+  useEffect(() => { pushStatus().then(setPush).catch(() => {}); }, []);
   useEffect(() => { loadList(); const iv = setInterval(loadList, POLL_MS); return () => clearInterval(iv); }, [loadList]);
   useEffect(() => { loadThread(); if (!selId) return undefined; const iv = setInterval(loadThread, POLL_MS); return () => clearInterval(iv); }, [loadThread, selId]);
   useEffect(() => { if (sel && sel.unread_count > 0) svc.markRead(sel.id).then(loadList).catch(e => logError('whatsapp.read', e)); }, [selId, sel && sel.unread_count]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -50,6 +53,12 @@ export default function WhatsAppInbox({ session }) {
 
   const shown = useMemo(() => filterConversations(state.rows, { filter, search, me, failedIds: state.failedIds }), [state.rows, state.failedIds, filter, search, me]);
   const act = async fn => { setErr(''); try { await fn(); await loadList(); await loadThread(); } catch (e) { logError('whatsapp.act', e); setErr(e.message || t('g9.wa.error', lang)); } };
+
+  const togglePush = async () => {
+    setErr('');
+    try { if (push === 'on') await disablePush(); else await enablePush(); setPush(await pushStatus()); }
+    catch (e) { logError('whatsapp.push', e); setErr(e.message === 'push-not-configured' ? t('g9.wa.push.notConfigured', lang) : e.message === 'permission-denied' ? t('g9.wa.push.denied', lang) : t('g9.wa.push.fail', lang)); setPush(await pushStatus()); }
+  };
 
   const toggleErrors = async () => {
     if (errPanel) { setErrPanel(null); return; }
@@ -91,6 +100,9 @@ export default function WhatsAppInbox({ session }) {
           <div style={{ display: 'flex', gap: 6, overflowX: 'auto' }}>
             {FILTERS.map(f => <button key={f} onClick={() => setFilter(f)} style={btn({ background: filter === f ? C.accent + '22' : 'transparent', color: filter === f ? C.accent : C.muted, borderColor: filter === f ? C.accent : C.border, whiteSpace: 'nowrap' })}>{t('g9.wa.f.' + f, lang)}</button>)}
           </div>
+          {(push === 'on' || push === 'off') && <button onClick={togglePush} style={btn({ borderColor: push === 'on' ? C.teal : C.accent, color: push === 'on' ? C.teal : C.accent })}>{t('g9.wa.push.' + push, lang)}</button>}
+          {push === 'needs-install' && <div style={{ color: C.muted, fontSize: 12 }}>{t('g9.wa.push.install', lang)}</div>}
+          {push === 'denied' && <div style={{ color: C.muted, fontSize: 12 }}>{t('g9.wa.push.denied', lang)}</div>}
           {errPanel && (
             <div style={{ background: C.card, border: '1px solid ' + C.danger + '66', borderRadius: 12, padding: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
               <div style={{ fontWeight: 700, color: C.text, fontSize: 13 }}>{'⚠️ ' + t('g9.wa.errors', lang)}</div>
