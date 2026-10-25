@@ -53,3 +53,12 @@ test('wiring: banner on both apps, admin-only error button, strings in both lang
   assert.match(inbox, /session && session\.role === 'admin' && <button onClick=\{toggleErrors\}/);
   for (const k of ['g9.wa.errors', 'g9.wa.errors.empty', 'g9.wa.errors.k.ai', 'g9.wa.errors.k.meta', 'g9.wa.errors.k.process', 'g9.wa.errors.conv']) assert.equal(dict.split('"' + k + '"').length - 1, 2, k);
 });
+
+test('push button: busy state, timeout on the service worker, and the error is visible in the list view too', () => {
+  const inbox = fs.readFileSync(new URL('../src/screens/WhatsAppInbox.jsx', import.meta.url), 'utf8');
+  const push = fs.readFileSync(new URL('../src/modules/whatsapp/push.js', import.meta.url), 'utf8');
+  assert.match(push, /new Error\('sw-not-ready'\)/); assert.doesNotMatch(push, /await navigator\.serviceWorker\.ready/);
+  assert.match(inbox, /disabled=\{pushBusy\}/);
+  const list = inbox.slice(inbox.indexOf("push === 'needs-install'"), inbox.indexOf('{errPanel && ('));
+  assert.match(list, /\{err && <div role="alert"/, 'a failed enable must show its reason in the list view');
+});
