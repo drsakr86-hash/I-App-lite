@@ -30,3 +30,15 @@ export async function disablePush() {
   const reg = await swReady(); const sub = await reg.pushManager.getSubscription();
   if (sub) { try { await rpc('wa_push_unsubscribe', { p_endpoint: sub.endpoint }); } finally { await sub.unsubscribe(); } }
 }
+
+// One short line for troubleshooting (shown under the button): permission state, worker state, browser. No personal data.
+export async function pushDiagnostics() {
+  try {
+    const perm = typeof Notification !== 'undefined' ? Notification.permission : 'none';
+    let sw = 'none';
+    if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) { const r = await navigator.serviceWorker.getRegistration(); sw = r ? (r.active ? 'active' : r.installing ? 'installing' : r.waiting ? 'waiting' : 'registered') : 'none'; }
+    const ua = (typeof navigator !== 'undefined' && navigator.userAgent) || '';
+    const br = (/(SamsungBrowser|EdgA|OPR|Brave|Firefox|CriOS|Chrome)\/[\d.]+/.exec(ua) || [''])[0] || 'browser?';
+    return 'permission=' + perm + ' · sw=' + sw + ' · push=' + (pushSupported() ? 'yes' : 'no') + ' · ' + br + (isStandalone() ? ' · app' : '');
+  } catch { return 'diag-failed'; }
+}
