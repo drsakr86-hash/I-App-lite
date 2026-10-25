@@ -71,3 +71,10 @@ test('push: the permission prompt is the first await after the tap, and a dismis
   const inbox = fs.readFileSync(new URL('../src/screens/WhatsAppInbox.jsx', import.meta.url), 'utf8');
   assert.match(inbox, /permission-default.*g9\.wa\.push\.dismissed/);
 });
+
+test('push troubleshooting line is shown (and carries no personal data)', () => {
+  const push = fs.readFileSync(new URL('../src/modules/whatsapp/push.js', import.meta.url), 'utf8');
+  const inbox = fs.readFileSync(new URL('../src/screens/WhatsAppInbox.jsx', import.meta.url), 'utf8');
+  assert.match(push, /export async function pushDiagnostics/); assert.doesNotMatch(push.slice(push.indexOf('pushDiagnostics')), /endpoint|email|wa_id/);
+  assert.match(inbox, /pushDiag && push !== 'on'/);
+});
