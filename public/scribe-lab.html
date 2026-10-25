@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>تجربة تفريغ الكشف</title>
+<style>
+body{font-family:system-ui,Tahoma,Arial,sans-serif;max-width:640px;margin:0 auto;padding:20px 16px;line-height:1.9}
+button,select{padding:10px 16px;font-size:15px}
+#out{width:100%;min-height:220px;font-size:16px;line-height:1.8;padding:10px;box-sizing:border-box}
+.warn{background:#fff4e5;border:1px solid #f0b66b;padding:10px 12px;border-radius:8px;font-size:14px}
+#st{color:#555;font-size:14px}
+</style></head>
+<body>
+<h1>تجربة تفريغ الكشف</h1>
+<p class="warn">للتجربة فقط. لا يُحفظ أي صوت أو نص في التطبيق ولا في الخادم، والنص يظهر هنا على شاشتك فقط ويضيع عند إغلاق الصفحة. تنبيه: تفريغ الكلام في Chrome يتم بخدمة Google، فيُرسَل الصوت لها أثناء التسجيل. استخدمها فقط مع مريض وقّع موافقة كتابية على التسجيل.</p>
+<p><label><input type="checkbox" id="ok"> أخذت موافقة المريض الكتابية</label></p>
+<p>اللغة:
+<select id="lang"><option value="ar-EG">عربي مصري</option><option value="ar-SA">عربي فصحى</option><option value="en-US">English</option></select></p>
+<p><button id="go" disabled>ابدأ التسجيل</button> <button id="clr">مسح</button> <button id="cp">نسخ النص</button></p>
+<p id="st">جاهز.</p>
+<textarea id="out" placeholder="النص يظهر هنا. يمكنك تعديله يدويًا."></textarea>
+<script>
+const $ = id => document.getElementById(id);
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec = null, on = false, final = '';
+if (!SR) { $('st').textContent = 'المتصفح لا يدعم التفريغ. استخدم Chrome على أندرويد أو الكمبيوتر.'; }
+$('ok').onchange = () => { $('go').disabled = !SR || !$('ok').checked; };
+function start() {
+  rec = new SR(); rec.lang = $('lang').value; rec.continuous = true; rec.interimResults = true;
+  rec.onresult = e => {
+    let interim = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const t = e.results[i][0].transcript;
+      if (e.results[i].isFinal) final += t + '\n'; else interim += t;
+    }
+    $('out').value = final + interim;
+  };
+  rec.onerror = e => { $('st').textContent = 'خطأ: ' + e.error + (e.error === 'not-allowed' ? ' (اسمح للميكروفون من إعدادات الموقع)' : ''); };
+  // Chrome stops after pauses; restart while the user has not pressed stop.
+  rec.onend = () => { if (on) { try { rec.start(); } catch (_) {} } else { $('st').textContent = 'تم الإيقاف.'; $('go').textContent = 'ابدأ التسجيل'; } };
+  rec.start(); on = true; $('st').textContent = 'جارٍ التسجيل...'; $('go').textContent = 'إيقاف';
+}
+$('go').onclick = () => { if (on) { on = false; rec && rec.stop(); } else { final = $('out').value ? $('out').value + '\n' : ''; start(); } };
+$('clr').onclick = () => { if (!on) { final = ''; $('out').value = ''; } };
+$('cp').onclick = async () => { try { await navigator.clipboard.writeText($('out').value); $('st').textContent = 'تم النسخ.'; } catch (_) { $('out').select(); $('st').textContent = 'حدد النص وانسخه يدويًا.'; } };
+</script></body></html>
