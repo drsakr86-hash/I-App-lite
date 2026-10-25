@@ -62,3 +62,12 @@ test('push button: busy state, timeout on the service worker, and the error is v
   const list = inbox.slice(inbox.indexOf("push === 'needs-install'"), inbox.indexOf('{errPanel && ('));
   assert.match(list, /\{err && <div role="alert"/, 'a failed enable must show its reason in the list view');
 });
+
+test('push: the permission prompt is the first await after the tap, and a dismissed prompt has its own message', () => {
+  const push = fs.readFileSync(new URL('../src/modules/whatsapp/push.js', import.meta.url), 'utf8');
+  const body = push.slice(push.indexOf('export async function enablePush'));
+  assert.ok(body.indexOf('Notification.requestPermission()') < body.indexOf("rpc('wa_push_public_key'"), 'ask permission before any network call');
+  assert.match(body, /permission-default/);
+  const inbox = fs.readFileSync(new URL('../src/screens/WhatsAppInbox.jsx', import.meta.url), 'utf8');
+  assert.match(inbox, /permission-default.*g9\.wa\.push\.dismissed/);
+});
