@@ -11,18 +11,20 @@ export const isStandalone = () => { try { return !!(window.matchMedia && window.
 export async function pushStatus() {
   if (!pushSupported()) return isIos() && !isStandalone() ? 'needs-install' : 'unsupported';
   if (Notification.permission === 'denied') return 'denied';
-  try { const reg = await navigator.serviceWorker.ready; return (await reg.pushManager.getSubscription()) && Notification.permission === 'granted' ? 'on' : 'off'; } catch { return 'off'; }
+  try { const reg = await swReady(3000); return (await reg.pushManager.getSubscription()) && Notification.permission === 'granted' ? 'on' : 'off'; } catch { return 'off'; }
 }
+// serviceWorker.ready never settles when no worker is active: give up after a while instead of hanging silently.
+const swReady = (ms = 8000) => Promise.race([navigator.serviceWorker.ready, new Promise((_, rej) => setTimeout(() => rej(new Error('sw-not-ready')), ms))]);
 export async function enablePush() {
   const key = await rpc('wa_push_public_key', {});
   if (!key) throw new Error('push-not-configured');
   if ((await Notification.requestPermission()) !== 'granted') throw new Error('permission-denied');
-  const reg = await navigator.serviceWorker.ready;
+  const reg = await swReady();
   const sub = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64uToBytes(key) });
   const j = sub.toJSON();
   await rpc('wa_push_subscribe', { p_endpoint: j.endpoint, p_p256dh: j.keys && j.keys.p256dh, p_auth: j.keys && j.keys.auth });
 }
 export async function disablePush() {
-  const reg = await navigator.serviceWorker.ready; const sub = await reg.pushManager.getSubscription();
+  const reg = await swReady(); const sub = await reg.pushManager.getSubscription();
   if (sub) { try { await rpc('wa_push_unsubscribe', { p_endpoint: sub.endpoint }); } finally { await sub.unsubscribe(); } }
 }
