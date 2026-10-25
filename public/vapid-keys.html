@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>مفاتيح الإشعارات</title>
+<style>body{font-family:system-ui,Tahoma,Arial,sans-serif;max-width:640px;margin:0 auto;padding:20px 16px;line-height:1.9}textarea{width:100%;direction:ltr;font-family:monospace;font-size:12px;height:70px}button{padding:10px 16px;font-size:15px}</style></head>
+<body>
+<h1>مفاتيح إشعارات واتساب</h1>
+<p>تُولَّد المفاتيح داخل متصفحك فقط ولا تُرسَل لأي مكان. افتح الصفحة، اضغط الزر، ثم:</p>
+<ol>
+<li>انسخ <b>المفتاح الخاص</b> وضعه في Supabase ← Edge Functions ← Secrets باسم <code>VAPID_PRIVATE_KEY</code>. لا ترسله لأحد ولا تحفظه في أي ملف.</li>
+<li>انسخ <b>المفتاح العام</b> وضعه في أمر SQL الموجود في آخر ملف <code>whatsapp-push.sql</code>.</li>
+</ol>
+<p><button id="go">توليد مفاتيح جديدة</button></p>
+<p>المفتاح الخاص (سري)</p><textarea id="priv" readonly></textarea>
+<p>المفتاح العام</p><textarea id="pub" readonly></textarea>
+<script>
+const b64u = b => btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+document.getElementById('go').onclick = async () => {
+  const k = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
+  document.getElementById('pub').value = b64u(await crypto.subtle.exportKey('raw', k.publicKey));
+  document.getElementById('priv').value = (await crypto.subtle.exportKey('jwk', k.privateKey)).d;
+};
+</script></body></html>

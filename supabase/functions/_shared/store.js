@@ -48,6 +48,8 @@ export function createStore(sb) {
     handoff: (conv, reason, notify) => rpc('wa_handoff', { p_conv: conv, p_reason: reason, p_notify: notify !== false }),
     markProcessed: (conv, upTo, err) => rpc('wa_mark_processed', { p_conv: conv, p_upto: upTo, p_error: err || null }),
     setConsent: (waId, reminders, optOut, source) => rpc('wa_set_consent', { p_wa_id: waId, p_reminders: reminders, p_opt_out: optOut, p_source: source }),
+    pushClaim: () => rpc('wa_push_claim', {}),
+    pushDrop: ids => rpc('wa_push_drop', { p_ids: ids }),
     audit: (actor, action, conv, detail) => rpc('wa_audit_add', { p_actor: actor, p_action: action, p_conv: conv, p_apt: null, p_detail: detail || null }),
     ingestInbound: m => rpc('wa_ingest_inbound', { p_wa_id: m.waId, p_profile_name: m.name || null, p_wamid: m.wamid, p_kind: m.kind, p_body: m.body || null, p_ts: m.ts }),
     ingestEcho: m => rpc('wa_ingest_echo', { p_to_wa_id: m.to, p_wamid: m.wamid, p_kind: m.kind, p_body: m.body || null, p_ts: m.ts }),
