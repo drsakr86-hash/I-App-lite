@@ -1,6 +1,6 @@
 // Gemini API client (server-side key, paid tier only: free-tier data may be used by Google for training).
 // generateJson() returns the parsed JSON object of the first candidate, or throws so the caller can report a clean error.
-export function createGeminiClient({ apiKey, model = 'gemini-3.5-flash', fetchImpl = globalThis.fetch, timeoutMs = 90000 }) {
+export function createGeminiClient({ apiKey, model = 'gemini-flash-latest', fetchImpl = globalThis.fetch, timeoutMs = 90000 }) {
   if (!apiKey) throw new Error('gemini: GEMINI_API_KEY is not set');
   return {
     model,
