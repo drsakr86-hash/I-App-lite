@@ -6,3 +6,6 @@ verify_jwt = false
 verify_jwt = false
 [functions.whatsapp-send]
 verify_jwt = true
+# AI scribe: JWT verified here and the admin role re-checked inside the function. Secrets: GEMINI_API_KEY (paid tier), optional GEMINI_MODEL.
+[functions.ai-scribe]
+verify_jwt = true

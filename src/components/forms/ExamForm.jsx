@@ -13,6 +13,7 @@ import { Field, SecHead, inp } from '../../modules/ui/atoms.jsx';
 import { localISO } from '../../modules/constants/misc.js';
 import { OphthFindings, OphthPlan } from './OphthDetails.jsx';
 import { examForEditing, applyOphthToExam } from '../../modules/patient-file/ophth.js';
+import ScribePanel from './ScribePanel.jsx';
 
 // Three-step examination add/edit form. Exact port of the legacy runtime's
 // ExamForm (public/legacy/app-runtime.js).
@@ -25,6 +26,7 @@ export default function ExamForm({ initial, patientId, onSave, onClose, doctorNa
   const iopHigh = anyIopHigh(f.iopR, f.iopL);
   return (
     <div>
+      <ScribePanel form={f} onApply={setF} />
       <div role="tablist" aria-label={t('g2.exam.stepsAria', lang)} style={{ display: 'flex', marginBottom: 18, background: C.card, borderRadius: 12, padding: 4 }}>
         {examStepLabels().map((st, i) => (
           <button
