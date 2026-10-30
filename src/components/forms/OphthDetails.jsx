@@ -2,7 +2,7 @@ import React from 'react';
 import { C } from '../../modules/theme/index.js';
 import { inp } from '../../modules/ui/atoms.jsx';
 import {
-  normalizeOphth, ANTERIOR_PARTS, POSTERIOR_PARTS, IOP_METHODS,
+  normalizeOphth, fillNormalSegment, ANTERIOR_PARTS, POSTERIOR_PARTS, IOP_METHODS,
   SPH_OPTIONS, CYL_OPTIONS, AXIS_OPTIONS, CD_OPTIONS, ANTERIOR_OPTIONS, POSTERIOR_OPTIONS,
   DX_OPTIONS, INVESTIGATION_OPTIONS, FOLLOWUP_REASON_OPTIONS
 } from '../../modules/patient-file/ophth.js';
@@ -104,6 +104,20 @@ function Group({ title, children, open }) {
   );
 }
 
+function NormalRow({ o, onChange, group }) {
+  const lang = useLang();
+  const btn = { minHeight: 36, padding: '4px 12px', borderRadius: 8, border: `1px solid ${C.border}`, background: 'transparent', color: C.text, fontSize: 12, cursor: 'pointer' };
+  return (
+    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+      {[['OD', ['od']], ['OS', ['os']], ['OU', ['od', 'os']]].map(([l, eyes]) => (
+        <button key={l} type="button" style={btn} onClick={() => onChange(fillNormalSegment(o, group, eyes))}>
+          {t('g2.ophth.normal', lang)} <span dir="ltr">{l}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 // Step 2 of the exam form (examination findings)
 export function OphthFindings({ value, onChange }) {
   const lang = useLang();
@@ -139,8 +153,10 @@ export function OphthFindings({ value, onChange }) {
         </div>
       ))}
       <div className="ds-h" style={{ marginTop: 4 }}>{t('g2.exam.anterior', lang)}</div>
+      <NormalRow o={o} onChange={onChange} group="anterior" />
       {ANTERIOR_PARTS.map(([k, l]) => <PairInputs key={k} o={o} onChange={onChange} group="anterior" part={k} label={tv(l)} options={ANTERIOR_OPTIONS[k]} />)}
       <div className="ds-h" style={{ marginTop: 4 }}>{t('g2.exam.posterior', lang)}</div>
+      <NormalRow o={o} onChange={onChange} group="posterior" />
       {POSTERIOR_PARTS.map(([k, l]) => <PairInputs key={k} o={o} onChange={onChange} group="posterior" part={k} label={tv(l)} options={POSTERIOR_OPTIONS[k]} />)}
       <PairInputs o={o} onChange={onChange} group="cd" label="C/D" options={CD_OPTIONS} />
       <PairInputs o={o} onChange={onChange} group="cmt" label="CMT" unit="µm" inputMode="decimal" />

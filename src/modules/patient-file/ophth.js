@@ -242,3 +242,17 @@ export const INVESTIGATION_OPTIONS = Object.freeze([
 export const FOLLOWUP_REASON_OPTIONS = Object.freeze([
   'متابعة ضغط العين', 'تقييم الاستجابة بعد الحقن', 'جرعة حقن قادمة', 'مراجعة نتيجة فحص', 'متابعة سكري', 'بعد عملية', 'متابعة روتينية', 'قياس نظارة'
 ]);
+
+// "Normal" shortcut: fills only EMPTY fields of one segment for the chosen eye(s) with the
+// first (normal) option of each list. Anything already written is never overwritten.
+export function fillNormalSegment(raw, group, eyes) {
+  const o = normalizeOphth(raw);
+  const opts = group === 'anterior' ? ANTERIOR_OPTIONS : group === 'posterior' ? POSTERIOR_OPTIONS : null;
+  if (!opts) return o;
+  for (const k of Object.keys(opts)) {
+    for (const eye of eyes) {
+      if (!String(o[group][k][eye] || '').trim()) o[group][k][eye] = opts[k][0];
+    }
+  }
+  return o;
+}

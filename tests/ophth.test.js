@@ -70,3 +70,18 @@ test('ophth: values from the lists are read back as numbers where numeric (CMT/C
   assert.equal(toNumber('+1.50'), 1.5);
   assert.equal(toNumber('0.7'), 0.7);
 });
+
+test('fillNormalSegment fills only empty fields of the chosen eye', async () => {
+  const { fillNormalSegment, blankOphth } = await import('../src/modules/patient-file/ophth.js');
+  const o = blankOphth();
+  o.anterior.lens.od = 'ماء أبيض (NS +2)';
+  const r = fillNormalSegment(o, 'anterior', ['od']);
+  assert.equal(r.anterior.lens.od, 'ماء أبيض (NS +2)');
+  assert.equal(r.anterior.cornea.od, 'صافية');
+  assert.equal(r.anterior.ac.od, 'عميقة ورائقة');
+  assert.equal(r.anterior.lids.os, '');
+  assert.equal(r.posterior.macula.od, '');
+  const u = fillNormalSegment(o, 'posterior', ['od', 'os']);
+  assert.equal(u.posterior.disc.os, 'طبيعي');
+  assert.equal(u.cd.od, '');
+});
