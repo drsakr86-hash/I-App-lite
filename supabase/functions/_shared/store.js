@@ -7,7 +7,7 @@ export function createStore(sb) {
     rpc,
     async getConfig() { return must(await sb.from('wa_config').select('*').eq('id', 1).maybeSingle(), 'getConfig'); },
     async getBundle(convId) {
-      const row = must(await sb.from('wa_conversations').select('id,status,ai_enabled,flow_state,contact_id,wa_contacts(wa_id,consent,reminders_opt_in)').eq('id', convId).maybeSingle(), 'getBundle');
+      const row = must(await sb.from('wa_conversations').select('id,status,ai_enabled,flow_state,contact_id,wa_contacts(wa_id,channel,phone,consent,reminders_opt_in)').eq('id', convId).maybeSingle(), 'getBundle');
       if (!row) return null;
       const { wa_contacts: contact, ...conv } = row; return { conv, contact };
     },
@@ -53,6 +53,10 @@ export function createStore(sb) {
     audit: (actor, action, conv, detail) => rpc('wa_audit_add', { p_actor: actor, p_action: action, p_conv: conv, p_apt: null, p_detail: detail || null }),
     ingestInbound: m => rpc('wa_ingest_inbound', { p_wa_id: m.waId, p_profile_name: m.name || null, p_wamid: m.wamid, p_kind: m.kind, p_body: m.body || null, p_ts: m.ts }),
     ingestEcho: m => rpc('wa_ingest_echo', { p_to_wa_id: m.to, p_wamid: m.wamid, p_kind: m.kind, p_body: m.body || null, p_ts: m.ts }),
+    // Messenger / Instagram (docs/sql/messenger-channels.sql)
+    ingestInboundCh: m => rpc('wa_ingest_inbound_ch', { p_channel: m.channel, p_ext_id: m.extId, p_profile_name: m.name || null, p_mid: m.mid, p_kind: m.kind, p_body: m.body || null, p_ts: m.ts }),
+    ingestEchoCh: m => rpc('wa_ingest_echo_ch', { p_channel: m.channel, p_to: m.to, p_mid: m.mid, p_kind: m.kind, p_body: m.body || null, p_ts: m.ts }),
+    setContactPhone: (conv, phone) => rpc('wa_set_contact_phone', { p_conv: conv, p_phone: phone }),
     recordStatus: s => rpc('wa_record_status_event', { p_wamid: s.wamid, p_status: s.status, p_ts: s.ts, p_code: s.code || null, p_detail: s.detail || null }),
     claimInbound: n => rpc('wa_claim_inbound', { p_limit: n }),
     claimOutbound: n => rpc('wa_claim_outbound', { p_limit: n }),

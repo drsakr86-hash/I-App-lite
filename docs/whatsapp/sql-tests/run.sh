@@ -22,3 +22,14 @@ bash "$HERE/concurrency.sh" "$D" "$PORT" "$PGBIN"
 $P -d wa -f "$REPO/docs/sql/whatsapp-assistant-rollback.sql" >/dev/null
 $P -d wa -tAc "select count(*) from pg_class where relname like 'wa\_%' and relnamespace='public'::regnamespace" | grep -qx 0 && echo "NOTICE:  rollback: clean (0 wa_* relations left)"
 $P -d wa -f "$REPO/docs/sql/whatsapp-assistant.sql" >/dev/null && echo "NOTICE:  re-apply after rollback: ok"
+
+# messenger-channels.sql on a second DB: original assertions must still pass after the upgrade, then the channel assertions, then rollback
+$P -d postgres -c "create database wa2" >/dev/null
+grep -v "^create role" "$HERE/schema.sql" | $P -d wa2 >/dev/null
+$P -d wa2 -f "$REPO/docs/sql/whatsapp-assistant.sql" >/dev/null
+$P -d wa2 -f "$REPO/docs/sql/messenger-channels.sql" >/dev/null && echo "NOTICE:  messenger-channels applied"
+$P -d wa2 -f "$HERE/assertions.sql" 2>&1 | grep -E "ERROR|ASSERT|psql:" | sed "s/^psql:[^ ]* //" | sed "s/^/  [after messenger upgrade] /"
+$P -d wa2 -f "$HERE/messenger-assertions.sql" 2>&1 | grep -E "NOTICE|ERROR|ASSERT|LINE|psql:" | sed "s/^psql:[^ ]* //"
+$P -d wa2 -f "$REPO/docs/sql/messenger-channels-rollback.sql" >/dev/null && echo "NOTICE:  messenger rollback: ok"
+$P -d wa2 -tAc "select count(*) from information_schema.columns where table_name='wa_contacts' and column_name='channel'" | grep -qx 0 && echo "NOTICE:  messenger rollback: clean"
+$P -d wa2 -f "$REPO/docs/sql/messenger-channels.sql" >/dev/null && echo "NOTICE:  messenger re-apply after rollback: ok"

@@ -9,3 +9,6 @@ verify_jwt = true
 # AI scribe: JWT verified here and the admin role re-checked inside the function. Secrets: GEMINI_API_KEY (paid tier), optional GEMINI_MODEL.
 [functions.ai-scribe]
 verify_jwt = true
+# Messenger + Instagram webhook: called by Meta, authenticated by the HMAC signature (same app secret as WhatsApp).
+[functions.messenger-webhook]
+verify_jwt = false

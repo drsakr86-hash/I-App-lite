@@ -3,6 +3,7 @@
 import { verifyMetaSignature, safeEqual } from './signature.js';
 import { isOptOut, sanitizeIncoming } from './text.js';
 import { processConversation } from './assistant.js';
+import { parseMessengerPayload } from './messenger.js';
 
 const MAX_BODY = 1_000_000;
 const WINDOW_MS = 24 * 3600 * 1000;
@@ -72,8 +73,32 @@ export async function handleWebhook({ rawBody, signature, env, store, kickWorker
   return json(200, { ok: true, received: fresh });
 }
 
+// ---------------------------------------------------------------- POST: Messenger / Instagram events (same Meta app, same signature)
+export async function handleMessengerWebhook({ rawBody, signature, env, store, kickWorker, log = () => {} }) {
+  if (typeof rawBody !== 'string' || rawBody.length > MAX_BODY) return json(413, { error: 'too large' });
+  if (!env.META_APP_SECRET) { log('mwebhook_no_secret', {}); return json(500, { error: 'not configured' }); }
+  if (!(await verifyMetaSignature(rawBody, signature, env.META_APP_SECRET))) { log('mwebhook_bad_signature', {}); return json(401, { error: 'invalid signature' }); }
+  let payload; try { payload = JSON.parse(rawBody); } catch { return json(400, { error: 'invalid json' }); }
+  if (!payload || (payload.object !== 'page' && payload.object !== 'instagram') || !Array.isArray(payload.entry)) return json(200, { ignored: true });
+  let cfg; try { cfg = await store.getConfig(); } catch (e) { log('mwebhook_config_error', { err: String(e.message) }); return json(500, { error: 'temporary' }); }
+  const ev = parseMessengerPayload(payload, cfg || {}, { ownAppId: env.META_APP_ID });
+  if (ev.ignored) log('mwebhook_ignored', { n: ev.ignored });
+  let fresh = 0, failures = 0;
+  for (const m of ev.inbound) {
+    try { const r = await store.ingestInboundCh(m); if (r && !r.duplicate) fresh++; }
+    catch (e) { failures++; log('mwebhook_item_error', { channel: m.channel, err: String(e && e.message || e).slice(0, 160) }); }
+  }
+  for (const m of ev.echoes) {
+    try { await store.ingestEchoCh(m); }
+    catch (e) { failures++; log('mwebhook_echo_error', { channel: m.channel, err: String(e && e.message || e).slice(0, 160) }); }
+  }
+  if (failures) return json(500, { error: 'temporary' });     // Meta retries; every write is idempotent per message id
+  if (fresh && kickWorker) { try { kickWorker(); } catch { /* the cron run will pick it up */ } }
+  return json(200, { ok: true, received: fresh });
+}
+
 // ---------------------------------------------------------------- worker (cron every minute + kicked by the webhook)
-export async function runWorker({ store, meta, llm, now = () => new Date(), log = () => {}, budgetMs = 50000 }) {
+export async function runWorker({ store, meta, messenger = null, llm, now = () => new Date(), log = () => {}, budgetMs = 50000 }) {
   const started = Date.now(), over = () => Date.now() - started > budgetMs;
   const cfg = await store.getConfig();
   const out = { disabled: false, reminders: 0, processed: 0, sent: 0, failed: 0, retried: 0 };
@@ -90,7 +115,7 @@ export async function runWorker({ store, meta, llm, now = () => new Date(), log 
         if (!b || !b.conv.ai_enabled || b.conv.status !== 'ai') { await store.markProcessed(w.conversation_id, w.max_message_id, null); continue; }   // a human owns it: the AI stays silent
         const unprocessed = await store.getUnprocessed(w.conversation_id, w.max_message_id);
         if (!unprocessed.length) continue;
-        const r = await processConversation({ store, llm, conv: b.conv, contact: b.contact, waId: b.contact.wa_id, config: cfg, now, log, flow: { ...(b.conv.flow_state || {}) }, unprocessed, attempts: w.attempts });
+        const r = await processConversation({ store, llm, conv: b.conv, contact: b.contact, waId: b.contact.wa_id, channel: b.contact.channel || 'whatsapp', config: cfg, now, log, flow: { ...(b.conv.flow_state || {}) }, unprocessed, attempts: w.attempts });
         if (r && r.ok) out.processed++;
       } catch (e) {
         log('process_error', { conv: w.conversation_id, err: String(e && e.message || e).slice(0, 160) });
@@ -106,6 +131,16 @@ export async function runWorker({ store, meta, llm, now = () => new Date(), log 
       if (over()) { await fin('retry', null, 'BUDGET', 'worker time budget reached', 15); continue; }
       if (m.purpose === 'reminder' && m.consent === 'opted_out') { await fin('cancelled', null, 'OPTED_OUT', 'contact opted out'); continue; }
       if (m.sender === 'ai' && !m.ai_active) { await fin('cancelled', null, 'HUMAN_TAKEOVER', 'conversation no longer belongs to the AI'); continue; }
+      const ch = m.channel || 'whatsapp';
+      if (ch !== 'whatsapp') {       // Messenger / Instagram: free text inside the 24 h window only (no templates there)
+        if (m.kind === 'template') { await fin('failed', null, 'TEMPLATE_WHATSAPP_ONLY', 'templates exist on WhatsApp only'); continue; }
+        if (!messenger) { await fin('retry', null, 'NOT_CONFIGURED', 'page token missing', 300); continue; }
+        const openM = m.last_inbound_at && now().getTime() - new Date(m.last_inbound_at).getTime() < WINDOW_MS;
+        if (!openM) { await fin('failed', null, 'WINDOW_CLOSED', '24h messaging window closed'); continue; }
+        const rm = await messenger.sendText(ch, m.wa_id, m.body);
+        await fin(rm.outcome, rm.id, rm.code, rm.detail, 60);
+        continue;
+      }
       if (!meta) { await fin('retry', null, 'NOT_CONFIGURED', 'Meta credentials missing', 300); continue; }
       let r;
       if (m.kind === 'template') r = await meta.sendTemplate(m.wa_id, m.template_name, m.template_lang, Array.isArray(m.template_params) ? m.template_params : []);
@@ -129,7 +164,7 @@ export async function handleStaffSend({ user, body, store, kickWorker, now = () 
   if (!Number.isInteger(convId) || convId <= 0 || !text || !clientId) return json(400, { error: 'invalid request' });
   const conv = await store.getConversationWindow(convId);
   if (!conv) return json(404, { error: 'conversation not found' });
-  if (!conv.last_inbound_at || now().getTime() - new Date(conv.last_inbound_at).getTime() >= WINDOW_MS) return json(409, { error: 'WINDOW_CLOSED', message: 'مرّت 24 ساعة على آخر رسالة من المريض: الرد الحر غير مسموح. استخدم تطبيق واتساب للأعمال أو قالب معتمد.' });
+  if (!conv.last_inbound_at || now().getTime() - new Date(conv.last_inbound_at).getTime() >= WINDOW_MS) return json(409, { error: 'WINDOW_CLOSED', message: 'مرّت 24 ساعة على آخر رسالة من المريض: الرد الحر غير مسموح من هنا. استخدم تطبيق واتساب للأعمال (أو صندوق رسائل الصفحة لماسنجر/إنستجرام).' });
   const id = await store.enqueueText({ conv: convId, sender: 'staff', purpose: 'manual', body: text, idem: `man:${convId}:${clientId}`, sentBy: String(user.email).toLowerCase() });
   if (kickWorker) { try { kickWorker(); } catch { /* cron will send */ } }
   return json(202, { ok: true, queued: id !== null, duplicate: id === null });

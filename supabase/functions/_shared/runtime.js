@@ -2,12 +2,15 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { createStore } from './store.js';
 import { createMetaClient } from './meta.js';
+import { createMessengerClient } from './messenger.js';
 import { createAnthropicClient } from './llm.js';
 
 export const env = k => Deno.env.get(k) || '';
 export const serviceClient = () => createClient(env('SUPABASE_URL'), env('SUPABASE_SERVICE_ROLE_KEY'), { auth: { persistSession: false, autoRefreshToken: false } });
 export const makeStore = () => createStore(serviceClient());
 export const makeMeta = () => env('META_ACCESS_TOKEN') && env('META_PHONE_NUMBER_ID') ? createMetaClient({ token: env("META_ACCESS_TOKEN"), phoneNumberId: env("META_PHONE_NUMBER_ID"), version: env('META_GRAPH_VERSION') || undefined }) : null;
+// Messenger + Instagram replies (one Page access token with pages_messaging + instagram_manage_messages).
+export const makeMessenger = () => env('META_PAGE_TOKEN') ? createMessengerClient({ token: env('META_PAGE_TOKEN'), version: env('META_GRAPH_VERSION') || undefined }) : null;
 export const makeLlm = () => env('ANTHROPIC_API_KEY') ? createAnthropicClient({ apiKey: env('ANTHROPIC_API_KEY'), model: env('ANTHROPIC_MODEL') || undefined }) : null;
 // Logs carry ids and error classes only - never message text, names or phone numbers.
 export const log = (event, data) => console.log(JSON.stringify({ event, ...data }));
