@@ -15,10 +15,14 @@ Nothing changes for WhatsApp.
 
 ## Order of deployment (each step is backward compatible)
 
-1. Apply `docs/sql/messenger-channels.sql` (tested locally: `npm run test:whatsapp-sql`). Rollback: `messenger-channels-rollback.sql`.
-2. Redeploy the worker (`dist-fn/whatsapp-worker.js`, live slug `quick-task`).
-3. Deploy `dist-fn/messenger-webhook.js` as a new function `messenger-webhook`, `verify_jwt = false`.
-4. Merge to main (inbox shows the channel badge; it also works before step 1).
+Done on 2026-10-31:
+
+1. `docs/sql/messenger-channels.sql` applied (tested locally: `npm run test:whatsapp-sql`). Rollback: `messenger-channels-rollback.sql`.
+2. New worker deployed as function `whatsapp-worker` and the `wa-worker` cron (job 1) now calls it.
+   The previous worker `quick-task` is left untouched: to roll back, point job 1 back at `/functions/v1/quick-task`.
+   (The webhook already wakes `whatsapp-worker`, so replies no longer wait for the next cron minute.)
+3. `messenger-webhook` deployed, `verify_jwt = false`.
+4. Merged to main (inbox shows the channel badge).
 
 ## Meta setup (owner)
 
