@@ -70,3 +70,11 @@ export function buildErrorRows({ audits = [], failed = [], retrying = [] } = {})
   for (const m of retrying) rows.push({ key: 'r' + m.id, at: m.created_at, kind: 'process', conv: m.conversation_id, text: String(m.process_error || '') });
   return rows.sort((x, y) => new Date(y.at) - new Date(x.at)).slice(0, 50);
 }
+
+// Channel of a conversation (Messenger / Instagram since docs/sql/messenger-channels.sql; older rows have no channel = WhatsApp).
+export const channelOf = c => (c && c.contact && c.contact.channel) || 'whatsapp';
+export const CHANNEL_COLOR = { whatsapp: '#25D366', messenger: '#0084FF', instagram: '#C13584' };
+// Number used to find this person's appointments: the WhatsApp number, or the mobile a Messenger/Instagram patient typed (may be none).
+export const lookupPhone = c => channelOf(c) === 'whatsapp' ? String(c && c.contact && c.contact.wa_id || '') : String(c && c.contact && c.contact.phone || '');
+// Label when the patient's name is unknown (Messenger/Instagram do not send it): never show a page-scoped id as if it were a phone.
+export const contactLabel = (c, chName) => (c && c.contact && c.contact.profile_name) || (channelOf(c) === 'whatsapp' ? maskWa(c && c.contact && c.contact.wa_id) : chName + ' #' + String(c && c.contact && c.contact.wa_id || '').slice(-4));

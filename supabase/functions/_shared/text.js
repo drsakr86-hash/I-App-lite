@@ -73,3 +73,7 @@ export function chunkText(s, max = 3800) {
 
 // WhatsApp bold is a single asterisk; models write **bold** (Markdown), which shows literal stars.
 export const toWhatsAppBold = s => String(s || '').replace(/\*\*([^*\n]+?)\*\*/g, '*$1*').replace(/^#{1,6}\s+/gm, '');
+// Messenger / Instagram show no Markdown at all: drop the stars and headings, keep the words.
+export const toPlainText = s => String(s || '').replace(/\*{1,2}([^*\n]+?)\*{1,2}/g, '$1').replace(/^#{1,6}\s+/gm, '');
+// Egyptian mobile typed by a patient (any digits, +20 / 0020 prefix, Arabic digits) -> 01xxxxxxxxx, or '' when it is not one.
+export const egyptMobile = s => { const p = normPhone(asciiDigits(s)); return /^01[0125][0-9]{8}$/.test(p) ? p : ''; };

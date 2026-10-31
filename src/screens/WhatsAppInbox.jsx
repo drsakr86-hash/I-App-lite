@@ -1,11 +1,11 @@
-// Secretary inbox for the official WhatsApp assistant. Admin + secretary only (RLS enforces it; the screen is also gated by the callers).
+// Secretary inbox for the official WhatsApp assistant (+ Facebook Messenger and Instagram Direct, same queue and assistant). Admin + secretary only (RLS enforces it; the screen is also gated by the callers).
 // Never shows credentials; sending goes through the whatsapp-send Edge Function. Degrades to a notice while the wa_* tables are absent.
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { C } from '../modules/theme/index.js';
 import { t, useLang, dirOf } from '../modules/i18n/index.js';
 import { logError } from '../services/logger.js';
 import {
-  filterConversations, FILTERS, ownerOf, windowOpen, windowLeftMin, deliveryKey, canRetry, isUncertain, bookingState, newClientId, maskWa, buildErrorRows
+  filterConversations, FILTERS, ownerOf, windowOpen, windowLeftMin, deliveryKey, canRetry, isUncertain, bookingState, newClientId, buildErrorRows, channelOf, CHANNEL_COLOR, lookupPhone, contactLabel
 } from '../modules/whatsapp/model.js';
 import * as svc from '../modules/whatsapp/service.js';
 import { pushStatus, enablePush, disablePush, pushDiagnostics } from '../modules/whatsapp/push.js';
@@ -50,7 +50,7 @@ export default function WhatsAppInbox({ session }) {
   useEffect(() => { loadList(); const iv = setInterval(loadList, POLL_MS); return () => clearInterval(iv); }, [loadList]);
   useEffect(() => { loadThread(); if (!selId) return undefined; const iv = setInterval(loadThread, POLL_MS); return () => clearInterval(iv); }, [loadThread, selId]);
   useEffect(() => { if (sel && sel.unread_count > 0) svc.markRead(sel.id).then(loadList).catch(e => logError('whatsapp.read', e)); }, [selId, sel && sel.unread_count]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { setApts([]); if (sel && sel.contact) svc.loadAppointments(sel.contact.wa_id).then(setApts).catch(() => {}); }, [selId]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setApts([]); if (sel && sel.contact) svc.loadAppointments(lookupPhone(sel)).then(setApts).catch(() => {}); }, [selId]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (endRef.current && endRef.current.scrollIntoView) endRef.current.scrollIntoView({ block: 'end' }); }, [msgs.length, selId]);
 
   const shown = useMemo(() => filterConversations(state.rows, { filter, search, me, failedIds: state.failedIds }), [state.rows, state.failedIds, filter, search, me]);
@@ -135,11 +135,12 @@ export default function WhatsAppInbox({ session }) {
             return (
               <div key={c.id} onClick={() => setSelId(c.id)} style={{ background: C.card, border: '1px solid ' + (c.unread_count > 0 ? C.accent : C.border), borderRadius: 12, padding: '10px 12px', cursor: 'pointer' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
-                  <div style={{ fontWeight: 700, color: C.text, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{(c.contact && c.contact.profile_name) || maskWa(c.contact && c.contact.wa_id)}</div>
+                  <div style={{ fontWeight: 700, color: C.text, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{contactLabel(c, t('g9.wa.ch.' + channelOf(c), lang))}</div>
                   <div style={{ fontSize: 10, color: C.muted, whiteSpace: 'nowrap' }}>{c.last_message_at ? new Date(c.last_message_at).toLocaleString(lang === 'en' ? 'en-GB' : 'ar-EG', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) : ''}</div>
                 </div>
                 <div style={{ color: C.muted, fontSize: 12, margin: '4px 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.last_preview || '—'}</div>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {channelOf(c) !== 'whatsapp' && pill(CHANNEL_COLOR[channelOf(c)], t('g9.wa.ch.' + channelOf(c), lang), 'ch')}
                   {pill(ownerColor(o), t('g9.wa.owner.' + o, lang), 'o')}
                   {c.handoff_reason === 'urgent' && pill(C.danger, '⚠ ' + t('g9.wa.urgent', lang), 'u')}
                   {c.unread_count > 0 && pill(C.accent, String(c.unread_count), 'n')}
@@ -156,8 +157,10 @@ export default function WhatsAppInbox({ session }) {
         <>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
             <button onClick={() => setSelId(null)} style={btn()}>{lang === 'en' ? '←' : '→'} {t('g9.wa.back', lang)}</button>
-            <div style={{ fontWeight: 700, color: C.text }}>{(sel.contact && sel.contact.profile_name) || maskWa(sel.contact && sel.contact.wa_id)}</div>
-            <div style={{ color: C.muted, fontSize: 11, direction: 'ltr' }}>{sel.contact && sel.contact.wa_id}</div>
+            <div style={{ fontWeight: 700, color: C.text }}>{contactLabel(sel, t('g9.wa.ch.' + channelOf(sel), lang))}</div>
+            {channelOf(sel) === 'whatsapp'
+              ? <div style={{ color: C.muted, fontSize: 11, direction: 'ltr' }}>{sel.contact && sel.contact.wa_id}</div>
+              : <>{pill(CHANNEL_COLOR[channelOf(sel)], t('g9.wa.ch.' + channelOf(sel), lang), 'ch')}<div style={{ color: C.muted, fontSize: 11 }} title={t('g9.wa.typedPhone', lang)}>{sel.contact && sel.contact.phone ? <span style={{ direction: 'ltr', unicodeBidi: 'embed' }}>📞 {sel.contact.phone}</span> : t('g9.wa.noPhoneYet', lang)}</div></>}
             {pill(ownerColor(owner), t('g9.wa.owner.' + owner, lang), 'o')}
             {sel.handoff_reason && pill(sel.handoff_reason === 'urgent' ? C.danger : C.muted, t('g9.wa.reason.' + sel.handoff_reason, lang) === 'g9.wa.reason.' + sel.handoff_reason ? t('g9.wa.reason.other', lang) : t('g9.wa.reason.' + sel.handoff_reason, lang), 'r')}
           </div>
@@ -210,7 +213,7 @@ export default function WhatsAppInbox({ session }) {
             ); })}
           </div>
 
-          {consent && (
+          {consent && channelOf(sel) === 'whatsapp' && (
             <div style={{ background: C.card, border: '1px solid ' + C.border, borderRadius: 12, padding: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               <div style={{ fontSize: 12, color: C.text }}>{t('g9.wa.reminders', lang)}: {consent.consent === 'opted_out' ? pill(C.danger, t('g9.wa.optedOut', lang), 'c') : consent.reminders_opt_in ? pill(C.teal, t('g9.wa.remOn', lang), 'c') : pill(C.muted, t('g9.wa.remOff', lang), 'c')}</div>
               {consent.consent !== 'opted_out' && <button style={btn()} onClick={() => act(() => svc.setReminderConsent(consent.id, !consent.reminders_opt_in))}>{consent.reminders_opt_in ? t('g9.wa.remDisable', lang) : t('g9.wa.remEnable', lang)}</button>}

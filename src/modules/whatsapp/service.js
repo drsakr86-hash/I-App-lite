@@ -3,13 +3,18 @@
 import { getSB } from '../data-access/index.js';
 import { isNotInstalled } from './model.js';
 
+const isMissingColumn = e => !!e && (e.code === '42703' || e.code === 'PGRST204' || /column .* does not exist/i.test(String(e.message || '')));
+
 const functionsUrl = () => String(sb().supabaseUrl || '').replace(/\/$/, '') + '/functions/v1/hyper-responder';
 const sb = () => { const c = getSB(); if (!c) throw new Error('offline'); return c; };
 const wrap = r => { if (r.error) { const e = new Error(r.error.message); e.code = r.error.code; throw e; } return r.data; };
 
 export async function loadConversations(limit = 200) {
   try {
-    const rows = wrap(await sb().from('wa_conversations').select('id,status,ai_enabled,assigned_to,unread_count,last_message_at,last_inbound_at,last_preview,handoff_reason,wa_contacts(id,wa_id,profile_name,consent,reminders_opt_in)').order('last_message_at', { ascending: false, nullsFirst: false }).limit(limit)) || [];
+    const q = cols => sb().from('wa_conversations').select('id,status,ai_enabled,assigned_to,unread_count,last_message_at,last_inbound_at,last_preview,handoff_reason,wa_contacts(' + cols + ')').order('last_message_at', { ascending: false, nullsFirst: false }).limit(limit);
+    let res = await q('id,wa_id,profile_name,consent,reminders_opt_in,channel,phone');
+    if (res.error && isMissingColumn(res.error)) res = await q('id,wa_id,profile_name,consent,reminders_opt_in');   // Messenger migration not applied yet
+    const rows = wrap(res) || [];
     const failed = wrap(await sb().from('wa_messages').select('conversation_id').eq('direction', 'out').eq('status', 'failed').gte('created_at', new Date(Date.now() - 7 * 86400000).toISOString()).limit(500)) || [];
     return { installed: true, rows: rows.map(({ wa_contacts, ...c }) => ({ ...c, contact: wa_contacts })), failedIds: new Set(failed.map(f => f.conversation_id)) };
   } catch (e) { if (isNotInstalled(e)) return { installed: false, rows: [], failedIds: new Set() }; throw e; }

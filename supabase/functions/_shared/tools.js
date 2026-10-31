@@ -4,7 +4,7 @@
 //   * appointments are referred to by opaque per-conversation refs (A1, A2...) created by list_my_appointments after a name check;
 //   * writes are only PROPOSED here (stored in conversations.flow_state.pending). They are executed by assistant.js when the PATIENT's
 //     next message is an explicit yes - model output alone can never create, change or cancel an appointment.
-import { cleanPatientName, firstToken, normArabic, sanitizeIncoming } from './text.js';
+import { cleanPatientName, egyptMobile, firstToken, normArabic, sanitizeIncoming } from './text.js';
 import { CLINICS, DEFAULT_DOCTOR, DEFAULT_VISIT_TYPE, WEEK_DAY_NAMES, addDaysISO, availableSlots, clinicDays, clinicNow, findClinic, isISODate, isScheduledSlot, isoDow, normTime, BOOKING_DAYS_AHEAD } from './schedule.js';
 import { getInfo, INFO_TOPICS } from './clinicinfo.js';
 
@@ -50,12 +50,26 @@ export const TOOL_DEFINITIONS = [
   }
 ];
 
+// Messenger / Instagram: the sender id is NOT a phone number, so nothing can be looked up, cancelled or moved by it. Only a booking
+// REQUEST is possible, with the mobile number the patient types; the secretary calls that number to confirm.
+const PHONE_LESS_BLOCKED = new Set(['list_my_appointments', 'propose_cancel', 'propose_reschedule']);
+export function toolDefinitionsFor(channel = 'whatsapp') {
+  if (channel === 'whatsapp') return TOOL_DEFINITIONS;
+  return TOOL_DEFINITIONS.filter(t => !PHONE_LESS_BLOCKED.has(t.name)).map(t => t.name !== 'propose_booking' ? t : {
+    ...t,
+    description: 'اقتراح طلب حجز بعد ما المريض يحدد العيادة والتاريخ والوقت ويقول اسمه بالكامل ورقم موبايله. ده مجرد اقتراح: النظام هيطلب من المريض التأكيد بنفسه، والسكرتارية هتتصل بالرقم لتأكيد الموعد. ممنوع تقول إن الحجز تم.',
+    input_schema: { ...t.input_schema, properties: { ...t.input_schema.properties, phone: { type: 'string', description: 'رقم موبايل المريض كما كتبه (01xxxxxxxxx)' } }, required: [...t.input_schema.required, 'phone'] }
+  });
+}
+
 const dayLabel = iso => `${WEEK_DAY_NAMES[isoDow(iso)]} ${iso}`;
 export const describeSlot = (clinic, date, time) => `${clinic.name} — ${dayLabel(date)} الساعة ${time}`;
 
-// ctx: { store, conv:{id}, waId, config, now(), flow (mutable object persisted by the caller), latestMsgId, info }
+// ctx: { store, conv:{id}, waId, channel, config, now(), flow (mutable object persisted by the caller), latestMsgId, info }
 export function createToolRuntime(ctx) {
   const tz = ctx.config.clinic_tz || 'Africa/Cairo';
+  const channel = ctx.channel || 'whatsapp';
+  const definitions = toolDefinitionsFor(channel), allowed = new Set(definitions.map(d => d.name));
   const nowDate = () => (ctx.now ? ctx.now() : new Date());
   const takenFor = async (clinic, date) => (await ctx.store.takenTimes(clinic.code, date)).map(normTime).filter(Boolean);
 
@@ -80,8 +94,10 @@ export function createToolRuntime(ctx) {
       return { clinic: clinic.code, working_days: clinicDays(clinic).map(d => WEEK_DAY_NAMES[d]), next_dates: out };
     },
 
-    async propose_booking({ clinic: c, date, time, patient_name, visit_type }) {
+    async propose_booking({ clinic: c, date, time, patient_name, visit_type, phone: typedPhone }) {
       const clinic = findClinic(c); if (!clinic) return { error: 'UNKNOWN_CLINIC' };
+      const phone = channel === 'whatsapp' ? null : egyptMobile(typedPhone);
+      if (channel !== 'whatsapp' && !phone) return { error: 'PHONE_REQUIRED', hint: 'اطلب رقم موبايل مصري صحيح (11 رقم يبدأ بـ 01) عشان السكرتارية تأكد الموعد' };
       if (!isISODate(date)) return { error: 'INVALID_DATE' };
       const t = normTime(time); if (!t) return { error: 'INVALID_TIME' };
       const name = cleanPatientName(patient_name); if (!name) return { error: 'NAME_REQUIRED', hint: 'اطلب الاسم بالكامل' };
@@ -89,8 +105,8 @@ export function createToolRuntime(ctx) {
       if (!type) return { error: 'INVALID_VISIT_TYPE', allowed: VISIT_TYPES };
       if (!isScheduledSlot(clinic, date, t, nowDate(), { tz })) return { error: 'NOT_A_SLOT', hint: 'المعاد ده خارج مواعيد العيادة أو فات. استخدم list_available_slots' };
       if ((await takenFor(clinic, date)).includes(t)) return { error: 'SLOT_TAKEN', hint: 'المعاد محجوز. اعرض بدائل من list_available_slots' };
-      ctx.flow.pending = { kind: 'book', args: { clinic: clinic.code, date, time: t, name, type }, created_msg_id: ctx.latestMsgId, expires_at: new Date(nowDate().getTime() + PENDING_TTL_MIN * 60000).toISOString() };
-      return { ok: true, awaiting_patient_confirmation: true, summary: `${describeSlot(clinic, date, t)} — ${name} — ${type}`, instruction: 'اعرض الملخص على المريض واطلب منه يرد بـ "تأكيد". النظام هو اللي هينفذ ويبعت رسالة التأكيد. ممنوع تقول إن الحجز تم.' };
+      ctx.flow.pending = { kind: 'book', args: { clinic: clinic.code, date, time: t, name, type, ...(phone ? { phone } : {}) }, created_msg_id: ctx.latestMsgId, expires_at: new Date(nowDate().getTime() + PENDING_TTL_MIN * 60000).toISOString() };
+      return { ok: true, awaiting_patient_confirmation: true, summary: `${describeSlot(clinic, date, t)} — ${name} — ${type}${phone ? ' — موبايل ' + phone : ''}`, instruction: 'اعرض الملخص على المريض واطلب منه يرد بـ "تأكيد". النظام هو اللي هينفذ ويبعت رسالة التأكيد. ممنوع تقول إن الحجز تم.' };
     },
 
     async list_my_appointments({ patient_name }) {
@@ -129,9 +145,9 @@ export function createToolRuntime(ctx) {
   };
 
   return {
-    definitions: TOOL_DEFINITIONS,
+    definitions,
     async execute(name, input) {
-      const fn = handlers[name];
+      const fn = allowed.has(name) && handlers[name];
       if (!fn) return { error: 'UNKNOWN_TOOL' };
       if (input === null || typeof input !== 'object' || Array.isArray(input)) return { error: 'INVALID_ARGUMENTS' };
       const clean = {};
