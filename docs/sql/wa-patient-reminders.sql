@@ -188,7 +188,7 @@ begin
       v_name := public.wa_tparam(r.name, 'حضرتك'); v_date := public.wa_ar_date(r.vdate, false);
       n := n + public.wa_queue_template(v_conv, 'checkup', cfg.checkup_template, cfg.reminder_template_lang, jsonb_build_array(v_name, v_date),
         'مرحباً ' || v_name || '،' || chr(10) || 'حسب خطة المتابعة المحددة لكم، حان موعد الكشف الدوري على العين، وكان آخر كشف بتاريخ ' || v_date || '.' || chr(10)
-          || 'يمكنكم حجز الموعد بالضغط على الزر بالأسفل.' || chr(10) || '[احجز الكشف الدوري]',
+          || 'يمكنكم حجز الموعد بالضغط على الزر بالأسفل.' || chr(10) || '[احجز الكشف]',
         'ck:' || r.pid || ':' || r.vdate, null, null, null, p_now);
     end loop;
   end if;

@@ -33,7 +33,7 @@ test('reminders: confirm button with no delivered reminder falls through to the 
 test('reminders: button texts and opt-out words', () => {
   assert.ok(isConfirmButton('تأكيد الحضور')); assert.ok(isConfirmButton(' تاكيد الحضور ')); assert.ok(!isConfirmButton('عايز أأكد الحضور بكرة ولا لأ؟'));
   for (const w of ['إيقاف', 'ايقاف', 'وقف', 'STOP', 'وقف الرسائل']) assert.ok(isOptOut(w), w);
-  for (const w of ['إلغاء', 'تغيير الموعد', 'احجز موعد المتابعة', 'احجز الكشف الدوري', 'تأكيد الحضور', 'ايقاف العلاج امتى؟']) assert.ok(!isOptOut(w), w);
+  for (const w of ['إلغاء', 'تغيير الموعد', 'احجز موعد المتابعة', 'احجز الكشف', 'تأكيد الحضور', 'ايقاف العلاج امتى؟']) assert.ok(!isOptOut(w), w);
 });
 
 test('reminders: worker runs the scheduler when only follow-ups are on, and drops opted-out reminders of every kind', async () => {
