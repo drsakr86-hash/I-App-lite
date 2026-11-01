@@ -28,7 +28,9 @@ const hasWord = (n, list) => list.some(w => new RegExp('(^|[^\\p{L}])' + normAra
 // ---- deterministic safety layer (runs BEFORE the model; the model is never asked whether something is an emergency) ----
 const OPT_OUT = ['stop', 'unsubscribe', 'وقف الرسائل', 'ايقاف الرسائل', 'إيقاف الرسائل', 'لا ترسل', 'متبعتش', 'بلاش رسائل', 'الغاء الاشتراك', 'إلغاء الاشتراك', 'الغاء الاشتراك', 'توقف', 'وقف التذكير', 'ايقاف التذكير'];
 // Opt-out must be a SHORT message ('stop', 'وقف الرسائل'); a long sentence that merely contains the word is not an opt-out.
-export const isOptOut = text => { const n = normArabic(sanitizeIncoming(text)); return n.length > 0 && n.length <= 40 && ((n.split(' ').length <= 2 && hasWord(n, ['stop', 'unsubscribe'])) || has(n, OPT_OUT.slice(2))); };
+// A bare "إيقاف" / "وقف" is what the reminder messages tell the patient to send.
+const OPT_OUT_EXACT = ['ايقاف', 'إيقاف', 'وقف', 'ايقاف التذكيرات', 'إيقاف التذكيرات'];
+export const isOptOut = text => { const n = normArabic(sanitizeIncoming(text)); return n.length > 0 && n.length <= 40 && ((n.split(' ').length <= 2 && hasWord(n, ['stop', 'unsubscribe'])) || has(n, OPT_OUT.slice(2)) || OPT_OUT_EXACT.some(w => n === normArabic(w))); };
 
 const HUMAN = ['موظف', 'سكرتير', 'سكرتيره', 'كلم حد', 'كلمني حد', 'عايز اتكلم مع', 'عاوز اتكلم مع', 'عايزه اتكلم مع', 'اتكلم مع حد', 'مع انسان', 'شخص حقيقي', 'مسؤول', 'مدير', 'human', 'agent', 'representative', 'اكلم حد', 'حد يرد عليا', 'عايز حد'];
 export const wantsHuman = text => { const n = normArabic(sanitizeIncoming(text)); return has(n, HUMAN.filter(w => w.length > 5)) || hasWord(n, ['human', 'agent', 'موظف', 'سكرتير', 'سكرتيره']); };

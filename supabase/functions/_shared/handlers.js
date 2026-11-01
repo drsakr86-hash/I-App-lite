@@ -7,6 +7,7 @@ import { parseMessengerPayload } from './messenger.js';
 
 const MAX_BODY = 1_000_000;
 const WINDOW_MS = 24 * 3600 * 1000;
+const REMINDER_PURPOSES = new Set(['reminder', 'followup', 'checkup']);
 const json = (status, body) => ({ status, body });
 
 // ---------------------------------------------------------------- GET: Meta's subscription handshake
@@ -104,7 +105,7 @@ export async function runWorker({ store, meta, messenger = null, llm, now = () =
   const out = { disabled: false, reminders: 0, processed: 0, sent: 0, failed: 0, retried: 0 };
   if (!cfg || !cfg.enabled) return { ...out, disabled: true };
   await store.reapStuck(); await store.retryPending();
-  if (cfg.reminders_enabled) out.reminders = await store.enqueueReminders();
+  if (cfg.reminders_enabled || cfg.followups_enabled) out.reminders = await store.enqueueReminders();   // appointment / follow-up / check-up templates
 
   if (cfg.ai_enabled && llm) {
     const work = await store.claimInbound(5);
@@ -129,7 +130,7 @@ export async function runWorker({ store, meta, messenger = null, llm, now = () =
     const fin = async (o, id, code, detail, secs) => { await store.finishOutbound(m.id, o, id, code, detail, secs); if (o === 'sent') out.sent++; else if (o === 'retry') out.retried++; else out.failed++; };
     try {
       if (over()) { await fin('retry', null, 'BUDGET', 'worker time budget reached', 15); continue; }
-      if (m.purpose === 'reminder' && m.consent === 'opted_out') { await fin('cancelled', null, 'OPTED_OUT', 'contact opted out'); continue; }
+      if (REMINDER_PURPOSES.has(m.purpose) && m.consent === 'opted_out') { await fin('cancelled', null, 'OPTED_OUT', 'contact opted out'); continue; }
       if (m.sender === 'ai' && !m.ai_active) { await fin('cancelled', null, 'HUMAN_TAKEOVER', 'conversation no longer belongs to the AI'); continue; }
       const ch = m.channel || 'whatsapp';
       if (ch !== 'whatsapp') {       // Messenger / Instagram: free text inside the 24 h window only (no templates there)
