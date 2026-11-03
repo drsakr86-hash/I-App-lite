@@ -4,7 +4,7 @@
 //   3. the model, restricted to the read/propose tools in tools.js
 //   4. output guard (a model text that claims a booking/cancellation happened is never sent)
 // Success messages for appointment writes are composed HERE after the database confirmed the result, never by the model.
-import { isAffirmative, isNegative, isUrgent, sanitizeIncoming, wantsHuman, chunkText, normArabic, toWhatsAppBold, toPlainText } from './text.js';
+import { isAffirmative, isNegative, isOptOut, isUrgent, sanitizeIncoming, wantsHuman, chunkText, normArabic, toWhatsAppBold, toPlainText } from './text.js';
 import { CLINICS, DEFAULT_DOCTOR, WEEK_DAY_NAMES, availableSlots, clinicNow, findClinic, addDaysISO, clinicDays, isoDow, isScheduledSlot, normTime } from './schedule.js';
 import { buildClinicInfo } from './clinicinfo.js';
 import { createToolRuntime, describeSlot } from './tools.js';
@@ -172,6 +172,11 @@ export async function processConversation(env) {
   }
   if (wantsHuman(text)) { await store.handoff(conv.id, 'patient_requested', true); return done(); }
 
+  // 1a) opt-out also here, so a worker update covers it even while an older webhook build is live (the webhook handles it first when it can)
+  if (channel === 'whatsapp' && isOptOut(text)) {
+    await store.setConsent(env.waId, null, true, 'chat');
+    await send('تم إيقاف رسائل التذكير. لو احتجت حاجة تقدر تكلمنا في أي وقت.', 'system', 'reply', 'o'); return done();
+  }
   // 1b) "تأكيد الحضور" button of an appointment reminder: confirmed in the database, no model involved
   if (channel === 'whatsapp' && isConfirmButton(text) && store.confirmFromReminder) {
     let r = null; try { r = await store.confirmFromReminder(conv.id); } catch (e) { env.log && env.log('confirm_reminder_error', { err: String(e && e.message || e).slice(0, 100) }); }

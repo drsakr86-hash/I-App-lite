@@ -55,3 +55,10 @@ test('reminders: patient form phone rule matches the server (Egyptian mobiles on
   for (const p of ['0453333313', '01312345678', '', null, '0101234567']) assert.ok(!hasReminderPhone(p), String(p));
   assert.deepEqual(CHECKUP_OPTIONS, [3, 6, 12]);
 });
+
+test('reminders: a bare "إيقاف" reaching the worker opts the patient out without the model', async () => {
+  const st = fakeStore(), llm = scriptedLlm([say('x')]); const calls = [];
+  st.setConsent = async (...a) => { calls.push(a); };
+  await run(st, llm, 'إيقاف');
+  assert.equal(llm.calls.length, 0); assert.deepEqual(calls[0], [WA, null, true, 'chat']); assert.match(st.out.at(-1).body, /تم إيقاف/);
+});
