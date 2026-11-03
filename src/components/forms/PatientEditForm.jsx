@@ -6,6 +6,7 @@ import {
 } from './patient-form-model.js';
 import { C } from '../../modules/theme/index.js';
 import { Field, inp } from '../../modules/ui/atoms.jsx';
+import ReminderFields from './ReminderFields.jsx';
 import { useLang, t } from '../../modules/i18n/index.js';
 import { tv } from '../../modules/i18n/tv.js';
 
@@ -108,6 +109,7 @@ export default function PatientEditForm({ patient, onSave, onClose }) {
           <Field label={t('g2.patient.phoneNo', lang)}>
             <input style={inp()} value={f.phone} onChange={s('phone')} />
           </Field>
+          <ReminderFields f={f} setF={setF} lang={lang} />
           <Field label={t('g2.patient.emergency', lang)}>
             <input style={inp()} value={f.emergencyContact || ''} onChange={s('emergencyContact')} placeholder={t('g2.patient.emergencyPh', lang)} />
           </Field>

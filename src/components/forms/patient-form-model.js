@@ -47,3 +47,11 @@ export const buildPatientPayload = f => ({ ...f, age: normalizeAge(f.age) });
 // PatientEditForm: plain copy of the patient, no validation at all.
 export const initialPatientEditState = patient => ({ ...patient });
 export const buildPatientEditPayload = f => ({ ...f, age: normalizeAge(f.age) });
+
+// WhatsApp reminders (ReminderFields.jsx). Same rule as the server's wa_phone_to_waid: Egyptian mobiles only.
+export const CHECKUP_OPTIONS = [3, 6, 12];
+const AR_DIGITS = /[٠-٩۰-۹]/g;
+export const hasReminderPhone = phone => {
+  const d = String(phone || '').replace(AR_DIGITS, c => String('٠١٢٣٤٥٦٧٨٩'.indexOf(c) >= 0 ? '٠١٢٣٤٥٦٧٨٩'.indexOf(c) : '۰۱۲۳۴۵۶۷۸۹'.indexOf(c))).replace(/\D/g, '');
+  return /^(?:0|20|0020)1[0125]\d{8}$/.test(d);
+};

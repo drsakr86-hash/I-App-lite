@@ -4,6 +4,7 @@ import {
   GENDERS, BLOOD_TYPES, PATIENT_STATUSES, initialPatientState, canSavePatient, buildPatientPayload
 } from './patient-form-model.js';
 import { Field, inp } from '../../modules/ui/atoms.jsx';
+import ReminderFields from './ReminderFields.jsx';
 import { useLang, t } from '../../modules/i18n/index.js';
 import { tv } from '../../modules/i18n/tv.js';
 import { localISO } from '../../modules/constants/misc.js';
@@ -54,6 +55,7 @@ export default function PatientForm({ initial, onSave, onClose }) {
       <Field label={t('g2.patient.lastVisit', lang)}>
         <input style={inp()} type="date" value={f.lastVisit} onChange={s('lastVisit')} />
       </Field>
+      <ReminderFields f={f} setF={setF} lang={lang} />
       <Field label={t('g2.patient.status', lang)}>
         <select style={inp()} value={f.status} onChange={s('status')}>
           {PATIENT_STATUSES.map(x => <option key={x} value={x}>{tv(x)}</option>)}

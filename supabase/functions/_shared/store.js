@@ -64,6 +64,7 @@ export function createStore(sb) {
     reapStuck: () => rpc('wa_reap_stuck'),
     retryPending: () => rpc('wa_retry_pending_statuses'),
     enqueueReminders: () => rpc('wa_enqueue_reminders'),
+    confirmFromReminder: conv => rpc('wa_confirm_from_reminder', { p_conv: conv }),     // docs/sql/wa-patient-reminders.sql
     purge: () => rpc('wa_purge')
   };
 }
