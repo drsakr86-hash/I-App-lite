@@ -94,3 +94,15 @@ test('logs never contain message text or phone numbers', async () => {
   await post(payload(msg('l1', 'سري جدا 0100')), st, { log: (e, d) => lines.push(e + JSON.stringify(d)) });
   assert.ok(lines.length); assert.ok(!lines.join('').includes('سري')); assert.ok(!lines.join('').includes('201000000001'));
 });
+
+test('a message without `from` is taken from the single contact, and anything skipped is logged (shape only)', async () => {
+  const st = fakeStore(), logs = [];
+  const v = msg('wamid.NOFROM', 'محتاج أحجز بكره'); delete v.messages[0].from;
+  const r = await post(payload(v), st, { log: (e, d) => logs.push([e, d]) });
+  assert.equal(r.status, 200); assert.equal(r.body.received, 1);
+  const v2 = { contacts: [{ user_id: 'EG.123' }], messages: [{ id: 'wamid.X', timestamp: '1768471200', type: 'text', text: { body: 'سري' } }] };
+  const r2 = await post(payload(v2), st, { log: (e, d) => logs.push([e, d]) });
+  assert.equal(r2.body.received, 0);
+  const sk = logs.find(l => l[0] === 'webhook_message_skipped'); assert.ok(sk);
+  assert.doesNotMatch(JSON.stringify(sk), /سري|123/);
+});
