@@ -31,6 +31,13 @@ const attendanceText = r => `شكرًا لتأكيد حضورك ✅\n📍 ${r.cl
 const FALSE_SUCCESS = /(تم\s+(تأكيد|حجز|إلغاء|الغاء|تعديل|تغيير|تسجيل)|اتحجز|اتأكد|اتلغ|اتعدل|حجزتلك|حجزتلكم|ألغيتلك|الغيتلك|سجلتلك|booking\s+(is\s+)?confirmed|has\s+been\s+(booked|cancel+ed|rescheduled)|successfully\s+(booked|cancel+ed))/i;
 export const claimsSuccess = t => FALSE_SUCCESS.test(String(t || ''));
 
+// A reply that hit the token limit ends mid-word: keep it only up to the last complete sentence / line.
+export function cutToLastSentence(t) {
+  const s = String(t || '').trim();
+  const i = Math.max(s.lastIndexOf('\n'), ...['.', '؟', '?', '!', '،\n'].map(c => s.lastIndexOf(c)));
+  return i > s.length * 0.3 ? s.slice(0, i + 1).trim() : s;
+}
+
 const dayLabel = iso => `${WEEK_DAY_NAMES[isoDow(iso)]} ${iso}`;
 
 export const CHANNEL_LABEL = { whatsapp: 'واتساب', messenger: 'ماسنجر فيسبوك', instagram: 'إنستجرام' };
@@ -54,7 +61,8 @@ ${wa ? '5) لمواعيد موجودة: اطلب اسم المريض المسج�
 7) لو المريض طلب يكلم موظف: request_human. لو مش واثق من أي حاجة: request_human.
 8) ممنوع تكتب "تصحيح" أو تعتذر عن رسائلك السابقة إلا لو نتيجة أداة أظهرت فعلاً إن معلومة قلتها غلط؛ وفي الحالة دي صحّح المعلومة نفسها بس. لا تقل إن مواعيد سابقة "مش مراجعة" ولا تحصر المواعيد المتاحة في يوم واحد لمجرد إنك فحصت يوم واحد.
 9) رسائل التذكير اللي العيادة بعتتها ظاهرة في المحادثة. لو المريض رد عليها بـ "إلغاء" أو "تغيير الموعد" فده طلب إلغاء أو نقل الموعد المذكور في التذكير: اطلب اسمه المسجل لو مش معروف، ثم list_my_appointments، ثم propose_cancel أو اسأله عن اليوم المناسب واعرض المتاح ثم propose_reschedule. لو رد بـ "احجز موعد المتابعة" أو "احجز الكشف" فده طلب حجز جديد بنوع زيارة "متابعة" أو "فحص روتيني": اسأله عن العيادة واليوم المناسب.
-10) خاطب المريض بـ "حضرتك" ولا تناديه باسم من عندك (الاسم المكتوب للحجز ممكن يكون لمريض تاني، ومينفعش تخمن الاسم الأول أو النوع). لو المريض كتب الاسم بالكامل مرة، لا تطلب منه تأكيده تاني: الملخص النهائي قبل التأكيد يكفي.${pending}
+10) خاطب المريض بـ "حضرتك" ولا تناديه باسم من عندك (الاسم المكتوب للحجز ممكن يكون لمريض تاني، ومينفعش تخمن الاسم الأول أو النوع). لو المريض كتب الاسم بالكامل مرة، لا تطلب منه تأكيده تاني: الملخص النهائي قبل التأكيد يكفي.
+11) الحجز في نفس اليوم مسموح لو فيه مواعيد متاحة لسه (list_available_slots بيحدد ده). ردودك قصيرة: لا تعلّق على طلبات أو مواعيد سابقة إلا لو المريض سأل عنها.${pending}
 معلومات للتوجيه: العيادات المتاحة للحجز: ${CLINICS.map(c => c.code).join('، ')}.`;
 }
 
@@ -221,7 +229,7 @@ export async function processConversation(env) {
       const blocks = Array.isArray(res.content) ? res.content : [];
       const uses = blocks.filter(b => b.type === 'tool_use');
       reply = blocks.filter(b => b.type === 'text').map(b => b.text).join('\n').trim();
-      if (!uses.length) break;
+      if (!uses.length) { if (res.stop_reason === 'max_tokens') reply = cutToLastSentence(reply); break; }
       messages = [...messages, { role: 'assistant', content: blocks }];
       const results = [];
       for (const u of uses) results.push({ type: 'tool_result', tool_use_id: u.id, content: JSON.stringify(await runtime.execute(u.name, u.input)) });

@@ -78,3 +78,12 @@ test('booking confirmation: friendly Arabic date/time, and no reminder offer for
   const later = await go('2026-01-18');
   assert.match(later.text, /الأحد 18 يناير/); assert.match(later.text, /تذكير/); assert.ok(later.flow.reminder_offer);
 });
+
+test('a reply cut by the token limit is trimmed to its last complete sentence', async () => {
+  const { cutToLastSentence } = await import('../supabase/functions/_shared/assistant.js');
+  const cut = 'أهلاً بحضرتك. عشان أساعدك في الحجز، محتاج:\n\n1. العيادة؟\n2. اليوم المناسب.\n3. اسم حضرتك بالكامل.\n\nولاحظت إن طلب الحج';
+  assert.equal(cutToLastSentence(cut), 'أهلاً بحضرتك. عشان أساعدك في الحجز، محتاج:\n\n1. العيادة؟\n2. اليوم المناسب.\n3. اسم حضرتك بالكامل.');
+  const st = fakeStore(), llm = { calls: [], async complete(a) { this.calls.push(a); return { content: [{ type: 'text', text: cut }], stop_reason: 'max_tokens' }; } };
+  await run(st, llm, 'عايز حجز');
+  assert.doesNotMatch(st.out.at(-1).body, /طلب الحج$/);
+});
