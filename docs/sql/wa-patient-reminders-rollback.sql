@@ -7,6 +7,7 @@ alter table public.wa_messages add constraint wa_messages_purpose_check check (p
 drop function public.wa_confirm_from_reminder(bigint, timestamptz);
 drop function public.wa_queue_template(bigint, text, text, text, jsonb, text, text, bigint, date, text, timestamptz);
 drop function public.wa_conv_for_phone(text);
+drop function public.wa_latest_records();
 drop function public.wa_patients_json();
 drop function public.wa_tparam(text, text);
 drop function public.wa_ar_clinic(text);

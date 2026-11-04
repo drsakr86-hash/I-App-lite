@@ -104,6 +104,21 @@ begin
   return k;
 end $$;
 
+-- The patient's LATEST visit or examination (the app stores the follow-up date on either: iapp_visits.next_visit or the exam's followUp).
+-- One row per patient; on the same day the record that carries a follow-up date wins.
+create or replace function public.wa_latest_records() returns table (pid text, src text, vdate date, nv text)
+language sql stable security definer set search_path = public as $$
+  select distinct on (x.pid) x.pid, x.src, x.vdate::date, x.nv from (
+    select patient_id::text as pid, 'v' || id::text as src, left(date::text, 10) as vdate, left(coalesce(next_visit::text, ''), 10) as nv
+      from public.iapp_visits where patient_id is not null and left(date::text, 10) ~ '^\d{4}-\d{2}-\d{2}$'
+    union all
+    select e ->> 'patientId', 'e' || (e ->> 'id'), left(coalesce(e ->> 'date', ''), 10), left(coalesce(e ->> 'followUp', ''), 10)
+      from public.iapp_store s, jsonb_array_elements(case when jsonb_typeof(s.value) = 'array' then s.value else '[]'::jsonb end) e
+     where s.key = 'iapp_exams' and jsonb_typeof(e) = 'object' and coalesce(e ->> 'patientId', '') <> '' and left(coalesce(e ->> 'date', ''), 10) ~ '^\d{4}-\d{2}-\d{2}$'
+  ) x
+  order by x.pid, x.vdate desc, (x.nv ~ '^\d{4}-\d{2}-\d{2}$') desc, x.src desc
+$$;
+
 -- ------------------------------------------------------------------------------------------------ the scheduler (called every minute by the worker)
 create or replace function public.wa_enqueue_reminders(p_now timestamptz default now()) returns int
 language plpgsql security definer set search_path = public as $$
@@ -146,13 +161,11 @@ begin
   if cfg.followup_template is not null then
     for r in
       with p as materialized (select * from public.wa_patients_json() where consent and wa is not null),
-           v as materialized (select id::text as vid, patient_id::text as pid, left(date::text, 10) as vdate, left(coalesce(next_visit::text, ''), 10) as nv
-                                from public.iapp_visits where patient_id is not null and left(date::text, 10) ~ '^\d{4}-\d{2}-\d{2}$'),
-           lastv as (select distinct on (pid) * from v order by pid, vdate desc, vid desc)
-      select l.vid, l.vdate::date as vdate, l.nv, p.pid, p.name, p.phone, p.wa
+           lastv as materialized (select * from public.wa_latest_records())
+      select l.src as vid, l.vdate, l.nv, p.pid, p.name, p.phone, p.wa
         from lastv l join p on p.pid = l.pid
        where l.nv ~ '^\d{4}-\d{2}-\d{2}$' and l.nv::date between v_today - 3 and v_today
-         and not exists (select 1 from public.wa_messages m where m.idempotency_key = 'fu:' || l.vid || ':' || l.nv)
+         and not exists (select 1 from public.wa_messages m where m.idempotency_key = 'fu:' || l.src || ':' || l.nv)
          and not exists (select 1 from public.iapp_appointments a where (a.patient_id::text = p.pid or public.wa_phone_to_waid(a.phone) = p.wa)
                             and a.date >= v_today and not a.cancelled and coalesce(a.wait_status, '') <> 'cancelled')
          and not exists (select 1 from public.iapp_booking_requests b where b.status = 'pending' and b.date >= v_today and public.wa_phone_to_waid(b.phone) = p.wa)
@@ -171,12 +184,10 @@ begin
   if cfg.checkup_template is not null then
     for r in
       with p as materialized (select * from public.wa_patients_json() where consent and wa is not null and checkup_months between 1 and 36),
-           v as materialized (select id::text as vid, patient_id::text as pid, left(date::text, 10) as vdate, left(coalesce(next_visit::text, ''), 10) as nv
-                                from public.iapp_visits where patient_id is not null and left(date::text, 10) ~ '^\d{4}-\d{2}-\d{2}$'),
-           lastv as (select distinct on (pid) * from v order by pid, vdate desc, vid desc)
-      select l.vdate::date as vdate, p.pid, p.name, p.phone, p.wa
+           lastv as materialized (select * from public.wa_latest_records())
+      select l.vdate, p.pid, p.name, p.phone, p.wa
         from lastv l join p on p.pid = l.pid
-       where (l.vdate::date + make_interval(months => p.checkup_months))::date <= v_today
+       where (l.vdate + make_interval(months => p.checkup_months))::date <= v_today
          and not (l.nv ~ '^\d{4}-\d{2}-\d{2}$' and l.nv::date >= v_today - 3)                       -- a follow-up is still ahead / just reminded
          and not exists (select 1 from public.wa_messages m where m.idempotency_key = 'ck:' || p.pid || ':' || l.vdate)
          and not exists (select 1 from public.iapp_appointments a where (a.patient_id::text = p.pid or public.wa_phone_to_waid(a.phone) = p.wa)
@@ -215,11 +226,11 @@ end $$;
 
 -- ------------------------------------------------------------------------------------------------ privileges: server (service_role) only
 revoke all on function public.wa_phone_to_waid(text), public.wa_ar_date(date, boolean), public.wa_ar_time(text), public.wa_ar_clinic(text), public.wa_tparam(text, text),
-  public.wa_patients_json(), public.wa_conv_for_phone(text),
+  public.wa_patients_json(), public.wa_latest_records(), public.wa_conv_for_phone(text),
   public.wa_queue_template(bigint, text, text, text, jsonb, text, text, bigint, date, text, timestamptz),
   public.wa_enqueue_reminders(timestamptz), public.wa_confirm_from_reminder(bigint, timestamptz) from public, anon, authenticated;
 grant execute on function public.wa_phone_to_waid(text), public.wa_ar_date(date, boolean), public.wa_ar_time(text), public.wa_ar_clinic(text), public.wa_tparam(text, text),
-  public.wa_patients_json(), public.wa_conv_for_phone(text),
+  public.wa_patients_json(), public.wa_latest_records(), public.wa_conv_for_phone(text),
   public.wa_queue_template(bigint, text, text, text, jsonb, text, text, bigint, date, text, timestamptz),
   public.wa_enqueue_reminders(timestamptz), public.wa_confirm_from_reminder(bigint, timestamptz) to service_role;
 
