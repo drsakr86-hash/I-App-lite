@@ -73,3 +73,12 @@ export function hoursText(c) {
   if (c.sessions) { const s = c.sessions[0].slots; return `من ${s[0]} إلى ${s[s.length - 1]}`; }
   return clinicDays(c).map(d => { const s = slotsForDow(c, d); return `${WEEK_DAY_NAMES[d]} من ${s[0]} إلى ${s[s.length - 1]}`; }).join('، ');
 }
+
+// Patient-facing date/time (confirmations): '2026-11-04' -> 'الأربعاء 4 نوفمبر', '20:00' -> '8:00 مساءً'. Same wording as the reminder templates (wa_ar_date / wa_ar_time).
+export const MONTH_NAMES = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+export const arDate = iso => isISODate(iso) ? `${WEEK_DAY_NAMES[isoDow(iso)]} ${Number(iso.slice(8, 10))} ${MONTH_NAMES[Number(iso.slice(5, 7)) - 1]}` : String(iso || '');
+export const arTime = t => {
+  const n = normTime(t); if (!n) return String(t || '');
+  const h = Number(n.slice(0, 2)), m = n.slice(3);
+  return `${h === 0 ? 12 : h > 12 ? h - 12 : h}:${m} ${h < 12 ? 'صباحًا' : h === 12 ? 'ظهرًا' : 'مساءً'}`;
+};

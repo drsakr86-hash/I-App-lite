@@ -152,7 +152,7 @@ test('cancel flow for the verified owner: propose, patient confirms, server exec
 });
 
 test('reminder consent: offered after a booking, honoured only on a later explicit yes/no', async () => {
-  const st = fakeStore(); const flow = { pending: { kind: 'book', args: { clinic: 'دمنهور', date: DATE, time: '20:10', name: 'سارة أحمد', type: 'x' }, created_msg_id: 10, expires_at: new Date(NOW.getTime() + 600000).toISOString() } };
+  const st = fakeStore(); const flow = { pending: { kind: 'book', args: { clinic: 'دمنهور', date: '2026-01-18', time: '20:10', name: 'سارة أحمد', type: 'x' }, created_msg_id: 10, expires_at: new Date(NOW.getTime() + 600000).toISOString() } };
   const a = await run(st, scriptedLlm([say('x')]), 'تمام', { flow, id: 11 });
   assert.match(sent(st).at(-1), /تذكير/); assert.equal(st.consent.length, 0); assert.ok(a.flow.reminder_offer);
   await run(st, scriptedLlm([say('x')]), 'نعم', { flow: a.flow, id: 12 });
