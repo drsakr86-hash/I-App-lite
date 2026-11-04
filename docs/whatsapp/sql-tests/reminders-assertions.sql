@@ -14,8 +14,9 @@ insert into public.iapp_store (key, value) values ('iapp_patients', '[
   {"id": 3, "name": "سعيد حسن", "phone": "٠١٢٠٠٠٠٠٠٠١", "reminderConsent": true, "checkupMonths": "6"},
   {"id": 4, "name": "هالة", "phone": "01500000002", "reminderConsent": true},
   {"id": 5, "name": "كريم", "phone": "0453333313", "reminderConsent": true},
-  {"id": 6, "name": "نادية", "phone": "01099999999", "reminderConsent": true, "checkupMonths": 6}
-]') on conflict (key) do update set value = excluded.value;
+  {"id": 6, "name": "نادية", "phone": "01099999999", "reminderConsent": true, "checkupMonths": 6},
+  {"id": 7, "name": "سمير", "phone": "01011111111", "reminderConsent": true}
+]'), ('iapp_exams', '[{"id": 900, "patientId": 7, "date": "2026-10-25", "followUp": "2026-11-02"}]') on conflict (key) do update set value = excluded.value;
 
 insert into public.iapp_appointments (id, patient_id, patient, phone, date, time, clinic) values
   (101, 1, 'أحمد  محمد', '01012345678', '2026-11-03', '20:30', 'دمنهور'),     -- consent in app -> reminder
@@ -27,12 +28,14 @@ insert into public.iapp_visits (id, patient_id, patient, date, next_visit) value
   ('v1', 3, 'سعيد حسن', '2026-04-01', ''),             -- 6-month check-up overdue -> checkup
   ('v2', 4, 'هالة', '2026-10-20', '2026-11-02'),       -- follow-up due but she already has an appointment -> nothing
   ('v3', 6, 'نادية', '2026-10-01', '2026-11-01'),      -- follow-up due (yesterday) -> followup ; check-up not yet due
-  ('v4', 1, 'أحمد  محمد', '2026-09-01', '2026-11-02'); -- follow-up due but has appointment tomorrow -> nothing
+  ('v4', 1, 'أحمد  محمد', '2026-09-01', '2026-11-02'), -- follow-up due but has appointment tomorrow -> nothing
+  ('v7', 7, 'سمير', '2026-10-25', null);               -- same-day exam below carries the follow-up date
 
 do $$ declare n int; begin
   -- before the send hour: nothing
   n := public.wa_enqueue_reminders('2026-11-02 10:00:00+00'::timestamptz);   -- 12:00 Cairo: follow-ups yes, appointment reminders not yet
-  assert n = 2, 'noon run should queue 2 (followup + checkup), got ' || n;
+  assert n = 3, 'noon run should queue 3 (2 followups incl. one from an exam + checkup), got ' || n;
+  assert exists (select 1 from public.wa_messages where idempotency_key = 'fu:e900:2026-11-02'), 'follow-up date taken from the exam';
   assert (select count(*) from public.wa_messages where purpose = 'reminder') = 0, 'no appointment reminder before 18:00';
   n := public.wa_enqueue_reminders('2026-11-02 17:00:00+00'::timestamptz);
   assert n = 1, 'evening run should queue 1 appointment reminder, got ' || n;
@@ -46,7 +49,7 @@ do $$ declare m record; begin
   assert m.template_name = 'appointment_reminder', 'template name';
   assert m.template_params = '["أحمد محمد", "الثلاثاء 3 نوفمبر", "8:30 مساءً", "عيادة دمنهور"]'::jsonb, 'params: ' || m.template_params::text;
   assert (select wa_id from public.wa_contacts c join public.wa_conversations v on v.contact_id = c.id where v.id = m.conversation_id) = '201012345678', 'wa id';
-  select * into m from public.wa_messages where purpose = 'followup';
+  select * into m from public.wa_messages where purpose = 'followup' and idempotency_key like 'fu:v%';
   assert m.template_params = '["نادية", "1 أكتوبر"]'::jsonb, 'followup params: ' || m.template_params::text;
   select * into m from public.wa_messages where purpose = 'checkup';
   assert m.template_params = '["سعيد حسن", "1 أبريل"]'::jsonb, 'checkup params: ' || m.template_params::text;
