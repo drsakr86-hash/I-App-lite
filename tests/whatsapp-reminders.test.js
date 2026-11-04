@@ -62,3 +62,19 @@ test('reminders: a bare "إيقاف" reaching the worker opts the patient out wi
   await run(st, llm, 'إيقاف');
   assert.equal(llm.calls.length, 0); assert.deepEqual(calls[0], [WA, null, true, 'chat']); assert.match(st.out.at(-1).body, /تم إيقاف/);
 });
+
+test('booking confirmation: friendly Arabic date/time, and no reminder offer for a same-day booking', async () => {
+  const { arDate, arTime } = await import('../supabase/functions/_shared/schedule.js');
+  assert.equal(arDate('2026-11-04'), 'الأربعاء 4 نوفمبر'); assert.equal(arTime('20:00'), '8:00 مساءً'); assert.equal(arTime('12:10'), '12:10 ظهرًا'); assert.equal(arTime('09:30'), '9:30 صباحًا');
+  const today = NOW.toISOString().slice(0, 10);
+  const mk = date => ({ pending: { kind: 'book', args: { clinic: 'دمنهور', date, time: '20:10', name: 'سارة أحمد', type: 'x' }, created_msg_id: 9, expires_at: new Date(NOW.getTime() + 600000).toISOString() } });
+  const go = async date => {
+    const st = fakeStore(); st.cfg.reminders_enabled = true;
+    const env = { store: st, llm: scriptedLlm([say('x')]), conv: { id: 1 }, contact: { wa_id: WA, consent: 'service', reminders_opt_in: false }, waId: WA, config: st.cfg, now: () => NOW, log: () => {}, flow: mk(date), unprocessed: [{ id: 10, body: 'تأكيد', kind: 'text' }], attempts: 1 };
+    await processConversation(env); return { text: st.out.at(-1).body, flow: env.flow };
+  };
+  const same = await go(today);
+  assert.match(same.text, /8:10 مساءً/); assert.doesNotMatch(same.text, /2026-/); assert.doesNotMatch(same.text, /تذكير/); assert.ok(!same.flow.reminder_offer);
+  const later = await go('2026-01-18');
+  assert.match(later.text, /الأحد 18 يناير/); assert.match(later.text, /تذكير/); assert.ok(later.flow.reminder_offer);
+});
