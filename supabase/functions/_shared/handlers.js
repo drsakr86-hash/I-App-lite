@@ -31,18 +31,27 @@ export async function handleWebhook({ rawBody, signature, env, store, kickWorker
   if (!env.META_APP_SECRET) { log('webhook_no_secret', {}); return json(500, { error: 'not configured' }); }
   if (!(await verifyMetaSignature(rawBody, signature, env.META_APP_SECRET))) { log('webhook_bad_signature', {}); return json(401, { error: 'invalid signature' }); }
   let payload; try { payload = JSON.parse(rawBody); } catch { return json(400, { error: 'invalid json' }); }
-  if (!payload || payload.object !== 'whatsapp_business_account' || !Array.isArray(payload.entry)) return json(200, { ignored: true });
+  if (!payload || payload.object !== 'whatsapp_business_account' || !Array.isArray(payload.entry)) { log('webhook_ignored_object', { object: payload && String(payload.object).slice(0, 40) }); return json(200, { ignored: true }); }
 
   let cfg; try { cfg = await store.getConfig(); } catch (e) { log('webhook_config_error', { err: String(e.message) }); return json(500, { error: 'temporary' }); }
   let fresh = 0, failures = 0;
   for (const entry of payload.entry) for (const ch of (entry.changes || [])) {
     const v = ch.value || {};
     if (cfg && cfg.phone_number_id && v.metadata && v.metadata.phone_number_id && String(v.metadata.phone_number_id) !== String(cfg.phone_number_id)) { log('webhook_other_number', {}); continue; }
+    if (ch.field === 'messages' && !(v.messages || []).length && !(v.statuses || []).length) log('webhook_messages_empty', { keys: Object.keys(v).slice(0, 15) });
     try {
       if (ch.field === 'messages') {
         const names = Object.fromEntries((v.contacts || []).map(c => [String(c.wa_id), c.profile && c.profile.name]));
+        // Sender id: `from`; when it is missing (e.g. a user who hides the phone number) fall back to the single contact's wa_id.
+        const soleContact = (v.contacts || []).length === 1 && /^[0-9]{8,15}$/.test(String(v.contacts[0].wa_id || '')) ? String(v.contacts[0].wa_id) : null;
         for (const m of (v.messages || [])) {
-          if (!m || !m.id || !m.from || m.type === 'reaction' || m.type === 'system') continue;
+          const from = m && (/^[0-9]{8,15}$/.test(String(m.from || '')) ? String(m.from) : soleContact);
+          if (!m || !m.id || !from || m.type === 'reaction' || m.type === 'system') {
+            // never silent: shape only (field names + type), no text, names or numbers
+            log('webhook_message_skipped', { type: m && m.type, keys: m ? Object.keys(m).slice(0, 15) : [], contactKeys: (v.contacts || []).map(c => Object.keys(c || {}).join('|')).slice(0, 3) });
+            continue;
+          }
+          if (!m.from) m.from = from;
           const body = textOf(m);
           const r = await store.ingestInbound({ waId: String(m.from), name: names[String(m.from)], wamid: m.id, kind: body ? 'text' : 'other', body: body ? sanitizeIncoming(body, 4000) : null, ts: tsOf(m.timestamp) });
           if (r && r.duplicate) continue;
