@@ -1,6 +1,6 @@
 // Anthropic Messages API client (server-side key). Returns the raw content blocks; throws on any transport/API failure
 // so the orchestrator can retry or hand the chat to a human instead of guessing.
-export function createAnthropicClient({ apiKey, model = 'claude-haiku-5-5', fetchImpl = globalThis.fetch, timeoutMs = 25000, maxTokens = 700 }) {
+export function createAnthropicClient({ apiKey, model = 'claude-haiku-5-5', fetchImpl = globalThis.fetch, timeoutMs = 25000, maxTokens = 1500 }) {
   if (!apiKey) throw new Error('llm: ANTHROPIC_API_KEY is not set');
   return {
     async complete({ system, messages, tools }) {
