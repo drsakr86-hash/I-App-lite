@@ -8,6 +8,7 @@
 
 import { t, getLang, dirOf } from '../i18n/index.js';
 import { tv } from '../i18n/tv.js';
+import { examDiagrams, diagramIsEmpty, diagramToSvg } from '../exam-diagrams/model.js';
 
 // Notes of auto-created recurring expenses end with a stored Arabic suffix; show it in the current language.
 const expenseNote = n => {
@@ -103,6 +104,7 @@ export function getPatientFileHTMLRaw(patient, visits, exams, prescriptions, pri
   const isRequest = e => e.status === "requested" || (Array.isArray(e.requestedTests) && e.requestedTests.length > 0);
   const pExams = (exams || []).filter(e => e.patientId === p.id && !isRequest(e)).sort(byDateDesc);
   const lastExam = pExams[0];
+  const lastExamDiagrams = examDiagrams(lastExam).filter(d => !diagramIsEmpty(d));
   const pRx = (prescriptions || []).filter(r => r.patientId === p.id).sort(byDateDesc);
   const date = new Date().toLocaleDateString(loc, {
     year: "numeric",
@@ -150,6 +152,8 @@ export function getPatientFileHTMLRaw(patient, visits, exams, prescriptions, pri
   ${lastExam ? `<h3>${tr("g7.print.lastExam")} (${lastExam.date})${lastExam.doctor ? " · " + tv(lastExam.doctor) : ""}</h3>
   <table><tr><th>${tr("g7.print.thVA")}</th><th>${tr("g7.print.thIOP")}</th><th>${tr("g7.print.diagnosis")}</th></tr>
   <tr><td>${tr("g7.print.rightLbl")}: ${lastExam.visualAcuityR || "—"} · ${tr("g7.print.leftLbl")}: ${lastExam.visualAcuityL || "—"}</td><td>${tr("g7.print.rightLbl")}: ${lastExam.iopR || "—"} · ${tr("g7.print.leftLbl")}: ${lastExam.iopL || "—"}</td><td>${tv(lastExam.diagnosis) || "—"}</td></tr></table>` : ""}
+  ${lastExam && lastExamDiagrams.length ? `<h3>${tr("g2.diag.title")}</h3>
+  <div style="display:flex;flex-wrap:wrap;gap:10px;margin:6px 0">${lastExamDiagrams.map(d => `<div style="width:190px;text-align:center;font-size:11px;page-break-inside:avoid">${diagramToSvg(d, 190)}<div>${tr("g2.diag.tpl." + d.tpl)}</div>${d.note ? `<div>${d.note}</div>` : ""}</div>`).join("")}</div>` : ""}
   ${pExams.length > 1 ? `<h3>${tr("g7.print.examLog")} (${pExams.length})</h3>
   <table><tr><th>${tr("g7.print.thDate")}</th><th>${tr("g7.print.thDoctor")}</th><th>${tr("g7.print.thVAShort")}</th><th>${tr("g7.print.thIOPShort")}</th><th>${tr("g7.print.diagnosis")}</th><th>${tr("g7.print.thPlan")}</th><th>${tr("g7.print.thFollowUp")}</th></tr>
   ${pExams.map(e => `<tr><td>${e.date || "—"}</td><td>${tv(e.doctor) || "—"}</td><td>${e.visualAcuityR || "—"} / ${e.visualAcuityL || "—"}</td><td>${e.iopR || "—"} / ${e.iopL || "—"}</td><td>${tv(e.diagnosis) || "—"}</td><td>${e.treatmentPlan || "—"}</td><td>${e.followUp || "—"}</td></tr>`).join("")}</table>` : ""}
