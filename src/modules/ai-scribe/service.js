@@ -7,7 +7,7 @@ export const SCRIBE_FUNCTION = 'ai-scribe';
 
 const sb = () => { const c = getSB(); if (!c) throw new Error('offline'); return c; };
 
-export const recorderSupported = () => typeof window !== 'undefined' && !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) && typeof window.MediaRecorder !== 'undefined';
+export const recorderSupported = () => typeof window !== 'undefined' && typeof navigator !== 'undefined' && !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) && typeof window.MediaRecorder !== 'undefined';
 
 // Starts recording; returns { stop(): Promise<Blob>, cancel() }.
 export async function startRecording() {
