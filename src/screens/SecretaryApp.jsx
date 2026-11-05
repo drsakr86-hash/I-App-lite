@@ -233,6 +233,18 @@ export default function SecretaryApp() {
     return mutateApts(list => withoutAptId(list, id), list => !list.some(x => x.id === id), t("g5.sec.toastDeleted", lang));
   };
   const updateApt = apt => mutateApts(list => mergeApt(list, apt));
+  // Confirming a patient-requested appointment also closes its pending booking
+  // request (matched by phone/date/time), so it stops showing in the requests list.
+  const toggleConfirm = async a => {
+    const next = !a.confirmed;
+    await updateApt({ ...a, confirmed: next });
+    if (next && a.fromPatient && a.phone) {
+      try {
+        await getSB().from(BOOKING_TABLE).update({ status: "accepted" })
+          .eq("status", "pending").eq("phone", a.phone).eq("date", a.date).eq("time", a.time);
+      } catch (e) { logError('booking.closeOnConfirm', e); }
+    }
+  };
   const pushVisitRecord = async (apt, cost, paid) => {
     const vid = collectionVisitId(apt);
     const rec = buildCollectionVisitRecord(apt, cost, paid, clinicLabel);
@@ -449,7 +461,7 @@ export default function SecretaryApp() {
                 </div>
                 {a.notes && <div style={{ color: C.muted, fontSize: 11, marginBottom: 8 }}>{"📝 "}{a.notes}</div>}
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                  <div onClick={() => updateApt({ ...a, confirmed: !a.confirmed })} style={{ flex: "1 1 60px", background: a.confirmed ? C.success + "33" : "transparent", border: "1px solid " + (a.confirmed ? C.success : C.border), borderRadius: 8, padding: "7px 0", color: a.confirmed ? C.success : C.muted, fontSize: 11, fontWeight: 700, cursor: "pointer", textAlign: "center" }}>{a.confirmed ? t("g5.sec.confirmed", lang) : t("g5.sec.confirm", lang)}</div>
+                  <div onClick={() => toggleConfirm(a)} style={{ flex: "1 1 60px", background: a.confirmed ? C.success + "33" : "transparent", border: "1px solid " + (a.confirmed ? C.success : C.border), borderRadius: 8, padding: "7px 0", color: a.confirmed ? C.success : C.muted, fontSize: 11, fontWeight: 700, cursor: "pointer", textAlign: "center" }}>{a.confirmed ? t("g5.sec.confirmed", lang) : t("g5.sec.confirm", lang)}</div>
                   {a.date === today && !["waiting", "called", "in", "done"].includes(a.waitStatus) && <div onClick={() => updateApt({ ...a, waitStatus: "waiting", arrivedAt: Date.now() })} style={{ flex: "1 1 70px", background: C.gold + "22", border: "1px solid " + C.gold + "44", borderRadius: 8, padding: "7px 0", color: C.gold, fontSize: 11, fontWeight: 700, cursor: "pointer", textAlign: "center" }}>{t("g5.sec.arrived", lang)}</div>}
                   {a.phone && <a href={waCardHref(a, clinicLabel)} target="_blank" title={t("g5.sec.whatsapp", lang)} aria-label={t("g5.sec.whatsapp", lang)} style={{ background: "#25D36622", border: "1px solid #25D36633", borderRadius: 8, padding: "7px 12px", color: "#25D366", fontSize: 14, textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "center" }}>💬</a>}
                   {a.phone && <a href={"tel:" + a.phone} title={t("g5.sec.call", lang)} aria-label={t("g5.sec.call", lang)} style={{ background: C.teal + "22", border: "1px solid " + C.teal + "33", borderRadius: 8, padding: "7px 12px", color: C.teal, fontSize: 14, textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "center" }}>📞</a>}
