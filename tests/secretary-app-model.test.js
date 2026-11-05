@@ -6,7 +6,7 @@ import {
   addAptMutation, editAptMutation, acceptAptMutation, mergeApt, markRemindedIn, withoutAptId,
   buildAcceptedAppointment, requestAuditDetail, collectionVisitId, buildCollectionVisitRecord, upsertVisit,
   collectAudit, collectToast, deleteAuditDetail,
-  countPendingFromPatient, countWaitingToday, countToday, countConfirmed, filterSecretaryApts,
+  countPendingFromPatient, isPendingPatientRequest, countWaitingToday, countToday, countConfirmed, filterSecretaryApts,
   todayDoctorNames, collectedToday, unpaidTodayCount, clinicStats, typeStats, requestsTabLabel, waCardHref
 } from '../src/modules/secretary-app/model.js';
 
@@ -140,11 +140,19 @@ test('filterSecretaryApts: date / search / fromPatient / clinic, sorted by date 
   assert.deepEqual(f({ filterDate: TODAY }), [2, 1, 4]);
   assert.deepEqual(f({}), [5, 2, 1, 4, 3]);
   assert.deepEqual(f({ search: 'أحمد' }), [5, 1]);
-  assert.deepEqual(f({ filterFromPatient: true }), [5, 2]);
+  assert.deepEqual(f({ filterFromPatient: true }), [2], 'requests filter shows only unconfirmed patient bookings, not handled ones (#5)');
   assert.deepEqual(f({ filterClinic: 'الرحمانية' }), [2]);
   assert.deepEqual(f({ filterDate: TODAY, filterClinic: 'دمنهور' }), [1, 4]);
   assert.deepEqual(filterSecretaryApts([{ id: 1, date: TODAY }], { search: 'x' }), [], 'missing patient never matches a search');
   assert.equal(apts.map(a => a.id).join(), '1,2,3,4,5', 'input not reordered');
+});
+
+test('isPendingPatientRequest: unconfirmed, active, from the patient only', () => {
+  assert.equal(isPendingPatientRequest({ fromPatient: true }), true);
+  assert.equal(isPendingPatientRequest({ fromPatient: true, confirmed: true }), false);
+  assert.equal(isPendingPatientRequest({ fromPatient: true, cancelled: true }), false);
+  assert.equal(isPendingPatientRequest({ confirmed: false }), false, 'staff-made booking is not a request');
+  assert.equal(isPendingPatientRequest(null), false);
 });
 
 test('todayDoctorNames keeps first-appearance order, unique', () => {
