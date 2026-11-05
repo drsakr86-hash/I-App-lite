@@ -117,7 +117,11 @@ export const deleteAuditDetail = (rec, id) => rec && rec.date + ' ' + (rec.time 
 
 // ---- Counts, filters, stats ------------------------------------------------
 
-export const countPendingFromPatient = apts => apts.filter(a => a.fromPatient && !a.confirmed).length;
+// A patient-sent booking that still needs the secretary's confirmation. The "requests" filter and
+// its badge use this one definition, so the list never shows old, already-handled bookings.
+export const isPendingPatientRequest = a => !!a && !!a.fromPatient && !a.confirmed && isActiveApt(a);
+
+export const countPendingFromPatient = apts => apts.filter(isPendingPatientRequest).length;
 
 export const countWaitingToday = (apts, today) => apts.filter(a => a.date === today && a.waitStatus === 'waiting').length;
 
@@ -125,13 +129,13 @@ export const countToday = (apts, today) => apts.filter(a => a.date === today).le
 
 export const countConfirmed = list => list.filter(a => a.confirmed).length;
 
-// The appointments list: date / name search / patient-request / clinic filters,
+// The appointments list: date / name search / pending-patient-request / clinic filters,
 // sorted by date then time.
 export function filterSecretaryApts(apts, { filterDate, search, filterFromPatient, filterClinic }) {
   return apts.filter(a => {
     const dateOk = filterDate ? a.date === filterDate : true;
     const searchOk = search ? a.patient?.includes(search) : true;
-    const fromOk = filterFromPatient ? a.fromPatient : true;
+    const fromOk = filterFromPatient ? isPendingPatientRequest(a) : true;
     const clinicOk = filterClinic ? a.clinic === filterClinic : true;
     return dateOk && searchOk && fromOk && clinicOk;
   }).sort((a, b) => a.date.localeCompare(b.date) || (a.time || '').localeCompare(b.time || ''));
