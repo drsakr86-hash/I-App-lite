@@ -10,5 +10,5 @@ import { usePatientFile } from '../modules/patient-file/use-patient-file.js';
 // PatientFile.jsx already expects a single `ctx` prop.
 export default function PatientFileContainer(props) {
   const ctx = usePatientFile(props);
-  return <PatientFile ctx={ctx} />;
+  return <PatientFile ctx={{ ...ctx, session: props.session }} />;
 }

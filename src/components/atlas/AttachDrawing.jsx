@@ -39,7 +39,7 @@ function SignedImg({ cache, path, alt, lang, style }) {
   return url ? <img src={url} alt={alt} onError={onError} style={style} /> : <span style={{ fontSize: 11, color: C.muted }}>…</span>;
 }
 
-export default function AttachDrawing({ lang, plate, annotations, renderBlobs, user, role }) {
+export default function AttachDrawing({ lang, plate, annotations, renderBlobs, user, role, fixed = null }) {
   const priv = useMemo(() => {
     if (!privateStorageEnabled() || !canApproveDrawing(role)) return null;
     try { return enablePrivateStorage({ client: getSB() }); } catch { return null; }
@@ -47,8 +47,8 @@ export default function AttachDrawing({ lang, plate, annotations, renderBlobs, u
   const [patients, setPatients] = useState([]);
   const [exams, setExams] = useState([]);
   const [q, setQ] = useState('');
-  const [patient, setPatient] = useState(null);
-  const [examId, setExamId] = useState('');
+  const [patient, setPatient] = useState(fixed ? fixed.patient : null);
+  const [examId, setExamId] = useState(fixed ? fixed.exam.id : '');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState(null);
 
@@ -112,9 +112,9 @@ export default function AttachDrawing({ lang, plate, annotations, renderBlobs, u
   return (
     <div style={{ ...card, display: 'flex', flexDirection: 'column', gap: 8 }}>
       <div style={{ fontSize: 15, fontWeight: 800 }}>{t('atlas.attach.title', lang)}</div>
-      <div style={muted}>{t('atlas.attach.help', lang)}</div>
+      <div style={muted}>{t(fixed ? 'atlas.attach.helpFixed' : 'atlas.attach.help', lang)}</div>
 
-      {patient ? (
+      {fixed ? null : patient ? (
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           <span style={{ fontWeight: 700 }}>{patient.name}</span>
           <button style={btn(false)} onClick={() => { setPatient(null); setExamId(''); setQ(''); setMsg(null); }}>×</button>
@@ -133,7 +133,7 @@ export default function AttachDrawing({ lang, plate, annotations, renderBlobs, u
         </div>
       )}
 
-      {patient ? (
+      {!fixed && patient ? (
         patientExams.length ? (
           <select value={examId} onChange={e => { setExamId(e.target.value); setMsg(null); }} aria-label={t('atlas.attach.exam', lang)}
             style={{ background: C.surface2, border: `1px solid ${C.border}`, color: C.text, borderRadius: 10, padding: '9px 12px', fontSize: 14 }}>

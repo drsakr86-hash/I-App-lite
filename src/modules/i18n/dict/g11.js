@@ -63,7 +63,14 @@ export const ar = {
   "atlas.attach.replace": "اعتماد الرسمة الحالية كنسخة جديدة",
   "atlas.attach.report": "إدراج في التقرير",
   "atlas.attach.reportNote": "الاختيار محفوظ لكل رسمة، وظهوره في الطباعة سيُفعَّل في خطوة لاحقة.",
-  "atlas.attach.imgFail": "تعذر عرض الصورة"
+  "atlas.attach.imgFail": "تعذر عرض الصورة",
+  "atlas.exam.title": "رسومات التشريح",
+  "atlas.exam.open": "فتح الأطلس لهذا الفحص",
+  "atlas.exam.saveFirst": "احفظ الفحص أولاً، ثم افتحه من ملف المريض لإضافة رسومات التشريح.",
+  "atlas.exam.back": "رجوع إلى الفحص",
+  "atlas.exam.none": "لا توجد رسومات معتمدة لهذا الفحص بعد",
+  "atlas.exam.needPrivate": "لإرفاق الرسمة بالفحص يجب تفعيل التخزين الخاص (private_storage).",
+  "atlas.attach.helpFixed": "ارسم على اللوحة ثم اعتمد الرسمة لتُرفق بهذا الفحص. لا يُحفظ شيء قبل الضغط على «اعتماد وإرفاق».",
 };
 export const en = {
   "atlas.nav": "Anatomy atlas",
@@ -128,5 +135,12 @@ export const en = {
   "atlas.attach.replace": "Approve the current drawing as a new version",
   "atlas.attach.report": "Include in report",
   "atlas.attach.reportNote": "The choice is saved per drawing; showing it in print will be enabled in a later step.",
-  "atlas.attach.imgFail": "Image could not be shown"
+  "atlas.attach.imgFail": "Image could not be shown",
+  "atlas.exam.title": "Anatomy drawings",
+  "atlas.exam.open": "Open the atlas for this exam",
+  "atlas.exam.saveFirst": "Save the exam first, then open it from the patient file to add anatomy drawings.",
+  "atlas.exam.back": "Back to the exam",
+  "atlas.exam.none": "No approved drawings for this exam yet",
+  "atlas.exam.needPrivate": "To attach a drawing to the exam, private storage (private_storage) must be on.",
+  "atlas.attach.helpFixed": "Draw on the plate, then approve the drawing to attach it to this exam. Nothing is saved until you press \"Approve & attach\".",
 };

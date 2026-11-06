@@ -234,6 +234,8 @@ export default function PatientFile({ ctx }) {
           <ExamForm
             doctorNames={doctorNames}
             patientId={curPatient.id}
+            patient={curPatient}
+            session={ctx.session}
             onSave={e => {
               onSaveExam(e);
               setModal(null);
@@ -248,6 +250,8 @@ export default function PatientFile({ ctx }) {
             doctorNames={doctorNames}
             initial={modal.editExam}
             patientId={curPatient.id}
+            patient={curPatient}
+            session={ctx.session}
             onSave={e => {
               onSaveExam(e);
               setModal(null);

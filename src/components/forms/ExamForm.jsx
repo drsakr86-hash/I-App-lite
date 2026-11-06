@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, lazy, Suspense } from 'react';
 import { Btn } from '../common.jsx';
 import { DEFAULT_DOCTOR_NAMES } from './visit-form-model.js';
 import {
@@ -14,10 +14,14 @@ import { localISO } from '../../modules/constants/misc.js';
 import { OphthFindings, OphthPlan } from './OphthDetails.jsx';
 import { examForEditing, applyOphthToExam } from '../../modules/patient-file/ophth.js';
 import ScribePanel from './ScribePanel.jsx';
+import { isEnabled } from '../../modules/feature-flags/index.js';
+import { can } from '../../app/permissions.js';
+// loaded only when the atlas flag is on and the role may use it (keeps the sync layer out of the plain exam form)
+const ExamAtlasSection = lazy(() => import('../atlas/ExamAtlasSection.jsx'));
 
 // Three-step examination add/edit form. Exact port of the legacy runtime's
 // ExamForm (public/legacy/app-runtime.js).
-export default function ExamForm({ initial, patientId, onSave, onClose, doctorNames = DEFAULT_DOCTOR_NAMES }) {
+export default function ExamForm({ initial, patientId, patient = null, session = null, onSave, onClose, doctorNames = DEFAULT_DOCTOR_NAMES }) {
   const lang = useLang();
   const [f, setF] = useState(() => initialExamState(initial ? examForEditing(initial) : initial, localISO()));
   const [step, setStep] = useState(0);
@@ -252,6 +256,9 @@ export default function ExamForm({ initial, patientId, onSave, onClose, doctorNa
               placeholder={t('g2.exam.notesPh', lang)}
             />
           </Field>
+          {isEnabled('atlas') && can(session && session.role, 'atlas', 'read') ? (
+            <Suspense fallback={null}><ExamAtlasSection exam={initial && initial.id ? initial : null} patient={patient} session={session} /></Suspense>
+          ) : null}
         </div>
       )}
       <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
