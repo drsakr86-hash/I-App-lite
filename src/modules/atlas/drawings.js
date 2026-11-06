@@ -15,7 +15,7 @@ export const DRAWING_KINDS = Object.freeze(['atlas', 'imaging']);
 export const DRAWING_EXTS = Object.freeze(['png', 'jpg', 'jpeg', 'webp']);
 export const ATLAS_DRAWINGS_KEY = 'atlasDrawings';
 
-const UUID = /^[0-9a-f-]{8,64}$/i;
+const UUID = /^[0-9a-z-]{8,64}$/i;
 
 // ---- permissions ------------------------------------------------------------
 export const canViewDrawings = role => can(role, 'atlas', 'read');
