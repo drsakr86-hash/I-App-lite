@@ -1,3 +1,5 @@
+import { can } from '../app/permissions.js';
+
 // Pure data/logic for src/components/BottomNav.jsx -- exact copy of the
 // legacy runtime's NAV array and its role-based filter (no JSX, so this can
 // be unit-tested directly with node --test).
@@ -28,10 +30,16 @@ export function primaryNavItems(role) {
   return navItemsForRole(role).filter(item => !item.inMore);
 }
 
-export function moreNavItems(role) {
-  return navItemsForRole(role).filter(item => item.inMore);
+// Feature-flagged tabs (docs/ATLAS.md). They are only offered when the flag is on AND the role may read the resource,
+// and they are NOT part of NAV, so with the flag off nothing about the navigation changes.
+export const ATLAS_NAV = { id: 'atlas', labelKey: 'atlas.nav', label: 'أطلس التشريح', icon: '🔬', inMore: true };
+export const atlasTabAllowed = (role, features = {}) => !!features.atlas && can(role, 'atlas', 'read');
+
+export function moreNavItems(role, features = {}) {
+  const items = navItemsForRole(role).filter(item => item.inMore);
+  return atlasTabAllowed(role, features) ? [...items, ATLAS_NAV] : items;
 }
 
-export function isMoreActive(active, role) {
-  return MORE_EXTRA_TABS.includes(active) || moreNavItems(role).some(item => item.id === active);
+export function isMoreActive(active, role, features = {}) {
+  return MORE_EXTRA_TABS.includes(active) || moreNavItems(role, features).some(item => item.id === active);
 }

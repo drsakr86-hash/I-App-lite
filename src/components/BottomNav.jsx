@@ -7,6 +7,7 @@ import { XRAY_ICON } from '../modules/ui/atoms.jsx';
 import { primaryNavItems, moreNavItems, isMoreActive, MORE_ID } from './bottomnav-model.js';
 import { ThemeToggle, LangToggle } from './common.jsx';
 import { t, useLang } from '../modules/i18n/index.js';
+import { isEnabled } from '../modules/feature-flags/index.js';
 
 const NAV_HEIGHT = 64;
 
@@ -77,9 +78,10 @@ function SheetRow({ label, children }) {
 export default function BottomNav({ active, setActive, role }) {
   const lang = useLang();
   const [open, setOpen] = React.useState(false);
+  const features = { atlas: isEnabled('atlas') };
   const items = primaryNavItems(role);
-  const moreItems = moreNavItems(role);
-  const moreOn = isMoreActive(active, role);
+  const moreItems = moreNavItems(role, features);
+  const moreOn = isMoreActive(active, role, features);
 
   React.useEffect(() => {
     if (!open) return undefined;

@@ -10,6 +10,8 @@ import { localISO } from "../modules/constants/misc.js";
 import LoginScreen from "../components/forms/LoginScreen.jsx";
 import TopBar from "../components/TopBar.jsx";
 import BottomNav from "../components/BottomNav.jsx";
+import { atlasTabAllowed } from "../components/bottomnav-model.js";
+import { isEnabled } from "../modules/feature-flags/index.js";
 import FollowUpCentre from "../components/FollowUpCentre.jsx";
 import GlobalSearch from "../components/GlobalSearch.jsx";
 import { Toast } from "../components/common.jsx";
@@ -27,6 +29,7 @@ import WaWaitingBanner from '../components/WaWaitingBanner.jsx';
 const Radiology = lazy(() => retryImport(() => import("./Radiology.jsx")));
 const WhatsAppInbox = lazy(() => retryImport(() => import("./WhatsAppInbox.jsx")));
 const ImagingCenter = lazy(() => retryImport(() => import("./ImagingCenter.jsx")));
+const AtlasScreen = lazy(() => retryImport(() => import("./AtlasScreen.jsx")));
 const Accounting = lazy(() => retryImport(() => import("./Accounting.jsx")));
 const Settings = lazy(() => retryImport(() => import("./Settings.jsx")));
 
@@ -184,7 +187,8 @@ export default function App() {
     } catch { /* storage unavailable (private mode / quota): non-fatal */ }
   };
   if (!session) return <LoginScreen onLogin={handleLogin} />;
-  const effectiveTab = (tab === "accounting" || tab === "whatsapp") && session.role !== "admin" ? "dashboard" : tab;
+  const atlasOk = atlasTabAllowed(session.role, { atlas: isEnabled("atlas") });
+  const effectiveTab = ((tab === "accounting" || tab === "whatsapp") && session.role !== "admin") || (tab === "atlas" && !atlasOk) ? "dashboard" : tab;
   if (!pR || !aR || !rR || !eR || !vR || !dR || !prR || !ctR || !clR || !exR || !reR) {
     return (
       <div style={{ minHeight: "100vh", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center", direction: dirOf(lang), fontFamily: "'Segoe UI','Tahoma',Arial,sans-serif" }}>
@@ -248,6 +252,7 @@ export default function App() {
     imaging: React.createElement(ImagingCenter, {
       patients, primary, clinic
     }),
+    atlas: atlasOk ? React.createElement(AtlasScreen, { role: session.role }) : null,
     accounting: React.createElement(Accounting, {
       visits, expenses, recurringExpenses, appointments, doctors, clinic, session
     }),
