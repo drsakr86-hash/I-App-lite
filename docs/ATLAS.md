@@ -20,13 +20,16 @@ Select a structure for its description; zoom/pan (wheel, drag, pinch, buttons); 
 ## Not in Phase 1 (needs approval first)
 Linking drawings to patients/exams/reports, any new table or Migration, Supabase private storage / signed URLs, the disease library, AI reasoning, changes to deployed functions or to the Scribe.
 
-## Phase 2 - attach an approved drawing to an exam (flags `atlas` + `private_storage`)
+## Phase 2 - the anatomy sketch is a step of the exam (flags `atlas` + `private_storage`)
 
-- Visible only to doctor/admin. Pick patient, pick exam, press "Approve & attach". Nothing is saved before that click.
-- The PNG goes to the private bucket `clinical-private` (`atlas/<patientId>/<uuid>.png`, plus a 320 px thumbnail); only the path is stored.
-- The record is kept in `atlasDrawings[]` on the exam record (a sibling of `ophth`: the structured-exam form rebuilds `ophth` and would drop unknown keys).
-  Each item holds who/when/visit/exam, the vector annotations, a per-drawing "include in report" switch (off by default) and an append-only `revisions` list.
-- An approved drawing is never edited in place: a new approval creates a new version and the old one stays as "previous version".
+- Doctor/admin only. In the exam form a step "Anatomy sketch" sits between "Clinical exam" and "Diagnosis & plan". There is no separate tab.
+- The atlas is shown inline with this patient and exam fixed. Draw, then press "Approve & attach": the PNG (and a 320 px thumbnail) is uploaded to the private bucket
+  `clinical-private` (`atlas/<patientId>/<uuid>.png`) and the drawing joins the exam's own list in the form.
+- Nothing reaches the patient record until the normal "Save exam" button: the drawing is saved with the exam in `atlasDrawings[]` on the exam record
+  (a sibling of `ophth`, which the structured-exam form rebuilds and would drop unknown keys from). A new exam gets its id when the form opens so the drawing can point at it.
+- Each item holds who/when/visit/exam, the vector annotations, a per-drawing "include in report" switch (off by default) and an append-only `revisions` list.
+  An approved drawing is never edited in place: approving the same plate again creates a new version and the old one stays as "previous version".
+- Saved drawings appear as thumbnails on the exam card in the patient file (private signed links, renewed automatically).
 - Never shown to secretary/employee (storage policy + no permission) or the patient portal (the portal strips `atlasDrawings`).
-- A stale exam form cannot erase drawings (`preserveDrawings` in `saveExam`).
+  A stale exam form cannot erase drawings (`preserveDrawings` in `saveExam`).
 - Not yet: showing the included drawings in the printed report; migration of old Cloudinary images (deliberately out of scope).

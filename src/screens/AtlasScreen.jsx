@@ -41,7 +41,7 @@ function serializePlate(svg, plate, lang) {
   return { text: new XMLSerializer().serializeToString(clone), w: b.w * 2, h: b.h * 2 };
 }
 
-export default function AtlasScreen({ role = null, user = null, context = null, onClose = null } = {}) {
+export default function AtlasScreen({ role = null, user = null, context = null, drawings = [], onDrawingsChange = null, embedded = false } = {}) {
   const lang = useLang();
   const [plateId, setPlateId] = useState(firstPlateId());
   const plate = getPlate(plateId);
@@ -116,14 +116,8 @@ export default function AtlasScreen({ role = null, user = null, context = null, 
   const modeNow = labelMode || 'auto';
 
   return (
-    <div style={{ padding: 12, paddingBottom: 90, direction: dirOf(lang), color: C.text, maxWidth: 1100, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
+    <div style={{ padding: embedded ? 0 : 12, paddingBottom: embedded ? 12 : 90, direction: dirOf(lang), color: C.text, maxWidth: 1100, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
       <div>
-        {context ? (
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 8, flexWrap: 'wrap' }}>
-            <button style={btn(false)} onClick={onClose}>{t('atlas.exam.back', lang)}</button>
-            <span style={{ fontSize: 13, color: C.muted }}>{context.patient.name} · {String(context.exam.date || '').slice(0, 10)}</span>
-          </div>
-        ) : null}
         <div style={{ fontSize: 20, fontWeight: 800 }}>{t('atlas.title', lang)}</div>
         <div role="note" style={{ marginTop: 6, fontSize: 12, color: C.gold, background: `${C.gold}18`, border: `1px solid ${C.gold}55`, borderRadius: 10, padding: '6px 10px' }}>{t('atlas.draft', lang)}</div>
       </div>
@@ -229,9 +223,10 @@ export default function AtlasScreen({ role = null, user = null, context = null, 
         </ol>
       </div>
 
-      {privateStorageEnabled() && canApproveDrawing(role) ? (
+      {onDrawingsChange && !privateStorageEnabled() ? <div role="note" style={{ fontSize: 12, color: C.gold }}>{t('atlas.exam.needPrivate', lang)}</div> : null}
+      {onDrawingsChange && privateStorageEnabled() && canApproveDrawing(role) ? (
         <Suspense fallback={null}>
-          <AttachDrawing lang={lang} plate={plate} annotations={annotations} renderBlobs={renderBlobs} user={user} role={role} fixed={context} />
+          <AttachDrawing lang={lang} plate={plate} annotations={annotations} renderBlobs={renderBlobs} user={user} role={role} patient={context && context.patient} exam={context && context.exam} drawings={drawings} onChange={onDrawingsChange} />
         </Suspense>
       ) : null}
 

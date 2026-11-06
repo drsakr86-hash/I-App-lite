@@ -145,48 +145,44 @@ test('private_storage flag is off unless turned on', () => {
   assert.equal(resolveFlag('private_storage', { env: '1', query: '?ff=-private_storage' }), false);
 });
 
-import { attachApprovedDrawing, setDrawingReport } from '../src/modules/atlas/attach.js';
+import { approveIntoList, setReportInList } from '../src/modules/atlas/attach.js';
 
-const exams = () => [{ id: 7, patientId: 12, date: '2026-11-06', ophth: { v: 1 }, visitId: 5 }, { id: 8, patientId: 99 }];
-const mem = initial => { let db = initial; return { get: () => db, mutate: async (key, fn) => { assert.equal(key, 'iapp_exams'); db = fn(db); } }; };
 const storage = (fail = false) => ({ uploadAtlasImage: async ({ patientId, id }) => { if (fail) throw new Error('denied'); return img('atlas/' + patientId + '/' + id + '.png'); } });
-const args = o => ({ plate: { id: 'retina-layers' }, annotations: [{ t: 'pen' }], png: {}, thumb: null, patient: { id: 12 }, exam: { id: 7, patientId: 12, visitId: 5 }, user: doc, role: 'doctor', newId: () => 'aaaa1111', ...o });
+const args = o => ({ plate: { id: 'retina-layers' }, annotations: [{ t: 'pen' }], png: {}, thumb: null, patient: { id: 12 }, exam: { id: 7, patientId: 12, visitId: 5 }, user: doc, role: 'doctor', newId: () => 'aaaa1111', list: [], storage: storage(), ...o });
 
-test('attach: uploads then records on the exam record (not inside ophth), audited and private', async () => {
-  const m = mem(exams());
-  const d = await attachApprovedDrawing({ ...args(), storage: storage(), mutate: m.mutate });
-  const e = m.get().find(x => x.id === 7);
-  assert.equal(e.atlasDrawings.length, 1);
-  assert.equal(e.atlasDrawings[0].id, d.id);
-  assert.equal('atlasDrawings' in e.ophth, false);
-  assert.equal(e.atlasDrawings[0].visitId, 5);
-  assert.equal(m.get().find(x => x.id === 8).atlasDrawings, undefined); // other exams untouched
+test('approve while examining: returns the exam\'s new list (nothing is saved anywhere else)', async () => {
+  const { list, drawing } = await approveIntoList(args());
+  assert.equal(list.length, 1);
+  assert.equal(drawing.id, 'aaaa1111');
+  assert.equal(drawing.examId, 7); assert.equal(drawing.visitId, 5); assert.equal(drawing.approvedBy, 'u1');
+  assert.equal(drawing.includeInReport, false);
+  assert.equal(drawing.image.provider, 'supabase');
 });
 
-test('attach: a second approval on the same exam creates a new version and keeps the old', async () => {
-  const m = mem(exams());
-  await attachApprovedDrawing({ ...args(), storage: storage(), mutate: m.mutate });
-  await attachApprovedDrawing({ ...args({ replaceId: 'aaaa1111', newId: () => 'bbbb2222' }), storage: storage(), mutate: m.mutate });
-  const list = m.get().find(x => x.id === 7).atlasDrawings;
-  assert.deepEqual(list.map(x => [x.id, x.status]), [['aaaa1111', 'superseded'], ['bbbb2222', 'approved']]);
+test('approve works for a brand-new exam that only has a provisional id', async () => {
+  const { drawing } = await approveIntoList(args({ exam: { id: 1730900000000, patientId: 12 } }));
+  assert.equal(drawing.examId, 1730900000000); assert.equal(drawing.visitId, null);
 });
 
-test('attach: wrong role, wrong patient, upload failure and record failure never attach silently', async () => {
-  const m = mem(exams());
-  await assert.rejects(() => attachApprovedDrawing({ ...args({ role: 'secretary' }), storage: storage(), mutate: m.mutate }), /not allowed/);
-  await assert.rejects(() => attachApprovedDrawing({ ...args({ patient: { id: 99 } }), storage: storage(), mutate: m.mutate }), /belong/);
-  await assert.rejects(() => attachApprovedDrawing({ ...args(), storage: storage(true), mutate: m.mutate }), /denied/);
-  assert.equal(m.get().find(x => x.id === 7).atlasDrawings, undefined);
-  const bad = await attachApprovedDrawing({ ...args(), storage: storage(), mutate: async () => { throw new Error('db'); } }).catch(e => e);
-  assert.match(bad.message, /not attached/); assert.equal(bad.orphanPath, 'atlas/12/aaaa1111.png');
+test('approving the same plate again makes a new version and keeps the old one', async () => {
+  const first = await approveIntoList(args());
+  const second = await approveIntoList(args({ list: first.list, replaceId: 'aaaa1111', newId: () => 'bbbb2222' }));
+  assert.deepEqual(second.list.map(x => [x.id, x.status]), [['aaaa1111', 'superseded'], ['bbbb2222', 'approved']]);
+  assert.equal(first.list[0].status, 'approved'); // input list untouched
+});
+
+test('wrong role, wrong patient and upload failure never produce a drawing', async () => {
+  await assert.rejects(() => approveIntoList(args({ role: 'secretary' })), /not allowed/);
+  await assert.rejects(() => approveIntoList(args({ patient: { id: 99 } })), /belong/);
+  await assert.rejects(() => approveIntoList(args({ storage: storage(true) })), /denied/);
 });
 
 test('report switch is per drawing and role-checked', async () => {
-  const m = mem(exams());
-  await attachApprovedDrawing({ ...args(), storage: storage(), mutate: m.mutate });
-  await setDrawingReport({ mutate: m.mutate, examId: 7, id: 'aaaa1111', value: true, user: doc, role: 'admin' });
-  assert.equal(m.get().find(x => x.id === 7).atlasDrawings[0].includeInReport, true);
-  await assert.rejects(() => setDrawingReport({ mutate: m.mutate, examId: 7, id: 'aaaa1111', value: false, user: doc, role: 'employee' }), /not allowed/);
+  const { list } = await approveIntoList(args());
+  const on = setReportInList({ list, id: 'aaaa1111', value: true, user: doc, role: 'admin' });
+  assert.equal(on[0].includeInReport, true);
+  assert.equal(list[0].includeInReport, false);
+  assert.throws(() => setReportInList({ list: on, id: 'aaaa1111', value: false, user: doc, role: 'employee' }), /not allowed/);
 });
 
 test('a stale exam form cannot erase drawings approved after it was opened', () => {

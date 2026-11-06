@@ -1,8 +1,11 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { Btn } from '../../components/common.jsx';
 import { C } from '../../modules/theme/index.js';
 import { t, useLang } from '../../modules/i18n/index.js';
 import { tv } from '../../modules/i18n/tv.js';
+import { isEnabled } from '../../modules/feature-flags/index.js';
+import { privateStorageEnabled } from '../../services/private-storage.js';
+const ExamDrawings = lazy(() => import('../../components/atlas/ExamDrawings.jsx'));
 
 // Patient file — "exams" tab. Presentational port of the legacy PatientFile JSX;
 // all state and handlers come from the legacy function through ctx.
@@ -75,6 +78,9 @@ export default function ExamsTab({ ctx }) {
               <div style={{ color: C.text, fontSize: 12 }}>{tv(ex.chiefComplaint)}</div>
             </div>
           )}
+          {isEnabled('atlas') && privateStorageEnabled() && Array.isArray(ex.atlasDrawings) && ex.atlasDrawings.length ? (
+            <Suspense fallback={null}><ExamDrawings drawings={ex.atlasDrawings} /></Suspense>
+          ) : null}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
             {[[t("g1.exams.vaR", lang), ex.visualAcuityR || "-"], [t("g1.exams.vaL", lang), ex.visualAcuityL || "-"], [t("g1.exams.iopR", lang), ex.iopR ? ex.iopR + " mmHg" : "-"], [t("g1.exams.iopL", lang), ex.iopL ? ex.iopL + " mmHg" : "-"]].map(([k, v]) => (
               <div key={k} style={{ background: C.bg, borderRadius: 8, padding: "8px 10px" }}>
