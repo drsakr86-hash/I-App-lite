@@ -5,7 +5,9 @@
 
 export const FLAG_DEFS = Object.freeze({
   // Phase 1: interactive anatomy atlas (docs/ATLAS.md)
-  atlas: Object.freeze({ env: 'VITE_FF_ATLAS', storageKey: 'iapp_ff_atlas', fallback: false })
+  atlas: Object.freeze({ env: 'VITE_FF_ATLAS', storageKey: 'iapp_ff_atlas', fallback: false }),
+  // Phase 2: new uploads go to private storage with signed URLs (not wired yet; nothing reads this flag)
+  private_storage: Object.freeze({ env: 'VITE_FF_PRIVATE_STORAGE', storageKey: 'iapp_ff_private_storage', fallback: false })
 });
 
 const ON = new Set(['1', 'true', 'on', 'yes']);
