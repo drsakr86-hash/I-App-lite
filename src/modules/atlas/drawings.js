@@ -1,7 +1,8 @@
-// Phase 2 (inert until wired): the record of an approved atlas drawing attached to a patient exam.
-// Pure data logic only: no Supabase, no storage, no React. Records live inside the exam's optional
-// `ophth.atlasDrawings[]` array. Each item is flat and has a stable id, so the array can later be
-// unnested into a standalone table without losing anything (see toRows / fromRows).
+// Phase 2: the record of an approved atlas drawing attached to a patient exam.
+// Pure data logic only: no Supabase, no storage, no React. Records live in an `atlasDrawings[]` array on the
+// exam record itself (a sibling of `ophth`, NOT inside it: the structured-exam form rebuilds `ophth` from a
+// fixed shape and would silently drop unknown keys). Each item is flat and has a stable id, so the array can
+// later be unnested into a standalone table without losing anything (see toRows / fromRows).
 // Rules (agreed with the doctor): nothing is attached without an explicit approval by a doctor/admin;
 // an approved drawing is never edited in place (a change creates a new version and supersedes the old
 // one, which stays readable); report inclusion is a per-drawing choice, off by default; secretary,
@@ -185,4 +186,14 @@ export function fromRows(rows) {
     status: r.status, approvedBy: r.approved_by, approvedByName: r.approved_by_name, approvedAt: r.approved_at,
     includeInReport: r.include_in_report, supersedes: r.supersedes, supersededBy: r.superseded_by, revisions: r.revisions
   }));
+}
+
+// ---- saving an exam from a form that was opened earlier -----------------------------------------
+// The exam form replaces the whole record. If drawings were approved after the form was opened, the stale copy
+// must not erase them: history only grows, so the saved record always keeps the union of both sides.
+export function preserveDrawings(existingRecord, incomingRecord) {
+  const had = existingRecord && Array.isArray(existingRecord[ATLAS_DRAWINGS_KEY]) ? existingRecord[ATLAS_DRAWINGS_KEY] : [];
+  if (!incomingRecord || !had.length) return incomingRecord;
+  const inc = Array.isArray(incomingRecord[ATLAS_DRAWINGS_KEY]) ? incomingRecord[ATLAS_DRAWINGS_KEY] : [];
+  return { ...incomingRecord, [ATLAS_DRAWINGS_KEY]: mergeDrawings(had, inc) };
 }

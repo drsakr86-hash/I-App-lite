@@ -1,12 +1,16 @@
 // Anatomy atlas screen (feature flag `atlas`, docs/ATLAS.md). Phase 1: static, original, bilingual plates with
 // selectable structures, zoom/pan, labels and local drawn annotations. Nothing here reads or writes patient data or the database.
-import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useCallback, lazy, Suspense } from 'react';
 import { C } from '../modules/theme/index.js';
 import { t, useLang, dirOf } from '../modules/i18n/index.js';
 import { listPlates, getPlate, firstPlateId, partName, pick, searchParts, plateVBox, plateAttribution, isApproved, normalizeText } from '../modules/atlas/model.js';
 import { zoomCentered, ZOOM_STEP } from '../modules/atlas/viewport.js';
 import { ANNOTATION_COLORS, loadAnnotations, saveAnnotations, add, undo, note } from '../modules/atlas/annotations.js';
 import AtlasViewer from '../components/atlas/AtlasViewer.jsx';
+import { privateStorageEnabled } from '../services/private-storage.js';
+import { canApproveDrawing } from '../modules/atlas/drawings.js';
+// loaded only when the private-storage flag is on and the role may approve (keeps the sync layer out of the plain atlas)
+const AttachDrawing = lazy(() => import('../components/atlas/AttachDrawing.jsx'));
 
 const btn = (on, extra = {}) => ({
   background: on ? `${C.accent}22` : C.card, border: `1px solid ${on ? C.accent : C.border}`, color: on ? C.accent : C.text,
@@ -37,7 +41,7 @@ function serializePlate(svg, plate, lang) {
   return { text: new XMLSerializer().serializeToString(clone), w: b.w * 2, h: b.h * 2 };
 }
 
-export default function AtlasScreen() {
+export default function AtlasScreen({ role = null, user = null } = {}) {
   const lang = useLang();
   const [plateId, setPlateId] = useState(firstPlateId());
   const plate = getPlate(plateId);
@@ -82,21 +86,29 @@ export default function AtlasScreen() {
     setPendingText(null); setTextValue('');
   };
 
+  // The whole plate as a PNG (and a small copy for lists). Shared by "save PNG" and "approve & attach".
+  const renderBlobs = async () => {
+    const { text, w, h } = serializePlate(svgRef.current, plate, lang);
+    const img = new Image();
+    const url = URL.createObjectURL(new Blob([text], { type: 'image/svg+xml;charset=utf-8' }));
+    try { await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; img.src = url; }); } finally { URL.revokeObjectURL(url); }
+    const canvas = document.createElement('canvas'); canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext('2d'); ctx.fillStyle = '#fbf9f4'; ctx.fillRect(0, 0, w, h); ctx.drawImage(img, 0, 0, w, h);
+    const png = await new Promise(r => canvas.toBlob(r, 'image/png'));
+    if (!png) throw new Error('empty');
+    const tw = 320; const th = Math.max(1, Math.round(h * tw / w));
+    const small = document.createElement('canvas'); small.width = tw; small.height = th;
+    const sctx = small.getContext('2d'); sctx.fillStyle = '#fbf9f4'; sctx.fillRect(0, 0, tw, th); sctx.drawImage(canvas, 0, 0, tw, th);
+    const thumb = await new Promise(r => small.toBlob(r, 'image/png'));
+    return { png, thumb };
+  };
+
   const exportAs = async kind => {
     setMessage('');
     try {
-      const svg = svgRef.current;
-      const { text, w, h } = serializePlate(svg, plate, lang);
-      if (kind === 'svg') { download(`${plate.id}.svg`, new Blob([text], { type: 'image/svg+xml' })); return; }
-      const img = new Image();
-      const url = URL.createObjectURL(new Blob([text], { type: 'image/svg+xml;charset=utf-8' }));
-      await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; img.src = url; });
-      const canvas = document.createElement('canvas'); canvas.width = w; canvas.height = h;
-      const ctx = canvas.getContext('2d'); ctx.fillStyle = '#fbf9f4'; ctx.fillRect(0, 0, w, h); ctx.drawImage(img, 0, 0, w, h);
-      URL.revokeObjectURL(url);
-      const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
-      if (!blob) throw new Error('empty');
-      download(`${plate.id}.png`, blob);
+      if (kind === 'svg') { download(`${plate.id}.svg`, new Blob([serializePlate(svgRef.current, plate, lang).text], { type: 'image/svg+xml' })); return; }
+      const { png } = await renderBlobs();
+      download(`${plate.id}.png`, png);
     } catch { setMessage(t('atlas.export.failed', lang)); }
   };
 
@@ -210,6 +222,12 @@ export default function AtlasScreen() {
           ))}
         </ol>
       </div>
+
+      {privateStorageEnabled() && canApproveDrawing(role) ? (
+        <Suspense fallback={null}>
+          <AttachDrawing lang={lang} plate={plate} annotations={annotations} renderBlobs={renderBlobs} user={user} role={role} />
+        </Suspense>
+      ) : null}
 
       <div style={{ ...card, fontSize: 12, color: C.muted, lineHeight: 1.7 }}>
         <div><b>{t('atlas.source', lang)}:</b> {plateAttribution(plate)}</div>

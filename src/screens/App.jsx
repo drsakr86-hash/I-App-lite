@@ -252,7 +252,7 @@ export default function App() {
     imaging: React.createElement(ImagingCenter, {
       patients, primary, clinic
     }),
-    atlas: atlasOk ? React.createElement(AtlasScreen, { role: session.role }) : null,
+    atlas: atlasOk ? React.createElement(AtlasScreen, { role: session.role, user: { id: session.id != null ? session.id : session.username, name: session.name || session.username || '' } }) : null,
     accounting: React.createElement(Accounting, {
       visits, expenses, recurringExpenses, appointments, doctors, clinic, session
     }),

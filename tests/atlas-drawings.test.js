@@ -144,3 +144,65 @@ test('private_storage flag is off unless turned on', () => {
   assert.equal(resolveFlag('private_storage', { query: '?ff=private_storage' }), true);
   assert.equal(resolveFlag('private_storage', { env: '1', query: '?ff=-private_storage' }), false);
 });
+
+import { attachApprovedDrawing, setDrawingReport } from '../src/modules/atlas/attach.js';
+
+const exams = () => [{ id: 7, patientId: 12, date: '2026-11-06', ophth: { v: 1 }, visitId: 5 }, { id: 8, patientId: 99 }];
+const mem = initial => { let db = initial; return { get: () => db, mutate: async (key, fn) => { assert.equal(key, 'iapp_exams'); db = fn(db); } }; };
+const storage = (fail = false) => ({ uploadAtlasImage: async ({ patientId, id }) => { if (fail) throw new Error('denied'); return img('atlas/' + patientId + '/' + id + '.png'); } });
+const args = o => ({ plate: { id: 'retina-layers' }, annotations: [{ t: 'pen' }], png: {}, thumb: null, patient: { id: 12 }, exam: { id: 7, patientId: 12, visitId: 5 }, user: doc, role: 'doctor', newId: () => 'aaaa1111', ...o });
+
+test('attach: uploads then records on the exam record (not inside ophth), audited and private', async () => {
+  const m = mem(exams());
+  const d = await attachApprovedDrawing({ ...args(), storage: storage(), mutate: m.mutate });
+  const e = m.get().find(x => x.id === 7);
+  assert.equal(e.atlasDrawings.length, 1);
+  assert.equal(e.atlasDrawings[0].id, d.id);
+  assert.equal('atlasDrawings' in e.ophth, false);
+  assert.equal(e.atlasDrawings[0].visitId, 5);
+  assert.equal(m.get().find(x => x.id === 8).atlasDrawings, undefined); // other exams untouched
+});
+
+test('attach: a second approval on the same exam creates a new version and keeps the old', async () => {
+  const m = mem(exams());
+  await attachApprovedDrawing({ ...args(), storage: storage(), mutate: m.mutate });
+  await attachApprovedDrawing({ ...args({ replaceId: 'aaaa1111', newId: () => 'bbbb2222' }), storage: storage(), mutate: m.mutate });
+  const list = m.get().find(x => x.id === 7).atlasDrawings;
+  assert.deepEqual(list.map(x => [x.id, x.status]), [['aaaa1111', 'superseded'], ['bbbb2222', 'approved']]);
+});
+
+test('attach: wrong role, wrong patient, upload failure and record failure never attach silently', async () => {
+  const m = mem(exams());
+  await assert.rejects(() => attachApprovedDrawing({ ...args({ role: 'secretary' }), storage: storage(), mutate: m.mutate }), /not allowed/);
+  await assert.rejects(() => attachApprovedDrawing({ ...args({ patient: { id: 99 } }), storage: storage(), mutate: m.mutate }), /belong/);
+  await assert.rejects(() => attachApprovedDrawing({ ...args(), storage: storage(true), mutate: m.mutate }), /denied/);
+  assert.equal(m.get().find(x => x.id === 7).atlasDrawings, undefined);
+  const bad = await attachApprovedDrawing({ ...args(), storage: storage(), mutate: async () => { throw new Error('db'); } }).catch(e => e);
+  assert.match(bad.message, /not attached/); assert.equal(bad.orphanPath, 'atlas/12/aaaa1111.png');
+});
+
+test('report switch is per drawing and role-checked', async () => {
+  const m = mem(exams());
+  await attachApprovedDrawing({ ...args(), storage: storage(), mutate: m.mutate });
+  await setDrawingReport({ mutate: m.mutate, examId: 7, id: 'aaaa1111', value: true, user: doc, role: 'admin' });
+  assert.equal(m.get().find(x => x.id === 7).atlasDrawings[0].includeInReport, true);
+  await assert.rejects(() => setDrawingReport({ mutate: m.mutate, examId: 7, id: 'aaaa1111', value: false, user: doc, role: 'employee' }), /not allowed/);
+});
+
+test('a stale exam form cannot erase drawings approved after it was opened', () => {
+  const d = D.addDrawing([], base());
+  const stored = { id: 7, atlasDrawings: d, diagnosis: 'a' };
+  const staleForm = { id: 7, diagnosis: 'b' }; // opened before the approval, no drawings key
+  const saved = D.preserveDrawings(stored, staleForm);
+  assert.equal(saved.diagnosis, 'b');
+  assert.deepEqual(saved.atlasDrawings, d);
+  assert.equal(D.preserveDrawings({ id: 7 }, staleForm), staleForm); // nothing to preserve: same object
+  assert.equal(D.preserveDrawings(stored, null), null);
+});
+
+test('the portal copy of an exam has no drawings', () => {
+  const rec = { id: 7, patientId: 12, diagnosis: 'x', atlasDrawings: D.addDrawing([], base()) };
+  const safe = D.stripClinicalDrawings(rec);
+  assert.equal('atlasDrawings' in safe, false);
+  assert.equal(safe.diagnosis, 'x');
+});
