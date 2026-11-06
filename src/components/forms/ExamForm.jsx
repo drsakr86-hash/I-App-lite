@@ -14,8 +14,6 @@ import { localISO } from '../../modules/constants/misc.js';
 import { OphthFindings, OphthPlan } from './OphthDetails.jsx';
 import { examForEditing, applyOphthToExam } from '../../modules/patient-file/ophth.js';
 import ScribePanel from './ScribePanel.jsx';
-import ExamDiagrams from './ExamDiagrams.jsx';
-import { finalizeExamDiagrams } from '../../modules/exam-diagrams/model.js';
 
 // Three-step examination add/edit form. Exact port of the legacy runtime's
 // ExamForm (public/legacy/app-runtime.js).
@@ -219,7 +217,6 @@ export default function ExamForm({ initial, patientId, onSave, onClose, doctorNa
             ))}
           </div>
           <OphthFindings value={f.ophth} onChange={setOphth} />
-          <ExamDiagrams value={f.diagrams} onChange={d => setF(v => ({ ...v, diagrams: d }))} />
         </div>
       )}
       {step === 2 && (
@@ -264,7 +261,7 @@ export default function ExamForm({ initial, patientId, onSave, onClose, doctorNa
         ) : (
           <>
             <Btn outline full onClick={onClose}>{t('g2.common.cancel', lang)}</Btn>
-            <Btn full onClick={() => onSave(finalizeExamDiagrams(applyOphthToExam(buildExamPayload(f, patientId, Date.now()))))}>{t('g2.exam.save', lang)}</Btn>
+            <Btn full onClick={() => onSave(applyOphthToExam(buildExamPayload(f, patientId, Date.now())))}>{t('g2.exam.save', lang)}</Btn>
           </>
         )}
       </div>

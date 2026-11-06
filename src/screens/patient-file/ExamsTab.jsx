@@ -3,7 +3,6 @@ import { Btn } from '../../components/common.jsx';
 import { C } from '../../modules/theme/index.js';
 import { t, useLang } from '../../modules/i18n/index.js';
 import { tv } from '../../modules/i18n/tv.js';
-import { ExamDiagramsView } from '../../components/forms/ExamDiagrams.jsx';
 
 // Patient file — "exams" tab. Presentational port of the legacy PatientFile JSX;
 // all state and handlers come from the legacy function through ctx.
@@ -92,7 +91,6 @@ export default function ExamsTab({ ctx }) {
               <div style={{ color: C.text, fontSize: 12 }}>{tv(ex.diagnosis)}</div>
             </div>
           )}
-          <ExamDiagramsView diagrams={ex.diagrams} />
         </div>
       ))}
     </div>
