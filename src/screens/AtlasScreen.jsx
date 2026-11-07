@@ -26,7 +26,20 @@ function download(name, blob) {
 }
 
 // The exported file shows the whole plate (not the current zoom), without selection highlights, with its attribution line.
-function serializePlate(svg, plate, lang) {
+// A background photo is embedded as a data URL: an external file cannot be drawn when the SVG is turned into a PNG.
+async function inlineImages(clone) {
+  for (const im of clone.querySelectorAll('image')) {
+    const href = im.getAttribute('href');
+    if (!href || href.startsWith('data:')) continue;
+    const res = await fetch(href);
+    if (!res.ok) throw new Error('image');
+    const blob = await res.blob();
+    const data = await new Promise((resolve, reject) => { const r = new FileReader(); r.onload = () => resolve(r.result); r.onerror = reject; r.readAsDataURL(blob); });
+    im.setAttribute('href', data);
+  }
+}
+
+async function serializePlate(svg, plate, lang) {
   const clone = svg.cloneNode(true);
   const b = plateVBox(plate);
   clone.setAttribute('viewBox', `${b.x} ${b.y} ${b.w} ${b.h}`);
@@ -38,6 +51,7 @@ function serializePlate(svg, plate, lang) {
   foot.setAttribute('font-size', '9'); foot.setAttribute('fill', '#6b7280'); foot.setAttribute('direction', 'ltr');
   foot.textContent = `${pick(plate.title, lang)} — ${plateAttribution(plate)}${isApproved(plate) ? '' : ' — draft'}`;
   clone.appendChild(foot);
+  await inlineImages(clone);
   return { text: new XMLSerializer().serializeToString(clone), w: b.w * 2, h: b.h * 2 };
 }
 
@@ -88,7 +102,7 @@ export default function AtlasScreen({ role = null, user = null, context = null, 
 
   // The whole plate as a PNG (and a small copy for lists). Shared by "save PNG" and "approve & attach".
   const renderBlobs = async () => {
-    const { text, w, h } = serializePlate(svgRef.current, plate, lang);
+    const { text, w, h } = await serializePlate(svgRef.current, plate, lang);
     const img = new Image();
     const url = URL.createObjectURL(new Blob([text], { type: 'image/svg+xml;charset=utf-8' }));
     try { await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; img.src = url; }); } finally { URL.revokeObjectURL(url); }
@@ -106,7 +120,7 @@ export default function AtlasScreen({ role = null, user = null, context = null, 
   const exportAs = async kind => {
     setMessage('');
     try {
-      if (kind === 'svg') { download(`${plate.id}.svg`, new Blob([serializePlate(svgRef.current, plate, lang).text], { type: 'image/svg+xml' })); return; }
+      if (kind === 'svg') { download(`${plate.id}.svg`, new Blob([(await serializePlate(svgRef.current, plate, lang)).text], { type: 'image/svg+xml' })); return; }
       const { png } = await renderBlobs();
       download(`${plate.id}.png`, png);
     } catch { setMessage(t('atlas.export.failed', lang)); }

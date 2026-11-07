@@ -6,5 +6,6 @@ import extraocularMuscles from './extraocular-muscles.js';
 import visualPathway from './visual-pathway.js';
 import anteriorSegmentAngle from './anterior-segment-angle.js';
 import lensPupil from './lens-pupil.js';
+import imagePlates from './image-plates.js';
 
-export const PLATES = Object.freeze([generalEye, retinaLayers, vitreoretinalInterface, extraocularMuscles, visualPathway, anteriorSegmentAngle, lensPupil]);
+export const PLATES = Object.freeze([generalEye, retinaLayers, vitreoretinalInterface, extraocularMuscles, visualPathway, anteriorSegmentAngle, lensPupil, ...imagePlates]);

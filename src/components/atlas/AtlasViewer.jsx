@@ -1,7 +1,7 @@
 // Interactive SVG canvas for one atlas plate: select a structure, zoom/pan (wheel, drag, pinch), labels, and drawn annotations.
 // All geometry comes from plain plate data (src/modules/atlas); nothing is injected as raw HTML.
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { partsInDrawOrder, labelText, labelPlacement, partName, pick, symAxis, plateVBox } from '../../modules/atlas/model.js';
+import { partsInDrawOrder, labelText, labelPlacement, partName, pick, symAxis, plateVBox, plateImageUrl } from '../../modules/atlas/model.js';
 import {
   zoomAt, panBy, clientToPlate, unitsPerPx, pinchFactor, wheelFactor, viewBoxString, labelFontUnits, zoomLevel, defaultLabelMode
 } from '../../modules/atlas/viewport.js';
@@ -204,6 +204,7 @@ export default function AtlasViewer({
         onPointerCancel={e => finish(e, true)}
       >
         <rect x={base.x} y={base.y} width={base.w} height={base.h} fill={PAPER} />
+        {plate.image ? <image data-layer="photo" href={plateImageUrl(plate)} x={0} y={0} width={plate.image.width} height={plate.image.height} preserveAspectRatio="none" pointerEvents="none" /> : null}
         <g data-layer="decor">{(plate.decor || []).map((sh, i) => renderShape(sh, `d${i}`, lang, axis))}</g>
         <g data-layer="parts">
           {ordered.map(part => (

@@ -115,7 +115,13 @@ export function validatePlate(plate) {
   const vb = plate.viewBox;
   if (!Array.isArray(vb) || vb.length !== 4 || !vb.every(num) || vb[2] <= 0 || vb[3] <= 0) out.push(`${id}: bad viewBox`);
   if (!Object.values(CONTENT_STATUS).includes(plate.status)) out.push(`${id}: bad status ${plate.status}`);
-  if (!plate.source || plate.source.type !== 'original' && !(plate.source.license && plate.source.url)) out.push(`${id}: source/licence missing`);
+  if (!plate.source || !['original', 'supplied'].includes(plate.source.type) && !(plate.source.license && plate.source.url)) out.push(`${id}: source/licence missing`);
+  if (plate.image != null) {
+    const im = plate.image;
+    if (!im || !/^atlas\/[a-z0-9-]+\.webp$/.test(String(im.src))) out.push(`${id}: bad image src`);
+    else if (!num(im.width) || !num(im.height) || im.width <= 0 || im.height <= 0) out.push(`${id}: bad image size`);
+    else if (!Array.isArray(vb) || vb[0] !== 0 || vb[1] !== 0 || vb[2] !== im.width || vb[3] !== im.height) out.push(`${id}: viewBox must equal the image size`);
+  }
   if (!plate.source || !plate.source.license || !plate.source.author) out.push(`${id}: source needs author and licence`);
   if (!Array.isArray(plate.references) || !plate.references.length) out.push(`${id}: references missing`);
   (plate.decor || []).forEach((sh, i) => validateShape(sh, `${id}.decor[${i}]`, out));
@@ -141,5 +147,10 @@ export function validatePlate(plate) {
   return out;
 }
 
+// Where a plate's background image is served from (static file next to index.html; relative so any sub-path works).
+export const plateImageUrl = plate => {
+  if (!plate || !plate.image) return null;
+  try { return new URL(plate.image.src, typeof document !== 'undefined' ? document.baseURI : 'http://localhost/').href; } catch { return plate.image.src; }
+};
 export const plateAttribution = plate => `${plate.source.author} — ${plate.source.license}`;
 export const isApproved = plate => plate.status === CONTENT_STATUS.APPROVED;

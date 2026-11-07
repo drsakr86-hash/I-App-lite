@@ -5,15 +5,16 @@ import { validatePlate, listPlates, getPlate, getPart, searchParts, normalizeTex
 import { can } from '../src/app/permissions.js';
 import { moreNavItems, isMoreActive, NAV, atlasTabAllowed } from '../src/components/bottomnav-model.js';
 
-test('atlas: the seven requested plates exist, in order', () => {
-  assert.deepEqual(PLATES.map(p => p.id), ['general-eye', 'retina-layers', 'vitreoretinal-interface', 'extraocular-muscles', 'visual-pathway', 'anterior-segment-angle', 'lens-pupil']);
-  assert.deepEqual(listPlates().map(p => p.count > 4), PLATES.map(() => true));
+test('atlas: the seven original plates exist first, in order, then the supplied image plates', () => {
+  assert.deepEqual(PLATES.slice(0, 7).map(p => p.id), ['general-eye', 'retina-layers', 'vitreoretinal-interface', 'extraocular-muscles', 'visual-pathway', 'anterior-segment-angle', 'lens-pupil']);
+  assert.deepEqual(PLATES.slice(7).map(p => p.id), ['fundus-photo-od', 'fundus-photo-os', 'fundus-illustration-od', 'fundus-illustration-os', 'extraocular-muscles-od', 'extraocular-muscles-os', 'anterior-segment-section']);
+  assert.deepEqual(listPlates().slice(0, 7).map(p => p.count > 4), PLATES.slice(0, 7).map(() => true));
 });
 test('atlas: every plate passes validation (bilingual text, licence, bounds, whitelisted shape keys)', () => {
   for (const p of PLATES) assert.deepEqual(validatePlate(p), [], p.id);
 });
 test('atlas: content is draft until a doctor approves it, and provenance is original artwork', () => {
-  for (const p of PLATES) { assert.equal(p.status, CONTENT_STATUS.DRAFT); assert.equal(p.source.type, 'original'); assert.ok(p.references.length); }
+  for (const p of PLATES) { assert.equal(p.status, CONTENT_STATUS.DRAFT); assert.equal(p.source.type, p.image ? 'supplied' : 'original'); assert.ok(p.references.length); }
 });
 test('atlas: part ids are unique per plate and every part is addressable', () => {
   for (const p of PLATES) { const ids = p.parts.map(x => x.id); assert.equal(new Set(ids).size, ids.length); for (const id of ids) assert.equal(getPart(getPlate(p.id), id).id, id); }

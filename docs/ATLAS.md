@@ -33,3 +33,6 @@ Linking drawings to patients/exams/reports, any new table or Migration, Supabase
 - Never shown to secretary/employee (storage policy + no permission) or the patient portal (the portal strips `atlasDrawings`).
   A stale exam form cannot erase drawings (`preserveDrawings` in `saveExam`).
 - Not yet: showing the included drawings in the printed report; migration of old Cloudinary images (deliberately out of scope).
+
+## Image plates (supplied pictures)
+Seven plates use a supplied picture as the background (`plate.image`, static webp in `public/atlas/`, loaded only when the plate is opened and not precached by the service worker). Drawing, arrows, text and the selectable hotspots sit on top; the picture is never edited. Exports embed the picture. All seven are `draft` with source type `supplied` and an unverified licence: confirm the origin/licence of each picture, and review the hotspot positions (placed by eye), before using them outside the clinic.
