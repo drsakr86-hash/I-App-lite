@@ -125,6 +125,7 @@ export function validatePlate(plate) {
   if (!plate.source || !plate.source.license || !plate.source.author) out.push(`${id}: source needs author and licence`);
   if (!Array.isArray(plate.references) || !plate.references.length) out.push(`${id}: references missing`);
   (plate.decor || []).forEach((sh, i) => validateShape(sh, `${id}.decor[${i}]`, out));
+  if (plate.blank === true) { if (Array.isArray(plate.parts) && plate.parts.length) out.push(`${id}: a blank plate has no parts`); return out; }
   if (!Array.isArray(plate.parts) || !plate.parts.length) { out.push(`${id}: no parts`); return out; }
   const seen = new Set();
   const inside = ([x, y], margin = 0) => Array.isArray(vb) && num(x) && num(y) && x >= vb[0] - margin && x <= vb[0] + vb[2] + margin && y >= vb[1] - margin && y <= vb[1] + vb[3] + margin;
@@ -152,5 +153,9 @@ export const plateImageUrl = plate => {
   if (!plate || !plate.image) return null;
   try { return new URL(plate.image.src, typeof document !== 'undefined' ? document.baseURI : 'http://localhost/').href; } catch { return plate.image.src; }
 };
+// The library of anatomy plates is switched off in the UI: the doctor works on the blank canvas (free drawing + own image).
+// The plates stay in the data (old saved drawings still resolve their plate); flip this to bring the library back.
+export const LIBRARY_VISIBLE = false;
+export const visiblePlates = (showLibrary = LIBRARY_VISIBLE) => listPlates().filter(p => showLibrary || PLATES.find(q => q.id === p.id).blank === true);
 export const plateAttribution = plate => `${plate.source.author} — ${plate.source.license}`;
 export const isApproved = plate => plate.status === CONTENT_STATUS.APPROVED;

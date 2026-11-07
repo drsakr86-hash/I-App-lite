@@ -3,8 +3,9 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback, lazy, Suspense } from 'react';
 import { C } from '../modules/theme/index.js';
 import { t, useLang, dirOf } from '../modules/i18n/index.js';
-import { listPlates, getPlate, firstPlateId, partName, pick, searchParts, plateVBox, plateAttribution, isApproved, normalizeText } from '../modules/atlas/model.js';
+import { visiblePlates, LIBRARY_VISIBLE, getPlate, firstPlateId, partName, pick, searchParts, plateVBox, plateAttribution, isApproved, normalizeText } from '../modules/atlas/model.js';
 import { zoomCentered, ZOOM_STEP } from '../modules/atlas/viewport.js';
+import { checkBackgroundFile, scaledSize, fitRect } from '../modules/atlas/background.js';
 import { ANNOTATION_COLORS, loadAnnotations, saveAnnotations, add, undo, note } from '../modules/atlas/annotations.js';
 import AtlasViewer from '../components/atlas/AtlasViewer.jsx';
 import { privateStorageEnabled } from '../services/private-storage.js';
@@ -50,14 +51,14 @@ async function serializePlate(svg, plate, lang) {
   foot.setAttribute('x', String(b.x + 8)); foot.setAttribute('y', String(b.y + b.h - 8));
   foot.setAttribute('font-size', '9'); foot.setAttribute('fill', '#6b7280'); foot.setAttribute('direction', 'ltr');
   foot.textContent = `${pick(plate.title, lang)} — ${plateAttribution(plate)}${isApproved(plate) ? '' : ' — draft'}`;
-  clone.appendChild(foot);
+  if (!plate.blank) clone.appendChild(foot); // the blank canvas has no source line: the picture is the doctor's own
   await inlineImages(clone);
   return { text: new XMLSerializer().serializeToString(clone), w: b.w * 2, h: b.h * 2 };
 }
 
-export default function AtlasScreen({ role = null, user = null, context = null, drawings = [], onDrawingsChange = null, embedded = false } = {}) {
+export default function AtlasScreen({ role = null, user = null, context = null, drawings = [], onDrawingsChange = null, embedded = false, showLibrary = LIBRARY_VISIBLE } = {}) {
   const lang = useLang();
-  const [plateId, setPlateId] = useState(firstPlateId());
+  const [plateId, setPlateId] = useState(() => (visiblePlates(showLibrary)[0] || { id: firstPlateId() }).id);
   const plate = getPlate(plateId);
   const base = plateVBox(plate);
   const [viewState, setViewState] = useState({ id: plateId, view: base });
@@ -74,11 +75,13 @@ export default function AtlasScreen({ role = null, user = null, context = null, 
   const [query, setQuery] = useState('');
   const [message, setMessage] = useState('');
   const svgRef = useRef(null);
-  const plates = useMemo(() => listPlates(), []);
+  const plates = useMemo(() => visiblePlates(showLibrary), [showLibrary]);
+  const [bg, setBg] = useState(null); // an image the doctor added as the canvas background (kept only in this screen)
+  const fileRef = useRef(null);
 
   // switching plate: reset the view and selection, load that plate's saved drawing
   useEffect(() => {
-    setSelectedId(null); setPendingText(null); setMessage('');
+    setSelectedId(null); setPendingText(null); setMessage(''); setBg(null);
     try { setAnnotations(loadAnnotations(localStorage, plateId)); } catch { setAnnotations([]); }
   }, [plateId]);
 
@@ -117,6 +120,24 @@ export default function AtlasScreen({ role = null, user = null, context = null, 
     return { png, thumb };
   };
 
+  const addImage = async e => {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    setMessage('');
+    const bad = checkBackgroundFile(file);
+    if (bad) { setMessage(t(bad === 'type' ? 'atlas.bg.type' : 'atlas.bg.size', lang)); return; }
+    const url = URL.createObjectURL(file);
+    try {
+      const img = new Image();
+      await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; img.src = url; });
+      const { width, height } = scaledSize(img.naturalWidth, img.naturalHeight);
+      const c = document.createElement('canvas'); c.width = width; c.height = height;
+      const ctx = c.getContext('2d'); ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, width, height); ctx.drawImage(img, 0, 0, width, height);
+      setBg({ href: c.toDataURL('image/jpeg', 0.9), ...fitRect(width, height, base.w, base.h) });
+    } catch { setMessage(t('atlas.bg.fail', lang)); } finally { URL.revokeObjectURL(url); }
+  };
+
   const exportAs = async kind => {
     setMessage('');
     try {
@@ -133,10 +154,10 @@ export default function AtlasScreen({ role = null, user = null, context = null, 
     <div style={{ padding: embedded ? 0 : 12, paddingBottom: embedded ? 12 : 90, direction: dirOf(lang), color: C.text, maxWidth: 1100, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
       <div>
         <div style={{ fontSize: 20, fontWeight: 800 }}>{t('atlas.title', lang)}</div>
-        <div role="note" style={{ marginTop: 6, fontSize: 12, color: C.gold, background: `${C.gold}18`, border: `1px solid ${C.gold}55`, borderRadius: 10, padding: '6px 10px' }}>{t('atlas.draft', lang)}</div>
+        {plate.blank ? null : <div role="note" style={{ marginTop: 6, fontSize: 12, color: C.gold, background: `${C.gold}18`, border: `1px solid ${C.gold}55`, borderRadius: 10, padding: '6px 10px' }}>{t('atlas.draft', lang)}</div>}
       </div>
 
-      <div style={{ position: 'relative' }}>
+      {plate.blank ? null : <div style={{ position: 'relative' }}>
         <input
           value={query} onChange={e => setQuery(e.target.value)} placeholder={t('atlas.search', lang)} aria-label={t('atlas.search', lang)}
           style={{ width: '100%', boxSizing: 'border-box', background: C.surface2, border: `1px solid ${C.border}`, color: C.text, borderRadius: 10, padding: '9px 12px', fontSize: 14 }}
@@ -153,15 +174,15 @@ export default function AtlasScreen({ role = null, user = null, context = null, 
             }) : <div style={{ padding: 8, color: C.muted, fontSize: 13 }}>{t('atlas.search.none', lang)}</div>}
           </div>
         ) : null}
-      </div>
+      </div>}
 
-      <div role="tablist" aria-label={t('atlas.plates', lang)} style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+      {plates.length > 1 ? <div role="tablist" aria-label={t('atlas.plates', lang)} style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
         {plates.map(p => (
           <button key={p.id} role="tab" aria-selected={p.id === plateId} onClick={() => setPlateId(p.id)} style={{ ...btn(p.id === plateId), whiteSpace: 'nowrap', flex: '0 0 auto' }}>
             {pick(p.title, lang)}
           </button>
         ))}
-      </div>
+      </div> : null}
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
         <button style={btn(false)} onClick={() => zoom(ZOOM_STEP)} aria-label={t('atlas.zoom.in', lang)}>＋</button>
@@ -178,16 +199,23 @@ export default function AtlasScreen({ role = null, user = null, context = null, 
         </span>
         <button style={btn(false)} disabled={!annotations.length} onClick={() => commit(undo(annotations))}>{t('atlas.undo', lang)}</button>
         <button style={btn(false)} disabled={!annotations.length} onClick={() => { if (window.confirm(t('atlas.clear.confirm', lang))) commit([]); }}>{t('atlas.clear', lang)}</button>
+        {plate.blank ? (
+          <>
+            <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" onChange={addImage} style={{ display: 'none' }} aria-label={t('atlas.bg.add', lang)} />
+            <button style={btn(!!bg)} onClick={() => fileRef.current && fileRef.current.click()}>{t('atlas.bg.add', lang)}</button>
+            {bg ? <button style={btn(false)} onClick={() => setBg(null)}>{t('atlas.bg.remove', lang)}</button> : null}
+          </>
+        ) : null}
       </div>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
-        <span style={{ fontSize: 12, color: C.muted }}>{t('atlas.labels', lang)}:</span>
+        {plate.blank ? null : <><span style={{ fontSize: 12, color: C.muted }}>{t('atlas.labels', lang)}:</span>
         {['auto', 'names', 'numbers', 'off'].map(m => (
           <button key={m} style={btn(modeNow === m)} aria-pressed={modeNow === m} onClick={() => setLabelMode(m === 'auto' ? null : m)}>
             {m === 'auto' ? `${t('atlas.labels.names', lang)}/${t('atlas.labels.numbers', lang)}` : t(`atlas.labels.${m}`, lang)}
           </button>
         ))}
-        <button style={btn(bothLangs)} aria-pressed={bothLangs} onClick={() => setBothLangs(b => !b)}>{t('atlas.labels.both', lang)}</button>
+        <button style={btn(bothLangs)} aria-pressed={bothLangs} onClick={() => setBothLangs(b => !b)}>{t('atlas.labels.both', lang)}</button></>}
         <span style={{ flex: 1 }} />
         <button style={btn(false)} onClick={() => exportAs('png')}>{t('atlas.export.png', lang)}</button>
         <button style={btn(false)} onClick={() => exportAs('svg')}>{t('atlas.export.svg', lang)}</button>
@@ -206,12 +234,13 @@ export default function AtlasScreen({ role = null, user = null, context = null, 
         plate={plate} lang={lang} selectedId={selectedId} onSelect={setSelectedId}
         labelMode={labelMode} bothLangs={bothLangs} tool={tool} color={color} annotations={annotations}
         onAnnotate={a => commit(add(annotations, a))} onTextPoint={p => { setPendingText(p); setTextValue(''); }}
-        view={view} onViewChange={setView} svgRef={svgRef}
+        view={view} onViewChange={setView} svgRef={svgRef} background={bg}
       />
+      {plate.blank ? <div style={{ fontSize: 12, color: C.muted }}>{t('atlas.bg.hint', lang)}</div> : null}
       <div style={{ fontSize: 11, color: C.muted }}>{t('atlas.hint.gestures', lang)} {t('atlas.local', lang)}</div>
       {message ? <div role="alert" style={{ color: C.danger, fontSize: 13 }}>{message}</div> : null}
 
-      <div style={card} aria-live="polite">
+      {plate.blank ? null : <div style={card} aria-live="polite">
         <div style={{ fontSize: 12, color: C.muted, marginBottom: 6 }}>{t('atlas.selected', lang)}</div>
         {selected ? (
           <div>
@@ -221,9 +250,9 @@ export default function AtlasScreen({ role = null, user = null, context = null, 
             <p style={{ margin: 0, lineHeight: 1.6, fontSize: 12, color: C.muted, direction: other === 'ar' ? 'rtl' : 'ltr' }}>{pick(selected.desc, other)}</p>
           </div>
         ) : <div style={{ fontSize: 13, color: C.muted }}>{t('atlas.select.hint', lang)}</div>}
-      </div>
+      </div>}
 
-      <div style={card}>
+      {plate.blank ? null : <div style={card}>
         <div style={{ fontSize: 12, color: C.muted, marginBottom: 6 }}>{t('atlas.parts', lang)}</div>
         <ol style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 6 }}>
           {plate.parts.map((p, i) => (
@@ -235,7 +264,7 @@ export default function AtlasScreen({ role = null, user = null, context = null, 
             </li>
           ))}
         </ol>
-      </div>
+      </div>}
 
       {onDrawingsChange && !privateStorageEnabled() ? <div role="note" style={{ fontSize: 12, color: C.gold }}>{t('atlas.exam.needPrivate', lang)}</div> : null}
       {onDrawingsChange && privateStorageEnabled() && canApproveDrawing(role) ? (

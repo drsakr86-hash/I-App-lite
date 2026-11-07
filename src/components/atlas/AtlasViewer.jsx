@@ -54,7 +54,7 @@ function outline(sh, key, axis) {
 }
 
 export default function AtlasViewer({
-  plate, lang, selectedId, onSelect, labelMode, bothLangs, tool, color, annotations, onAnnotate, onTextPoint, view, onViewChange, svgRef
+  plate, lang, selectedId, onSelect, labelMode, bothLangs, tool, color, annotations, onAnnotate, onTextPoint, view, onViewChange, svgRef, background = null
 }) {
   const wrapRef = useRef(null);
   const localSvg = useRef(null);
@@ -204,6 +204,7 @@ export default function AtlasViewer({
         onPointerCancel={e => finish(e, true)}
       >
         <rect x={base.x} y={base.y} width={base.w} height={base.h} fill={PAPER} />
+        {background ? <image data-layer="photo" href={background.href} x={background.x} y={background.y} width={background.width} height={background.height} preserveAspectRatio="none" pointerEvents="none" /> : null}
         {plate.image ? <image data-layer="photo" href={plateImageUrl(plate)} x={0} y={0} width={plate.image.width} height={plate.image.height} preserveAspectRatio="none" pointerEvents="none" /> : null}
         <g data-layer="decor">{(plate.decor || []).map((sh, i) => renderShape(sh, `d${i}`, lang, axis))}</g>
         <g data-layer="parts">

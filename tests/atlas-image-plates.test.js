@@ -55,3 +55,48 @@ test('image plates: bilingual part names and a URL that resolves next to the app
   assert.equal(plateImageUrl(photos[0]), 'http://localhost/atlas/fundus-photo-od.webp');
   assert.equal(plateImageUrl(PLATES[0]), null);
 });
+
+test('blank canvas: the only plate shown by default, no anatomy, validates; the library can be switched back on', async () => {
+  const { visiblePlates, LIBRARY_VISIBLE } = await import('../src/modules/atlas/model.js');
+  assert.equal(LIBRARY_VISIBLE, false);
+  assert.deepEqual(visiblePlates().map(p => p.id), ['blank-canvas']);
+  assert.equal(visiblePlates(true).length, PLATES.length);
+  const blank = getPlate('blank-canvas');
+  assert.equal(blank.blank, true); assert.equal(blank.parts.length, 0);
+  assert.deepEqual(validatePlate(blank), []);
+  const bad = JSON.parse(JSON.stringify(blank)); bad.parts = [{ id: 'x' }];
+  assert.ok(validatePlate(bad).some(m => /blank plate has no parts/.test(m)));
+  const noBlank = JSON.parse(JSON.stringify(blank)); delete noBlank.blank;
+  assert.ok(validatePlate(noBlank).some(m => /no parts/.test(m)));
+});
+
+test('external image: file checks, downscale (never enlarge) and centred fit', async () => {
+  const { checkBackgroundFile, scaledSize, fitRect, BG_MAX_SIDE } = await import('../src/modules/atlas/background.js');
+  assert.equal(checkBackgroundFile({ type: 'image/jpeg', size: 1000 }), null);
+  assert.equal(checkBackgroundFile({ type: 'image/png', size: 1000 }), null);
+  assert.equal(checkBackgroundFile({ type: 'image/gif', size: 1000 }), 'type');
+  assert.equal(checkBackgroundFile({ type: 'image/svg+xml', size: 1000 }), 'type');
+  assert.equal(checkBackgroundFile({ type: 'image/png', size: 0 }), 'size');
+  assert.equal(checkBackgroundFile({ type: 'image/png', size: 16 * 1024 * 1024 }), 'size');
+  assert.equal(checkBackgroundFile(null), 'type');
+  assert.deepEqual(scaledSize(4000, 2000), { width: BG_MAX_SIDE, height: BG_MAX_SIDE / 2 });
+  assert.deepEqual(scaledSize(800, 600), { width: 800, height: 600 });
+  assert.throws(() => scaledSize(0, 10));
+  const r = fitRect(1000, 1000, 1200, 800);
+  assert.deepEqual(r, { x: 200, y: 0, width: 800, height: 800 });
+  const w = fitRect(2400, 800, 1200, 800);
+  assert.equal(w.width, 1200); assert.equal(w.height, 400); assert.equal(w.x, 0); assert.equal(w.y, 200);
+  assert.throws(() => fitRect(10, 0, 1200, 800));
+});
+
+test('blank canvas: approving twice in one exam keeps two drawings (no silent replacement)', async () => {
+  const { approveIntoList } = await import('../src/modules/atlas/attach.js');
+  const blank = getPlate('blank-canvas');
+  let n = 0;
+  const storage = { uploadAtlasImage: async ({ id }) => ({ provider: 'supabase', bucket: 'clinical-private', path: `atlas/12/${id}.png`, thumbPath: '', bytes: 1, sha256: '', mime: 'image/png' }) };
+  const base = { storage, plate: blank, annotations: [{ id: 'a' }], png: {}, patient: { id: 12 }, exam: { id: 5, patientId: 12 }, user: { id: 'u1', name: 'د' }, role: 'doctor', newId: () => 'id-' + (++n) + '-aaaaaaaa' };
+  const one = await approveIntoList({ ...base, list: [] });
+  const two = await approveIntoList({ ...base, list: one.list });
+  assert.equal(two.list.length, 2);
+  assert.ok(two.list.every(d => d.status === 'approved' && d.plateId === 'blank-canvas'));
+});

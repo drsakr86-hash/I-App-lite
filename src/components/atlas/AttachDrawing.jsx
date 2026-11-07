@@ -22,7 +22,8 @@ export default function AttachDrawing({ lang, plate, annotations, renderBlobs, u
   const [msg, setMsg] = useState(null);
   if (!priv) return null;
 
-  const current = drawings.find(d => d.status === 'approved' && d.plateId === plate.id) || null;
+  // on the blank canvas every approval is a new drawing (the doctor may sketch several things); a plate keeps one current version
+  const current = plate.blank ? null : (drawings.find(d => d.status === 'approved' && d.plateId === plate.id) || null);
   const muted = { fontSize: 12, color: C.muted };
 
   const approve = async () => {

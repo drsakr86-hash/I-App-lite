@@ -7,5 +7,6 @@ import visualPathway from './visual-pathway.js';
 import anteriorSegmentAngle from './anterior-segment-angle.js';
 import lensPupil from './lens-pupil.js';
 import imagePlates from './image-plates.js';
+import blankCanvas from './blank.js';
 
-export const PLATES = Object.freeze([generalEye, retinaLayers, vitreoretinalInterface, extraocularMuscles, visualPathway, anteriorSegmentAngle, lensPupil, ...imagePlates]);
+export const PLATES = Object.freeze([generalEye, retinaLayers, vitreoretinalInterface, extraocularMuscles, visualPathway, anteriorSegmentAngle, lensPupil, ...imagePlates, blankCanvas]);
