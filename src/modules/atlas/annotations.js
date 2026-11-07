@@ -1,12 +1,14 @@
-// Pure annotation model for the atlas canvas: freehand pen strokes, arrows and text notes drawn on top of a plate.
+// Pure annotation model for the atlas canvas: freehand pen strokes, arrows, text notes and ready-made lesion stamps drawn on top of a plate.
 // Annotations live in plate coordinates (so they follow zoom), are kept per plate in this browser only, and never
 // contain patient data -- attaching a drawing to a patient/exam is a later, doctor-approved step (see docs/ATLAS.md).
-export const ANNOTATION_TYPES = Object.freeze(['pen', 'arrow', 'text']);
+export const ANNOTATION_TYPES = Object.freeze(['pen', 'arrow', 'text', 'stamp']);
 export const ANNOTATION_COLORS = Object.freeze(['#d62828', '#1d4ed8', '#15803d', '#111827']);
 export const MAX_ANNOTATIONS = 200;
 export const MAX_POINTS = 600;
 export const MAX_TEXT = 80;
 export const STORAGE_PREFIX = 'iapp_atlas_ann_v1:';
+
+import { STAMP_IDS, STAMP_ROTATIONS } from './stamps.js';
 
 const num = v => typeof v === 'number' && Number.isFinite(v);
 const COORD_LIMIT = 5000;
@@ -21,6 +23,9 @@ export const cleanText = s => String(s == null ? '' : s).replace(/[\u0000-\u001f
 
 export const pen = (points, color) => ({ id: newId(), type: 'pen', color, points: simplify(points) });
 export const arrow = (from, to, color) => ({ id: newId(), type: 'arrow', color, points: [[r1(from.x), r1(from.y)], [r1(to.x), r1(to.y)]] });
+export const STAMP_MIN = 10, STAMP_MAX = 200;
+const HEX = /^#[0-9a-f]{6}$/i;
+export const stamp = (at, symbol, size, rot, color) => ({ id: newId(), type: 'stamp', symbol, color, size: Math.round(size), rot: STAMP_ROTATIONS.includes(rot) ? rot : 0, points: [[r1(at.x), r1(at.y)]] });
 export const note = (at, text, color) => ({ id: newId(), type: 'text', color, points: [[r1(at.x), r1(at.y)]], text: cleanText(text) });
 
 // Drop points closer than `min` plate units to the previous one (keeps strokes light), always keep the last point.
@@ -66,6 +71,12 @@ export function sanitize(raw) {
   const out = [];
   for (const a of raw) {
     if (!a || typeof a !== 'object' || !ANNOTATION_TYPES.includes(a.type)) continue;
+    if (a.type === 'stamp') {
+      if (!STAMP_IDS.includes(a.symbol) || !HEX.test(String(a.color)) || typeof a.id !== 'string' || !/^[a-z0-9]{3,40}$/i.test(a.id)) continue;
+      if (!Array.isArray(a.points) || a.points.length !== 1 || !okPoint(a.points[0]) || !num(a.size) || a.size < STAMP_MIN || a.size > STAMP_MAX) continue;
+      out.push({ id: a.id, type: 'stamp', symbol: a.symbol, color: a.color, size: Math.round(a.size), rot: STAMP_ROTATIONS.includes(a.rot) ? a.rot : 0, points: [[a.points[0][0], a.points[0][1]]] });
+      continue;
+    }
     if (!ANNOTATION_COLORS.includes(a.color) || typeof a.id !== 'string' || !/^[a-z0-9]{3,40}$/i.test(a.id)) continue;
     if (!Array.isArray(a.points) || !a.points.every(okPoint)) continue;
     if (a.type === 'pen' && (a.points.length < 1 || a.points.length > MAX_POINTS)) continue;

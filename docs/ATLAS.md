@@ -36,3 +36,6 @@ Linking drawings to patients/exams/reports, any new table or Migration, Supabase
 
 ## Image plates (supplied pictures)
 Seven plates use a supplied picture as the background (`plate.image`, static webp in `public/atlas/`, loaded only when the plate is opened and not precached by the service worker). Drawing, arrows, text and the selectable hotspots sit on top; the picture is never edited. Exports embed the picture. All seven are `draft` with source type `supplied` and an unverified licence: confirm the origin/licence of each picture, and review the hotspot positions (placed by eye), before using them outside the clinic.
+
+## Blank canvas and lesion symbols
+The plate library is hidden in the UI (`LIBRARY_VISIBLE=false` in `model.js`); the doctor works on the blank canvas: free drawing, an image added from the device (never edited), and 18 ready-made retinal-chart symbols (`modules/atlas/stamps.js`: point, small circle, haemorrhage, flame, microaneurysm, hard exudates, cotton-wool, horseshoe tear, round hole, lattice, laser scar, NV, CNV, oedema, pigment, atrophy, detachment, vitreous opacity) placed by one tap, sized S/M/L and rotated in 90° steps. Colours follow the usual chart convention; only the point and small circle take the picked colour. Symbols are annotations (type `stamp`), so they undo, persist and export with the drawing.

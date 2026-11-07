@@ -44,6 +44,13 @@ for (const lang of ['ar', 'en']) {
   ok(b.root.findAll(n => n.type === 'input' && n.props.type === 'file' && /image/.test(n.props.accept || '')).length === 1, `${lang}: add-image file input`);
   ok(json(b).includes(lang === 'ar' ? 'إضافة صورة' : 'Add image'), `${lang}: add-image button text`);
   ok(b.root.findAll(n => n.type === 'svg').length === 1, `${lang}: one drawing surface`);
+  const symBtn = b.root.findAll(n => n.type === 'button' && n.props.children === (lang === 'ar' ? 'رموز' : 'Symbols'))[0];
+  ok(!!symBtn, `${lang}: symbols tool button`);
+  if (symBtn) {
+    await act(async () => { symBtn.props.onClick(); });
+    const icons = b.root.findAll(n => n.type === 'svg' && n.props.viewBox === '-20 -20 40 40');
+    ok(icons.length === 18, `${lang}: ${icons.length} symbol previews in the palette`);
+  }
   await act(async () => { b.unmount(); });
 }
 if (failed) { console.error(failed + ' smoke check(s) failed'); process.exit(1); }

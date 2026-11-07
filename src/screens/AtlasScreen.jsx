@@ -6,7 +6,9 @@ import { t, useLang, dirOf } from '../modules/i18n/index.js';
 import { visiblePlates, LIBRARY_VISIBLE, getPlate, firstPlateId, partName, pick, searchParts, plateVBox, plateAttribution, isApproved, normalizeText } from '../modules/atlas/model.js';
 import { zoomCentered, ZOOM_STEP } from '../modules/atlas/viewport.js';
 import { checkBackgroundFile, scaledSize, fitRect } from '../modules/atlas/background.js';
-import { ANNOTATION_COLORS, loadAnnotations, saveAnnotations, add, undo, note } from '../modules/atlas/annotations.js';
+import { ANNOTATION_COLORS, loadAnnotations, saveAnnotations, add, undo, note, stamp as makeStamp } from '../modules/atlas/annotations.js';
+import { STAMPS, STAMP_SIZES, getStamp, nextRotation, stampColor } from '../modules/atlas/stamps.js';
+import StampIcon from '../components/atlas/StampGlyph.jsx';
 import AtlasViewer from '../components/atlas/AtlasViewer.jsx';
 import { privateStorageEnabled } from '../services/private-storage.js';
 import { canApproveDrawing } from '../modules/atlas/drawings.js';
@@ -73,6 +75,7 @@ export default function AtlasScreen({ role = null, user = null, context = null, 
   const [pendingText, setPendingText] = useState(null);
   const [textValue, setTextValue] = useState('');
   const [query, setQuery] = useState('');
+  const [stampSel, setStampSel] = useState({ id: 'hemorrhage', size: 'm', rot: 0 });
   const [message, setMessage] = useState('');
   const svgRef = useRef(null);
   const plates = useMemo(() => visiblePlates(showLibrary), [showLibrary]);
@@ -189,7 +192,7 @@ export default function AtlasScreen({ role = null, user = null, context = null, 
         <button style={btn(false)} onClick={() => zoom(1 / ZOOM_STEP)} aria-label={t('atlas.zoom.out', lang)}>－</button>
         <button style={btn(false)} onClick={() => setView(base)}>{t('atlas.zoom.reset', lang)}</button>
         <span style={{ width: 8 }} />
-        {['select', 'pen', 'arrow', 'text'].map(k => (
+        {['select', 'pen', 'arrow', 'text', 'stamp'].map(k => (
           <button key={k} style={btn(tool === k)} aria-pressed={tool === k} onClick={() => { setTool(k); setPendingText(null); }}>{t(`atlas.tool.${k}`, lang)}</button>
         ))}
         <span role="group" aria-label={t('atlas.color', lang)} style={{ display: 'inline-flex', gap: 6, marginInline: 4 }}>
@@ -221,6 +224,27 @@ export default function AtlasScreen({ role = null, user = null, context = null, 
         <button style={btn(false)} onClick={() => exportAs('svg')}>{t('atlas.export.svg', lang)}</button>
       </div>
 
+      {tool === 'stamp' ? (
+        <div style={{ ...card, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(128px, 1fr))', gap: 6 }}>
+            {STAMPS.map(st => (
+              <button key={st.id} type="button" aria-pressed={stampSel.id === st.id} onClick={() => setStampSel(v => ({ ...v, id: st.id }))} style={{ ...btn(stampSel.id === st.id), display: 'flex', alignItems: 'center', gap: 6, textAlign: 'start', padding: '5px 8px', fontSize: 12 }}>
+                <StampIcon stamp={st} color={color} />
+                <span>{pick(st.name, lang)}</span>
+              </button>
+            ))}
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+            <span style={{ fontSize: 12, color: C.muted }}>{t('atlas.stamp.size', lang)}:</span>
+            {['s', 'm', 'l'].map(k => (
+              <button key={k} type="button" aria-pressed={stampSel.size === k} style={btn(stampSel.size === k)} onClick={() => setStampSel(v => ({ ...v, size: k }))}>{t(`atlas.stamp.${k}`, lang)}</button>
+            ))}
+            <button type="button" style={btn(false)} onClick={() => setStampSel(v => ({ ...v, rot: nextRotation(v.rot) }))}>{t('atlas.stamp.rotate', lang)} {stampSel.rot}°</button>
+          </div>
+          <div style={{ fontSize: 12, color: C.muted }}>{t('atlas.stamp.hint', lang)}</div>
+        </div>
+      ) : null}
+
       {pendingText ? (
         <form onSubmit={submitText} style={{ ...card, display: 'flex', gap: 8, alignItems: 'center' }}>
           <input autoFocus value={textValue} maxLength={80} onChange={e => setTextValue(e.target.value)} placeholder={t('atlas.text.placeholder', lang)} style={{ flex: 1, background: C.surface2, border: `1px solid ${C.border}`, color: C.text, borderRadius: 8, padding: '8px 10px', fontSize: 14 }} />
@@ -234,6 +258,7 @@ export default function AtlasScreen({ role = null, user = null, context = null, 
         plate={plate} lang={lang} selectedId={selectedId} onSelect={setSelectedId}
         labelMode={labelMode} bothLangs={bothLangs} tool={tool} color={color} annotations={annotations}
         onAnnotate={a => commit(add(annotations, a))} onTextPoint={p => { setPendingText(p); setTextValue(''); }}
+        onStamp={p => { const st = getStamp(stampSel.id); if (st) commit(add(annotations, makeStamp(p, st.id, STAMP_SIZES[stampSel.size], stampSel.rot, stampColor(st, color)))); }}
         view={view} onViewChange={setView} svgRef={svgRef} background={bg}
       />
       {plate.blank ? <div style={{ fontSize: 12, color: C.muted }}>{t('atlas.bg.hint', lang)}</div> : null}

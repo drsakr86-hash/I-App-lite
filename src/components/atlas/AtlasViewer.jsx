@@ -6,6 +6,7 @@ import {
   zoomAt, panBy, clientToPlate, unitsPerPx, pinchFactor, wheelFactor, viewBoxString, labelFontUnits, zoomLevel, defaultLabelMode
 } from '../../modules/atlas/viewport.js';
 import { pen, arrow, penPath, arrowHead } from '../../modules/atlas/annotations.js';
+import { PlacedStamp } from './StampGlyph.jsx';
 
 const PAPER = '#fbf9f4';
 const HILITE = '#e8590c';
@@ -54,7 +55,7 @@ function outline(sh, key, axis) {
 }
 
 export default function AtlasViewer({
-  plate, lang, selectedId, onSelect, labelMode, bothLangs, tool, color, annotations, onAnnotate, onTextPoint, view, onViewChange, svgRef, background = null
+  plate, lang, selectedId, onSelect, labelMode, bothLangs, tool, color, annotations, onAnnotate, onTextPoint, onStamp, view, onViewChange, svgRef, background = null
 }) {
   const wrapRef = useRef(null);
   const localSvg = useRef(null);
@@ -170,6 +171,8 @@ export default function AtlasViewer({
       if (moved) onAnnotate(arrow(draft.from, draft.to, color));
     } else if (tool === 'text' && !moved) {
       onTextPoint(point(e));
+    } else if (tool === 'stamp' && !moved && onStamp) {
+      onStamp(point(e));
     }
     setDraft(null);
   };
@@ -253,6 +256,7 @@ export default function AtlasViewer({
         ) : null}
         <g data-layer="annotations" pointerEvents="none" fontFamily="'Segoe UI',Tahoma,Arial,sans-serif">
           {annotations.map(a => {
+            if (a.type === 'stamp') return <PlacedStamp key={a.id} a={a} />;
             if (a.type === 'pen') return <path key={a.id} d={penPath(a.points)} fill="none" stroke={a.color} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />;
             if (a.type === 'arrow') {
               return (
