@@ -6,6 +6,7 @@
 // not "cleaned up"). Callers apply safeTemplate() (see escape.js) before
 // calling these, exactly as the legacy runtime did.
 
+import { specialSummary, caseLabel, fieldLabel } from '../special-exam/model.js';
 import { t, getLang, dirOf } from '../i18n/index.js';
 import { tv } from '../i18n/tv.js';
 
@@ -103,6 +104,7 @@ export function getPatientFileHTMLRaw(patient, visits, exams, prescriptions, pri
   const isRequest = e => e.status === "requested" || (Array.isArray(e.requestedTests) && e.requestedTests.length > 0);
   const pExams = (exams || []).filter(e => e.patientId === p.id && !isRequest(e)).sort(byDateDesc);
   const lastExam = pExams[0];
+  const lastExamSpecial = lastExam ? specialSummary(lastExam) : [];
   const pRx = (prescriptions || []).filter(r => r.patientId === p.id).sort(byDateDesc);
   const date = new Date().toLocaleDateString(loc, {
     year: "numeric",
@@ -150,6 +152,8 @@ export function getPatientFileHTMLRaw(patient, visits, exams, prescriptions, pri
   ${lastExam ? `<h3>${tr("g7.print.lastExam")} (${lastExam.date})${lastExam.doctor ? " · " + tv(lastExam.doctor) : ""}</h3>
   <table><tr><th>${tr("g7.print.thVA")}</th><th>${tr("g7.print.thIOP")}</th><th>${tr("g7.print.diagnosis")}</th></tr>
   <tr><td>${tr("g7.print.rightLbl")}: ${lastExam.visualAcuityR || "—"} · ${tr("g7.print.leftLbl")}: ${lastExam.visualAcuityL || "—"}</td><td>${tr("g7.print.rightLbl")}: ${lastExam.iopR || "—"} · ${tr("g7.print.leftLbl")}: ${lastExam.iopL || "—"}</td><td>${tv(lastExam.diagnosis) || "—"}</td></tr></table>` : ""}
+  ${lastExamSpecial.map(sp => `<h3>${caseLabel(sp.id, lang)}</h3>
+  <table><tr><th></th><th>OD</th><th>OS</th></tr>${sp.rows.map(r => `<tr><td>${fieldLabel(sp.id, r.k, lang)}</td>${r.eyes ? `<td>${r.od || "—"}</td><td>${r.os || "—"}</td>` : `<td colspan="2">${r.value}</td>`}</tr>`).join("")}</table>`).join("")}
   ${pExams.length > 1 ? `<h3>${tr("g7.print.examLog")} (${pExams.length})</h3>
   <table><tr><th>${tr("g7.print.thDate")}</th><th>${tr("g7.print.thDoctor")}</th><th>${tr("g7.print.thVAShort")}</th><th>${tr("g7.print.thIOPShort")}</th><th>${tr("g7.print.diagnosis")}</th><th>${tr("g7.print.thPlan")}</th><th>${tr("g7.print.thFollowUp")}</th></tr>
   ${pExams.map(e => `<tr><td>${e.date || "—"}</td><td>${tv(e.doctor) || "—"}</td><td>${e.visualAcuityR || "—"} / ${e.visualAcuityL || "—"}</td><td>${e.iopR || "—"} / ${e.iopL || "—"}</td><td>${tv(e.diagnosis) || "—"}</td><td>${e.treatmentPlan || "—"}</td><td>${e.followUp || "—"}</td></tr>`).join("")}</table>` : ""}

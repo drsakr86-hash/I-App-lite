@@ -7,7 +7,11 @@ export const FLAG_DEFS = Object.freeze({
   // Phase 1: interactive anatomy atlas (docs/ATLAS.md)
   atlas: Object.freeze({ env: 'VITE_FF_ATLAS', storageKey: 'iapp_ff_atlas', fallback: false }),
   // Phase 2: new uploads go to private storage with signed URLs (not wired yet; nothing reads this flag)
-  private_storage: Object.freeze({ env: 'VITE_FF_PRIVATE_STORAGE', storageKey: 'iapp_ff_private_storage', fallback: false })
+  private_storage: Object.freeze({ env: 'VITE_FF_PRIVATE_STORAGE', storageKey: 'iapp_ff_private_storage', fallback: false }),
+  // Special-case examination sheets (neuro, uveitis, squint, glaucoma, DR) inside the exam form
+  special_sheets: Object.freeze({ env: 'VITE_FF_SPECIAL_SHEETS', storageKey: 'iapp_ff_special_sheets', fallback: false }),
+  // Rule-based differential diagnosis / work-up suggestions (decision support, doctor decides)
+  ddx: Object.freeze({ env: 'VITE_FF_DDX', storageKey: 'iapp_ff_ddx', fallback: false })
 });
 
 const ON = new Set(['1', 'true', 'on', 'yes']);

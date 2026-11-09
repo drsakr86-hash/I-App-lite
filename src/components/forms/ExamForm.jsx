@@ -14,6 +14,9 @@ import { localISO } from '../../modules/constants/misc.js';
 import { OphthFindings, OphthPlan } from './OphthDetails.jsx';
 import { examForEditing, applyOphthToExam } from '../../modules/patient-file/ophth.js';
 import ScribePanel from './ScribePanel.jsx';
+import SpecialExamSheets from './SpecialExamSheets.jsx';
+import { finalizeExamSpecial } from '../../modules/special-exam/model.js';
+import { appendWorkup } from '../../modules/special-exam/ddx.js';
 import { isEnabled } from '../../modules/feature-flags/index.js';
 import { can } from '../../app/permissions.js';
 // loaded only when the atlas flag is on and the role may use it (keeps the sync layer out of the plain exam form)
@@ -230,6 +233,14 @@ export default function ExamForm({ initial, patientId, patient = null, session =
             ))}
           </div>
           <OphthFindings value={f.ophth} onChange={setOphth} />
+          {isEnabled('special_sheets') ? (
+            <SpecialExamSheets
+              value={f.special}
+              onChange={sp => setF(v => ({ ...v, special: sp }))}
+              plan={f.treatmentPlan}
+              onWorkup={list => setF(v => ({ ...v, treatmentPlan: appendWorkup(v.treatmentPlan, list) }))}
+            />
+          ) : null}
         </div>
       )}
       {cur === 'atlas' && (
@@ -285,7 +296,7 @@ export default function ExamForm({ initial, patientId, patient = null, session =
         ) : (
           <>
             <Btn outline full onClick={onClose}>{t('g2.common.cancel', lang)}</Btn>
-            <Btn full onClick={() => onSave(applyOphthToExam(buildExamPayload({ ...f, id: f.id || draftId }, patientId, Date.now())))}>{t('g2.exam.save', lang)}</Btn>
+            <Btn full onClick={() => onSave(finalizeExamSpecial(applyOphthToExam(buildExamPayload({ ...f, id: f.id || draftId }, patientId, Date.now()))))}>{t('g2.exam.save', lang)}</Btn>
           </>
         )}
       </div>

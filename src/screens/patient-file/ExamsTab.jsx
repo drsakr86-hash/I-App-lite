@@ -5,6 +5,7 @@ import { t, useLang } from '../../modules/i18n/index.js';
 import { tv } from '../../modules/i18n/tv.js';
 import { isEnabled } from '../../modules/feature-flags/index.js';
 import { privateStorageEnabled } from '../../services/private-storage.js';
+import { SpecialExamView } from '../../components/forms/SpecialExamSheets.jsx';
 const ExamDrawings = lazy(() => import('../../components/atlas/ExamDrawings.jsx'));
 
 // Patient file — "exams" tab. Presentational port of the legacy PatientFile JSX;
@@ -78,6 +79,7 @@ export default function ExamsTab({ ctx }) {
               <div style={{ color: C.text, fontSize: 12 }}>{tv(ex.chiefComplaint)}</div>
             </div>
           )}
+          {isEnabled('special_sheets') ? <SpecialExamView exam={ex} /> : null}
           {isEnabled('atlas') && privateStorageEnabled() && Array.isArray(ex.atlasDrawings) && ex.atlasDrawings.length ? (
             <Suspense fallback={null}><ExamDrawings drawings={ex.atlasDrawings} /></Suspense>
           ) : null}
