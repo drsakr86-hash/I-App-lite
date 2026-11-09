@@ -1,6 +1,6 @@
 # Exam suite (branch `feature/exam-suite`)
 
-Everything is behind feature flags and **off by default**. Enable for a test session with
+Feature flags are **on by default since 2026-11-10** (switch one off on a device with `?ff=-name`; to ship them off again set `fallback: false` in `src/modules/feature-flags/index.js`). Enable for a test session with
 `?ff=atlas,private_storage,special_sheets,ddx`.
 
 | Flag | What it adds | Roles |

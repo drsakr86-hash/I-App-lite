@@ -139,8 +139,9 @@ test('signed urls: expired link is renewed once, then a clear error (file never 
   assert.equal(await makeSupabaseResolver(c)({ key: 'atlas/1/x.png' }), 'u2');
 });
 
-test('private_storage flag is off unless turned on', () => {
-  assert.equal(resolveFlag('private_storage', {}), false);
+test('private_storage flag is on by default and can be switched off per device', () => {
+  assert.equal(resolveFlag('private_storage', {}), true);
+  assert.equal(resolveFlag('private_storage', { stored: '0' }), false);
   assert.equal(resolveFlag('private_storage', { query: '?ff=private_storage' }), true);
   assert.equal(resolveFlag('private_storage', { env: '1', query: '?ff=-private_storage' }), false);
 });

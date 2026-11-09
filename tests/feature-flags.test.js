@@ -2,10 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { resolveFlag, parseFlagQuery, persistQueryFlags, isEnabled, FLAG_DEFS } from '../src/modules/feature-flags/index.js';
 
-test('flags: off by default, unknown flags always off', () => {
-  assert.equal(resolveFlag('atlas', {}), false);
+test('flags: on by default (since 2026-11-10), can be switched off, unknown flags always off', () => {
+  assert.equal(resolveFlag('atlas', {}), true);
+  assert.equal(resolveFlag('atlas', { query: '?ff=-atlas' }), false);
   assert.equal(resolveFlag('nope', { env: '1', stored: '1', query: '?ff=nope' }), false);
-  assert.equal(isEnabled('atlas'), false); // node: no window, no env
+  assert.equal(isEnabled('atlas'), true); // node: no window, no env -> default
 });
 test('flags: precedence is query > stored > env > default', () => {
   assert.equal(resolveFlag('atlas', { env: '1' }), true);

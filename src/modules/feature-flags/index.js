@@ -1,17 +1,17 @@
-// Feature flags. A flag is OFF unless something turns it on, so shipping a flagged feature changes nothing for users.
+// Feature flags. Each flag has a default (fallback); atlas, private_storage, special_sheets and ddx are ON by default since 2026-11-10 (?ff=-name switches one off on a device).
 // Precedence (highest first): URL query (?ff=atlas / ?ff=-atlas)  >  value stored on this device  >  build-time env  >  default (off).
 // The query value is remembered on the device, so the doctor can open the app once with ?ff=atlas to try a feature and
 // ?ff=-atlas to switch it off again. Pure resolution (resolveFlag) is separate from the browser lookups so it can be unit-tested.
 
 export const FLAG_DEFS = Object.freeze({
   // Phase 1: interactive anatomy atlas (docs/ATLAS.md)
-  atlas: Object.freeze({ env: 'VITE_FF_ATLAS', storageKey: 'iapp_ff_atlas', fallback: false }),
+  atlas: Object.freeze({ env: 'VITE_FF_ATLAS', storageKey: 'iapp_ff_atlas', fallback: true }),
   // Phase 2: new uploads go to private storage with signed URLs (not wired yet; nothing reads this flag)
-  private_storage: Object.freeze({ env: 'VITE_FF_PRIVATE_STORAGE', storageKey: 'iapp_ff_private_storage', fallback: false }),
+  private_storage: Object.freeze({ env: 'VITE_FF_PRIVATE_STORAGE', storageKey: 'iapp_ff_private_storage', fallback: true }),
   // Special-case examination sheets (neuro, uveitis, squint, glaucoma, DR) inside the exam form
-  special_sheets: Object.freeze({ env: 'VITE_FF_SPECIAL_SHEETS', storageKey: 'iapp_ff_special_sheets', fallback: false }),
+  special_sheets: Object.freeze({ env: 'VITE_FF_SPECIAL_SHEETS', storageKey: 'iapp_ff_special_sheets', fallback: true }),
   // Rule-based differential diagnosis / work-up suggestions (decision support, doctor decides)
-  ddx: Object.freeze({ env: 'VITE_FF_DDX', storageKey: 'iapp_ff_ddx', fallback: false })
+  ddx: Object.freeze({ env: 'VITE_FF_DDX', storageKey: 'iapp_ff_ddx', fallback: true })
 });
 
 const ON = new Set(['1', 'true', 'on', 'yes']);
