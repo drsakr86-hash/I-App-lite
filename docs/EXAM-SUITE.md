@@ -19,6 +19,10 @@ print path is unchanged and synchronous.
 ## Never shown to
 Secretary, employees and the patient portal never receive clinical drawings (`stripClinicalDrawings`, role checks).
 
+## Sync
+Exam records are merged per record (local edit wins). Approved drawings are append-only, so the three-way merge
+(`sync/merge.js`) and `saveExam` (`preserveDrawings`) always keep the union of both sides' drawings.
+
 ## Rollback
 Turn the flags off (or do not pass `?ff=`). No Supabase change belongs to this branch; the `clinical-private`
 bucket was created earlier with approval (rollback: drop policies `clinical_private_{read,insert,update,delete}`

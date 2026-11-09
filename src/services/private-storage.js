@@ -2,7 +2,7 @@
 // Behind the `private_storage` flag; nothing calls this yet and the existing Cloudinary upload paths are untouched.
 // Only a storage PATH is ever saved in a record; a short-lived URL is created when the file is opened.
 // The Supabase client is injected, so everything here runs in tests with a fake client.
-import { drawingPath, pathKind } from '../modules/atlas/drawings.js';
+import { drawingPath, isDrawingPath } from '../modules/atlas/drawings.js';
 import { createSignedUrlCache, makeSupabaseResolver, DEFAULT_TTL_S } from '../modules/atlas/signed-urls.js';
 import { registerUrlResolver, STORAGE_PROVIDERS } from './storage.js';
 import { isEnabled } from '../modules/feature-flags/index.js';
@@ -28,7 +28,7 @@ export function createPrivateStorage({ client, bucket = PRIVATE_BUCKET, enabled 
 
   async function sign(path, ttl = DEFAULT_TTL_S) {
     guard();
-    if (!pathKind(path)) throw new Error('bad path');
+    if (!isDrawingPath(path)) throw new Error('bad path');
     const { data, error } = await bkt().createSignedUrl(path, ttl);
     if (error || !data || !data.signedUrl) throw new Error((error && error.message) || 'sign failed');
     return { url: data.signedUrl };

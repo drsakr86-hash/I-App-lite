@@ -3,6 +3,8 @@
 // contain patient data -- attaching a drawing to a patient/exam is a later, doctor-approved step (see docs/ATLAS.md).
 export const ANNOTATION_TYPES = Object.freeze(['pen', 'arrow', 'text', 'stamp']);
 export const ANNOTATION_COLORS = Object.freeze(['#d62828', '#1d4ed8', '#15803d', '#111827']);
+// Spoken names of the colours above (i18n keys atlas.color.<name>), for screen readers.
+export const ANNOTATION_COLOR_NAMES = Object.freeze(['red', 'blue', 'green', 'black']);
 export const MAX_ANNOTATIONS = 200;
 export const MAX_POINTS = 600;
 export const MAX_TEXT = 80;
@@ -93,7 +95,17 @@ export function sanitize(raw) {
   return out.slice(-MAX_ANNOTATIONS);
 }
 
-// Per-plate persistence in browser storage (annotations on generic anatomy only -- no patient data).
+// Storage scope of a canvas. Standalone: one per plate. Inside an exam (context = { patient, exam }) the unsaved sketch
+// belongs to that patient's exam only, so a drawing made for one patient never reappears on another patient's exam.
+export function annotationScope(plateId, context) {
+  const pid = context && context.patient ? context.patient.id : null;
+  const eid = context && context.exam ? context.exam.id : null;
+  if ((pid == null || pid === '') && (eid == null || eid === '')) return String(plateId);
+  const safe = v => String(v == null ? '' : v).replace(/[^0-9A-Za-z_-]/g, '').slice(0, 40);
+  return `${plateId}@p${safe(pid)}.e${safe(eid)}`;
+}
+
+// Per-scope persistence in browser storage (`iapp_` prefix: removed by the sign-out PHI purge).
 export function loadAnnotations(storage, plateId) {
   try { return sanitize(JSON.parse(storage.getItem(STORAGE_PREFIX + plateId) || '[]')); } catch { return []; }
 }

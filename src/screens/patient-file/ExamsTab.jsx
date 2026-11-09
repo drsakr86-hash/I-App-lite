@@ -5,6 +5,7 @@ import { t, useLang } from '../../modules/i18n/index.js';
 import { tv } from '../../modules/i18n/tv.js';
 import { isEnabled } from '../../modules/feature-flags/index.js';
 import { privateStorageEnabled } from '../../services/private-storage.js';
+import { visibleDrawings } from '../../modules/atlas/drawings.js';
 import { SpecialExamView } from '../../components/forms/SpecialExamSheets.jsx';
 const ExamDrawings = lazy(() => import('../../components/atlas/ExamDrawings.jsx'));
 
@@ -80,8 +81,8 @@ export default function ExamsTab({ ctx }) {
             </div>
           )}
           {isEnabled('special_sheets') ? <SpecialExamView exam={ex} /> : null}
-          {isEnabled('atlas') && privateStorageEnabled() && Array.isArray(ex.atlasDrawings) && ex.atlasDrawings.length ? (
-            <Suspense fallback={null}><ExamDrawings drawings={ex.atlasDrawings} /></Suspense>
+          {isEnabled('atlas') && privateStorageEnabled() && visibleDrawings(ex.atlasDrawings, ctx.session && ctx.session.role).length ? (
+            <Suspense fallback={null}><ExamDrawings drawings={visibleDrawings(ex.atlasDrawings, ctx.session && ctx.session.role)} /></Suspense>
           ) : null}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
             {[[t("g1.exams.vaR", lang), ex.visualAcuityR || "-"], [t("g1.exams.vaL", lang), ex.visualAcuityL || "-"], [t("g1.exams.iopR", lang), ex.iopR ? ex.iopR + " mmHg" : "-"], [t("g1.exams.iopL", lang), ex.iopL ? ex.iopL + " mmHg" : "-"]].map(([k, v]) => (

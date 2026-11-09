@@ -35,6 +35,10 @@ export function drawingPath(kind, patientId, uuid, ext) {
 
 // Which area a path belongs to (the future storage policy keys on the first segment).
 export const pathKind = p => { const k = String(p || '').split('/')[0]; return DRAWING_KINDS.includes(k) ? k : null; };
+// The exact shape every stored drawing file has (`kind/<patientId>/<id>.<ext>`): no extra segments, no "..", no query.
+// Signing anything else is refused, even if a tampered record carries it.
+const PATH_SHAPE = /^(atlas|imaging)\/\d{1,20}\/[0-9A-Za-z-]{1,64}\.(png|jpg|jpeg|webp)$/;
+export const isDrawingPath = p => typeof p === 'string' && PATH_SHAPE.test(p);
 
 // ---- stable hashing (change detection only, not security) -------------------
 export function stableStringify(v) {
@@ -159,12 +163,23 @@ export function stripClinicalDrawings(ophth) {
 }
 
 // ---- concurrent edits (the exam is one JSON record: never overwrite the other side) --
-// Union by id. For the same id keep the copy with more revisions (history only grows).
+// Union by id. For the same id keep the copy with more revisions (history only grows). On a tie (two devices each
+// added one revision) a superseded copy wins: superseding is final, and keeping the "approved" copy would leave two
+// current versions of the same drawing; otherwise the copy whose last revision is later wins.
+const lastAt = d => { const r = d.revisions || []; return r.length ? String(r[r.length - 1].at || '') : ''; };
+function newer(d, cur) {
+  const n = (d.revisions || []).length; const m = (cur.revisions || []).length;
+  if (n !== m) return n > m;
+  const ds = d.status === DRAWING_STATUS.SUPERSEDED; const cs = cur.status === DRAWING_STATUS.SUPERSEDED;
+  if (ds !== cs) return ds;
+  return lastAt(d) > lastAt(cur);
+}
 export function mergeDrawings(a, b) {
   const map = new Map();
   for (const d of [...(Array.isArray(a) ? a : []), ...(Array.isArray(b) ? b : [])]) {
+    if (!d || typeof d !== 'object' || d.id == null) continue;
     const cur = map.get(d.id);
-    if (!cur || (d.revisions || []).length > (cur.revisions || []).length) map.set(d.id, d);
+    if (!cur || newer(d, cur)) map.set(d.id, d);
   }
   return [...map.values()].sort((x, y) => String(x.approvedAt).localeCompare(String(y.approvedAt)) || String(x.id).localeCompare(String(y.id)));
 }

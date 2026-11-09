@@ -15,7 +15,7 @@ Select a structure for its description; zoom/pan (wheel, drag, pinch, buttons); 
 ## Data & provenance
 - Plates are plain data in `src/modules/atlas/plates/*.js`; `validatePlate` (tests) enforces bilingual text, bounds, whitelisted shape attributes and a licence/author on every plate.
 - All artwork is original (no third-party images). Every plate is `status: 'draft'` and the UI says so, until a doctor approves the content.
-- Annotations are stored per plate in this browser only (`iapp_atlas_ann_v1:<plate>`), contain no patient data and are not synced.
+- Annotations are stored in this browser only and are not synced: per plate in the standalone atlas (`iapp_atlas_ann_v1:<plate>`), and per patient + exam inside the exam step (`iapp_atlas_ann_v1:<plate>@p<patient>.e<exam>`), so a sketch never reappears on another patient's exam. The `iapp_` prefix means the sign-out PHI purge removes them.
 
 ## Not in Phase 1 (needs approval first)
 Linking drawings to patients/exams/reports, any new table or Migration, Supabase private storage / signed URLs, the disease library, AI reasoning, changes to deployed functions or to the Scribe.

@@ -6,7 +6,7 @@ import { t, useLang, dirOf } from '../modules/i18n/index.js';
 import { visiblePlates, LIBRARY_VISIBLE, getPlate, firstPlateId, partName, pick, searchParts, plateVBox, plateAttribution, isApproved, normalizeText } from '../modules/atlas/model.js';
 import { zoomCentered, ZOOM_STEP } from '../modules/atlas/viewport.js';
 import { checkBackgroundFile, scaledSize, fitRect } from '../modules/atlas/background.js';
-import { ANNOTATION_COLORS, loadAnnotations, saveAnnotations, add, undo, note, stamp as makeStamp } from '../modules/atlas/annotations.js';
+import { ANNOTATION_COLORS, ANNOTATION_COLOR_NAMES, loadAnnotations, saveAnnotations, annotationScope, add, undo, note, stamp as makeStamp } from '../modules/atlas/annotations.js';
 import { STAMPS, STAMP_SIZES, getStamp, nextRotation, stampColor } from '../modules/atlas/stamps.js';
 import StampIcon from '../components/atlas/StampGlyph.jsx';
 import AtlasViewer from '../components/atlas/AtlasViewer.jsx';
@@ -82,16 +82,18 @@ export default function AtlasScreen({ role = null, user = null, context = null, 
   const [bg, setBg] = useState(null); // an image the doctor added as the canvas background (kept only in this screen)
   const fileRef = useRef(null);
 
+  // inside an exam the sketch is kept per patient + exam (never shown on another patient's exam)
+  const scope = annotationScope(plateId, context);
   // switching plate: reset the view and selection, load that plate's saved drawing
   useEffect(() => {
     setSelectedId(null); setPendingText(null); setMessage(''); setBg(null);
-    try { setAnnotations(loadAnnotations(localStorage, plateId)); } catch { setAnnotations([]); }
-  }, [plateId]);
+    try { setAnnotations(loadAnnotations(localStorage, scope)); } catch { setAnnotations([]); }
+  }, [scope]);
 
   const commit = useCallback(list => {
     setAnnotations(list);
-    try { saveAnnotations(localStorage, plateId, list); } catch { /* storage unavailable: the drawing stays for this visit only */ }
-  }, [plateId]);
+    try { saveAnnotations(localStorage, scope, list); } catch { /* storage unavailable: the drawing stays for this visit only */ }
+  }, [scope]);
 
   const results = useMemo(() => (normalizeText(query).length >= 2 ? searchParts(query).slice(0, 8) : []), [query]);
   const selected = selectedId ? plate.parts.find(p => p.id === selectedId) : null;
@@ -196,8 +198,8 @@ export default function AtlasScreen({ role = null, user = null, context = null, 
           <button key={k} style={btn(tool === k)} aria-pressed={tool === k} onClick={() => { setTool(k); setPendingText(null); }}>{t(`atlas.tool.${k}`, lang)}</button>
         ))}
         <span role="group" aria-label={t('atlas.color', lang)} style={{ display: 'inline-flex', gap: 6, marginInline: 4 }}>
-          {ANNOTATION_COLORS.map(c => (
-            <button key={c} onClick={() => setColor(c)} aria-label={c} aria-pressed={color === c} style={{ width: 26, height: 26, borderRadius: 13, background: c, border: `3px solid ${color === c ? C.accent : C.border}`, cursor: 'pointer', padding: 0 }} />
+          {ANNOTATION_COLORS.map((c, i) => (
+            <button key={c} type="button" onClick={() => setColor(c)} aria-label={t(`atlas.color.${ANNOTATION_COLOR_NAMES[i]}`, lang)} title={t(`atlas.color.${ANNOTATION_COLOR_NAMES[i]}`, lang)} aria-pressed={color === c} style={{ width: 32, height: 32, borderRadius: 16, background: c, border: `3px solid ${color === c ? C.accent : C.border}`, cursor: 'pointer', padding: 0 }} />
           ))}
         </span>
         <button style={btn(false)} disabled={!annotations.length} onClick={() => commit(undo(annotations))}>{t('atlas.undo', lang)}</button>
