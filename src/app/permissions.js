@@ -9,11 +9,12 @@ export const PERMISSIONS = Object.freeze({
   admin: {
     patients: ['*'], visits: ['*'], examinations: ['*'], prescriptions: ['*'], investigations: ['*'], imaging: ['*'], settings: ['*'], users: ['*'],
     accounting: ['*'], payments: ['*'], expenses: ['*'], doctor_settlements: ['*'], financial_reports: ['*'], cash_accounts: ['*'],
-    atlas: ['*'] // anatomy atlas (behind the `atlas` feature flag)
+    atlas: ['*'], // anatomy atlas (behind the `atlas` feature flag)
+    ddx: ['*'] // diagnosis assistant (behind the `ddx` feature flag)
   },
   doctor: {
     patients: ['read', 'write'], visits: ['*'], examinations: ['*'], prescriptions: ['*'], investigations: ['*'], imaging: ['*'],
-    atlas: ['*']
+    atlas: ['*'], ddx: ['*']
   },
   secretary: {
     patients: ['read', 'write'], visits: ['read', 'write'], investigations: ['read'], imaging: ['read'],

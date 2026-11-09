@@ -15,6 +15,7 @@ import { OphthFindings, OphthPlan } from './OphthDetails.jsx';
 import { examForEditing, applyOphthToExam } from '../../modules/patient-file/ophth.js';
 import ScribePanel from './ScribePanel.jsx';
 import SpecialExamSheets from './SpecialExamSheets.jsx';
+import DdxPanel from './DdxPanel.jsx';
 import { finalizeExamSpecial } from '../../modules/special-exam/model.js';
 import { appendWorkup } from '../../modules/special-exam/ddx.js';
 import { isEnabled } from '../../modules/feature-flags/index.js';
@@ -256,6 +257,13 @@ export default function ExamForm({ initial, patientId, patient = null, session =
       )}
       {cur === 'dx' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {isEnabled('ddx') && can(session && session.role, 'ddx', 'read') ? (
+            <DdxPanel
+              exam={f}
+              onDiagnosis={dx => setF(v => ({ ...v, diagnosis: dx }))}
+              onWorkup={list => setF(v => ({ ...v, treatmentPlan: appendWorkup(v.treatmentPlan, list) }))}
+            />
+          ) : null}
           <Field label={t('g2.exam.dx', lang)}>
             <textarea
               style={{ ...inp(), resize: 'none' }}
