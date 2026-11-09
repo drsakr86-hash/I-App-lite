@@ -9,6 +9,8 @@ import { examOphth, vaToLogMar, toNumber } from '../patient-file/ophth.js';
 import { IOP_HIGH_LIMIT } from '../../components/forms/exam-form-model.js';
 
 const str = v => (v == null ? '' : String(v)).trim();
+// difference of two readings rounded to 0.01, so 0.7 - 0.5 counts as 0.2 (binary floating point says 0.19999999999999996)
+const gap = (a, b) => Math.round(Math.abs(a - b) * 100) / 100;
 const EYES = ['od', 'os'];
 const FLAT = { va: { od: 'visualAcuityR', os: 'visualAcuityL' }, iop: { od: 'iopR', os: 'iopL' } };
 
@@ -32,6 +34,10 @@ export const T = Object.freeze({
   ANISO: 2
 });
 
+// Physiologically possible ranges. A value outside them is a typing slip (e.g. C/D "6" for 0.6) and is ignored, never guessed.
+export const RANGE = Object.freeze({ iop: [0, 80], cd: [0, 1], cmt: [50, 1500], vfMd: [-40, 10], sph: [-40, 40], cyl: [-15, 15] });
+const within = (n, [lo, hi]) => (n != null && n >= lo && n <= hi ? n : null);
+
 const C = Object.freeze({
   VISION: 'ضعف النظر', INFLAM: 'التهاب العين', HEADACHE: 'صداع', GLASSES: 'تغيير النظارة', READING: 'صعوبة في القراءة',
   CATARACT: 'مياه بيضاء', HAZY: 'شبورة بالعين', PAIN: 'ألم في العين', RED: 'عين حمراء', DISCHARGE: 'إفرازات من العين',
@@ -47,9 +53,9 @@ export function findingsOf(exam) {
     const b = vaToLogMar(bcva); const u = vaToLogMar(ucva); const p = vaToLogMar(ph);
     f.eyes[e] = {
       bcva, ucva, ph, bcvaL: b, ucvaL: u, phL: p,
-      iop: toNumber(exam && exam[FLAT.iop[e]]),
-      cd: toNumber(o.cd[e]), cmt: toNumber(o.cmt[e]), vfMd: toNumber(o.vfMd[e]),
-      sph: toNumber(o.refraction[e].sph), cyl: toNumber(o.refraction[e].cyl)
+      iop: within(toNumber(exam && exam[FLAT.iop[e]]), RANGE.iop),
+      cd: within(toNumber(o.cd[e]), RANGE.cd), cmt: within(toNumber(o.cmt[e]), RANGE.cmt), vfMd: within(toNumber(o.vfMd[e]), RANGE.vfMd),
+      sph: within(toNumber(o.refraction[e].sph), RANGE.sph), cyl: within(toNumber(o.refraction[e].cyl), RANGE.cyl)
     };
   }
   return f;
@@ -76,7 +82,7 @@ export function suggestGeneral(exam) {
     } else if (best && best.logmar >= T.VA_REDUCED_LOGMAR) {
       const value = v.bcva || v.ucva;
       add('organic-va', 'Organic cause of reduced vision (media, macula or optic nerve)', TIER.CONSIDER, { k: 'vaLow', p: { e: up(e), v: value } }, ['Dilated fundus examination', 'OCT macula']);
-      if (v.ucvaL && v.phL && v.ucvaL.logmar - v.phL.logmar >= T.PH_GAIN_LOGMAR) {
+      if (v.ucvaL && v.phL && v.ucvaL.logmar > v.phL.logmar && gap(v.ucvaL.logmar, v.phL.logmar) >= T.PH_GAIN_LOGMAR) {
         add('refractive', 'Uncorrected refractive error', TIER.CONSIDER, { k: 'phImprove', p: { e: up(e), a: v.ucva, b: v.ph } }, ['Cycloplegic refraction']);
       } else if (v.ucvaL && v.phL) {
         add('organic-va', 'Organic cause of reduced vision (media, macula or optic nerve)', TIER.CONSIDER, { k: 'phNoImprove', p: { e: up(e) } }, ['Dilated fundus examination', 'OCT macula']);
@@ -98,12 +104,12 @@ export function suggestGeneral(exam) {
   // between the two eyes
   const [od, os] = [f.eyes.od, f.eyes.os];
   const ba = od.bcvaL || od.ucvaL; const bb = os.bcvaL || os.ucvaL;
-  if (ba && bb && Math.abs(ba.logmar - bb.logmar) >= T.VA_ASYM_LOGMAR) add('organic-va', 'Organic cause of reduced vision (media, macula or optic nerve)', TIER.CONSIDER, { k: 'vaAsym', p: { a: od.bcva || od.ucva, b: os.bcva || os.ucva } }, ['RAPD check', 'Dilated fundus examination']);
-  if (od.iop != null && os.iop != null && Math.abs(od.iop - os.iop) >= T.IOP_ASYM && Math.max(od.iop, os.iop) > T.IOP_HIGH) {
+  if (ba && bb && gap(ba.logmar, bb.logmar) >= T.VA_ASYM_LOGMAR) add('organic-va', 'Organic cause of reduced vision (media, macula or optic nerve)', TIER.CONSIDER, { k: 'vaAsym', p: { a: od.bcva || od.ucva, b: os.bcva || os.ucva } }, ['RAPD check', 'Dilated fundus examination']);
+  if (od.iop != null && os.iop != null && gap(od.iop, os.iop) >= T.IOP_ASYM && Math.max(od.iop, os.iop) > T.IOP_HIGH) {
     add('secondary-glaucoma', 'Secondary glaucoma (steroid, uveitic, pseudoexfoliation, pigment dispersion, angle recession)', TIER.CONSIDER, { k: 'iopAsym', p: { a: od.iop, b: os.iop } }, ['Gonioscopy', 'Slit-lamp examination', 'Steroid and trauma history']);
   }
-  if (od.cd != null && os.cd != null && Math.abs(od.cd - os.cd) >= T.CD_ASYM) add('glaucoma-optic-neuropathy', 'Glaucomatous optic neuropathy (vs physiological cupping)', TIER.CONSIDER, { k: 'cdAsym', p: { a: od.cd, b: os.cd } }, ['OCT RNFL', 'Visual field 24-2']);
-  if (od.sph != null && os.sph != null && Math.abs(od.sph - os.sph) >= T.ANISO) add('anisometropia', 'Anisometropia: amblyopia risk', TIER.CONSIDER, { k: 'aniso', p: { d: Math.abs(od.sph - os.sph).toFixed(2).replace(/\.?0+$/, '') } }, ['Cycloplegic refraction', 'Cover test']);
+  if (od.cd != null && os.cd != null && gap(od.cd, os.cd) >= T.CD_ASYM) add('glaucoma-optic-neuropathy', 'Glaucomatous optic neuropathy (vs physiological cupping)', TIER.CONSIDER, { k: 'cdAsym', p: { a: od.cd, b: os.cd } }, ['OCT RNFL', 'Visual field 24-2']);
+  if (od.sph != null && os.sph != null && gap(od.sph, os.sph) >= T.ANISO) add('anisometropia', 'Anisometropia: amblyopia risk', TIER.CONSIDER, { k: 'aniso', p: { d: Math.abs(od.sph - os.sph).toFixed(2).replace(/\.?0+$/, '') } }, ['Cycloplegic refraction', 'Cover test']);
 
   // complaint and screening tests
   if (cx === C.FLASHES) add('rd-tear', 'Retinal tear / detachment, posterior vitreous detachment or vitreous haemorrhage', TIER.URGENT, { k: 'complaint', p: { c: cx } }, ['Dilated peripheral fundus examination', 'B-scan if the view is poor']);

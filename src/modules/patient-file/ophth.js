@@ -75,12 +75,14 @@ function anyLeaf(o) {
 export const ophthIsEmpty = o => !anyLeaf(o);
 
 // ---- numeric reading -----------------------------------------------------------------------
-const AR_DIGITS = { '٠': '0', '١': '1', '٢': '2', '٣': '3', '٤': '4', '٥': '5', '٦': '6', '٧': '7', '٨': '8', '٩': '9', '٫': '.', '،': '.' };
+const AR_DIGITS = { '٠': '0', '١': '1', '٢': '2', '٣': '3', '٤': '4', '٥': '5', '٦': '6', '٧': '7', '٨': '8', '٩': '9', '٫': '.', '،': '.', '۰': '0', '۱': '1', '۲': '2', '۳': '3', '۴': '4', '۵': '5', '۶': '6', '۷': '7', '۸': '8', '۹': '9' };
+// Arabic-Indic (and Persian) digits and the Arabic decimal/comma signs -> ASCII.
+export const asciiDigits = v => String(v).replace(/[٠-٩۰-۹٫،]/g, c => AR_DIGITS[c]);
 export function toNumber(v) {
   if (v == null) return null;
   if (typeof v === 'number') return Number.isFinite(v) ? v : null;
-  const s = String(v).replace(/[٠-٩٫،]/g, c => AR_DIGITS[c]).replace(',', '.').trim();
-  const m = /^[-+]?\d+(\.\d+)?/.exec(s);
+  const s = asciiDigits(v).replace(',', '.').trim();
+  const m = /^[-+]?(?:\d+(?:\.\d+)?|\.\d+)/.exec(s); // ".6" is how a C/D ratio is often typed
   if (!m) return null;
   const n = Number(m[0]);
   return Number.isFinite(n) ? n : null;
@@ -90,17 +92,25 @@ export function toNumber(v) {
 // always what gets displayed. Unparseable strings return null (never guessed).
 // Categorical low vision uses the conventional logMAR equivalents (CF 2.0, HM 2.3, LP 2.7, NLP 3.0).
 const LOW_VISION = { CF: 2.0, HM: 2.3, PL: 2.7, LP: 2.7, NPL: 3.0, NLP: 3.0 };
+// The same categories with the qualifiers clinicians usually add ("CF 1m", "FC@50cm", "HM+", "PL+ with PR", "PL -ve").
+const LOW_VISION_QUALIFIED = [
+  [/^(?:CF|FC)(?:AT|@)?\d+(?:\.\d+)?(?:M|CM|FT|FEET|METERS?|METRES?)?$/, 2.0],
+  [/^HMS?(?:\+|\+VE)?(?:(?:AT|@)\d+(?:\.\d+)?(?:M|CM|FT)?)?$/, 2.3],
+  [/^(?:PL|LP)(?:-|-VE|NEGATIVE)$/, 3.0],
+  [/^(?:PL|LP)(?:\+|\+VE|POSITIVE)?(?:(?:WITH|W\/|&)?(?:GOOD|ACCURATE|POOR|INACCURATE|FAULTY)?(?:PR|PROJ|PROJECTION)[+-]?)?$/, 2.7]
+];
 export function vaToLogMar(raw) {
-  const t = str(raw).trim().toUpperCase().replace(/\s+/g, '');
+  const t = asciiDigits(str(raw)).trim().toUpperCase().replace(/\s+/g, '');
   if (!t) return null;
   if (t in LOW_VISION) return { logmar: LOW_VISION[t], categorical: true };
+  for (const [re, logmar] of LOW_VISION_QUALIFIED) if (re.test(t)) return { logmar, categorical: true };
   const frac = /^(\d+(?:\.\d+)?)\/(\d+(?:\.\d+)?)$/.exec(t);
   if (frac) {
     const dec = Number(frac[1]) / Number(frac[2]);
     return dec > 0 && dec <= 3 ? { logmar: round2(-Math.log10(dec)), categorical: false } : null;
   }
   const dec = toNumber(t);
-  if (dec != null && dec > 0 && dec <= 3 && /^[\d.]+$/.test(t.replace(/[٠-٩٫]/g, c => AR_DIGITS[c]))) {
+  if (dec != null && dec > 0 && dec <= 3 && /^[\d.]+$/.test(t)) {
     return { logmar: round2(-Math.log10(dec)), categorical: false };
   }
   return null;

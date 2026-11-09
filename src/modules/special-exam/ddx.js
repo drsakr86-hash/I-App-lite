@@ -5,12 +5,23 @@
 // suggest(caseId, values) -> { ddx: string[], workup: string[] } (empty until a finding is filled).
 
 import { normalizeCase, caseIsEmpty } from './model.js';
+import { asciiDigits } from '../patient-file/ophth.js';
 
 const has = v => typeof v === 'string' && v.trim() !== '';
+// Free-text fields typed as a normal / negative finding ("Full", "normal", "nil", "طبيعي", "لا يوجد", Ishihara "17/17")
+// must not trigger a differential: only an abnormal entry counts.
+const NORMAL_WORDS = /^(normal|nl|full|free|full and free|ortho|orthophoria|none|nil|no|not present|absent|ok|n\/?a|-+|—|طبيعي|طبيعى|سليم|سليمة|كامل|كاملة|كاملة وحرة|حرة|لا|لا يوجد|لايوجد|لا شيء|لا شئ)$/i;
+export const isNormalText = v => {
+  const s = asciiDigits(v == null ? '' : v).trim().replace(/[.!]+$/, '').replace(/\s+/g, ' ');
+  if (!s || NORMAL_WORDS.test(s)) return true;
+  const frac = /^(\d+)\s*\/\s*(\d+)$/.exec(s); // full plate score, e.g. Ishihara 17/17 or 21/21
+  return !!frac && Number(frac[2]) > 0 && frac[1] === frac[2];
+};
+const abnormal = v => has(v) && !isNormalText(v);
 const eyesOf = v => [v.od, v.os].filter(has);
 const anyEye = (v, ...vals) => eyesOf(v).some(x => vals.includes(x));
 const bothEyes = (v, ...vals) => vals.includes(v.od) && vals.includes(v.os);
-const num = s => { const m = String(s || '').match(/\d+(\.\d+)?/); return m ? Number(m[0]) : NaN; };
+const num = s => { const m = asciiDigits(s || '').match(/\d+(\.\d+)?/); return m ? Number(m[0]) : NaN; }; // Arabic digits accepted
 
 function uveitis(v) {
   const ddx = []; const w = [];
@@ -88,7 +99,7 @@ function neuro(v) {
     ddx.push('Ocular myasthenia gravis', 'Aponeurotic (involutional) ptosis');
     w.push('Ice-pack test', 'AChR + anti-MuSK antibodies', 'CT chest (thymoma)');
   }
-  if (has(v.motility)) {
+  if (abnormal(v.motility)) {
     ddx.push('Cranial nerve palsy (III / IV / VI)', 'Thyroid eye disease', 'Myasthenia gravis', 'Orbital lesion');
     w.push('Blood pressure + blood sugar', 'Thyroid function + TRAb', 'MRI if young, multiple nerves, or pupil involved');
   }
@@ -96,7 +107,7 @@ function neuro(v) {
     ddx.push(v.nystagmus === 'Vertical' ? 'Brainstem / cerebellar lesion (vertical nystagmus)' : 'Congenital / infantile nystagmus', 'Vestibular disease', 'Drug toxicity');
     w.push('MRI brain (posterior fossa)', 'Neurology referral');
   }
-  if (eyesOf(v.color).length && !ddx.length) ddx.push('Optic nerve dysfunction', 'Congenital colour vision defect');
+  if ([v.color.od, v.color.os].some(abnormal) && !ddx.length) ddx.push('Optic nerve dysfunction', 'Congenital colour vision defect');
   if (ddx.length) w.push('Formal perimetry (24-2)', 'OCT RNFL + GCL');
   return { ddx, workup: w };
 }
@@ -117,7 +128,7 @@ function squint(v) {
   if (v.type === 'Hypertropia' || v.type === 'Hypotropia') w.push('Parks-Bielschowsky 3-step test', 'Hess / Lees screen', 'Thyroid function + TRAb', 'CT orbits if trauma');
   if (v.pattern === 'A pattern' || v.pattern === 'V pattern') ddx.push('Oblique muscle dysfunction (' + v.pattern + ')');
   if (has(v.amblyopia) && v.amblyopia !== 'None') { ddx.push('Strabismic / refractive / deprivation amblyopia'); w.push('Media + fundus check (exclude deprivation)'); }
-  if (has(v.headPosture)) { ddx.push('Ocular torticollis (incomitant strabismus / nystagmus null point)'); w.push('Bielschowsky head-tilt test'); }
+  if (abnormal(v.headPosture)) { ddx.push('Ocular torticollis (incomitant strabismus / nystagmus null point)'); w.push('Bielschowsky head-tilt test'); }
   if (v.constancy === 'Constant' && (v.type === 'Esotropia' || v.type === 'Exotropia') && v.amblyopia && v.amblyopia !== 'None') ddx.push('Sensory strabismus (check retinoblastoma / cataract in a child)');
   if (ddx.length || has(v.pdNear) || has(v.pdDistance)) {
     w.unshift('Alternate prism cover test (near + distance)', 'Cycloplegic refraction', 'Dilated fundus examination');
@@ -141,7 +152,7 @@ function glaucoma(v) {
   const narrow = anyEye(v.gonio, 'Shaffer 0', 'Shaffer 1');
   if (narrow || v.type === 'PACG' || v.type === 'PAC / PACS') w.push('Indentation gonioscopy', 'AS-OCT / UBM', 'Biometry (axial length, lens thickness)', 'Laser peripheral iridotomy assessment');
   const cds = eyesOf(v.cd).map(Number).filter(Number.isFinite);
-  if (cds.some(x => x >= 0.7) || (cds.length === 2 && Math.abs(cds[0] - cds[1]) > 0.2)) ddx.push('Glaucomatous optic neuropathy (C/D ≥ 0.7 or asymmetry > 0.2)');
+  if (cds.some(x => x >= 0.7) || (cds.length === 2 && Math.round(Math.abs(cds[0] - cds[1]) * 100) / 100 > 0.2)) ddx.push('Glaucomatous optic neuropathy (C/D ≥ 0.7 or asymmetry > 0.2)');
   if (anyEye(v.discHaem, 'Present')) ddx.push('Progressing glaucoma (disc haemorrhage)');
   if (v.type === 'NTG') w.push('MRI brain / orbits if atypical (pallor, young, field not matching disc)', '24-hour blood pressure', 'Vitamin B12');
   if (eyesOf(v.cct).some(x => num(x) < 500)) ddx.push('IOP underestimated (thin cornea)');
