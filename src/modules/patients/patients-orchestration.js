@@ -17,6 +17,7 @@ import { readCodeFloor, raiseCodeFloor } from './code-floor.js';
 import { createClinicalVisitCore } from '../visits/core.js';
 import { prescriptionParamsFromLegacy } from '../prescriptions/prescription.mapper.js';
 import { logError } from '../../services/logger.js';
+import { preserveDrawings } from '../atlas/drawings.js';
 
 const rxCoreParams = (rx, visitId, today) => prescriptionParamsFromLegacy(rx, { visitId, today });
 
@@ -113,8 +114,9 @@ export function usePatientsOrchestration({
     return rec;
   };
 
-  const saveExam = async (f, opts = {}) => {
-    const ex = exams.find(e => e.id === f.id);
+  const saveExam = async (f0, opts = {}) => {
+    const ex = exams.find(e => e.id === f0.id);
+    const f = preserveDrawings(ex, f0); // a form opened before an atlas drawing was approved must not erase it
     const next = ex ? exams.map(e => (e.id === f.id ? f : e)) : [...exams, f];
     const legacyResult = await setExams(next);
     if (opts.onLocalSaved) opts.onLocalSaved();

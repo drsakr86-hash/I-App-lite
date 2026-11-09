@@ -51,6 +51,7 @@ export default function PatientsContainer({
         prices={prices}
         clinic={clinic}
         customTests={customTests}
+        session={session}
       />
       </Suspense>
     );

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, lazy, Suspense } from 'react';
 import { Btn } from '../common.jsx';
 import { DEFAULT_DOCTOR_NAMES } from './visit-form-model.js';
 import {
@@ -14,13 +14,30 @@ import { localISO } from '../../modules/constants/misc.js';
 import { OphthFindings, OphthPlan } from './OphthDetails.jsx';
 import { examForEditing, applyOphthToExam } from '../../modules/patient-file/ophth.js';
 import ScribePanel from './ScribePanel.jsx';
+import SpecialExamSheets from './SpecialExamSheets.jsx';
+import DdxPanel from './DdxPanel.jsx';
+import { finalizeExamSpecial } from '../../modules/special-exam/model.js';
+import { appendWorkup } from '../../modules/special-exam/ddx.js';
+import { isEnabled } from '../../modules/feature-flags/index.js';
+import { can } from '../../app/permissions.js';
+// loaded only when the atlas flag is on and the role may use it (keeps the sync layer out of the plain exam form)
+const ExamAtlasStep = lazy(() => import('../atlas/ExamAtlasStep.jsx'));
 
 // Three-step examination add/edit form. Exact port of the legacy runtime's
 // ExamForm (public/legacy/app-runtime.js).
-export default function ExamForm({ initial, patientId, onSave, onClose, doctorNames = DEFAULT_DOCTOR_NAMES }) {
+export default function ExamForm({ initial, patientId, patient = null, session = null, onSave, onClose, doctorNames = DEFAULT_DOCTOR_NAMES }) {
   const lang = useLang();
   const [f, setF] = useState(() => initialExamState(initial ? examForEditing(initial) : initial, localISO()));
+  const atlasOn = isEnabled('atlas') && can(session && session.role, 'atlas', 'read');
+  // steps: data, clinical, [anatomy sketch], diagnosis. The sketch step exists only with the atlas flag on, for doctor/admin.
+  const keys = atlasOn ? ['data', 'clinical', 'atlas', 'dx'] : ['data', 'clinical', 'dx'];
+  const labels = examStepLabels();
+  const stepLabels = atlasOn ? [labels[0], labels[1], t('atlas.exam.step', lang), labels[2]] : labels;
   const [step, setStep] = useState(0);
+  const cur = keys[step];
+  const lastStep = keys.length - 1;
+  // an exam that is still new gets its id now, so a drawing approved while examining can point at it
+  const [draftId] = useState(() => (initial && initial.id) || Date.now());
   const s = k => e => setF(v => ({ ...v, [k]: e.target.value }));
   const setOphth = o => setF(v => ({ ...v, ophth: o }));
   const iopHigh = anyIopHigh(f.iopR, f.iopL);
@@ -28,7 +45,7 @@ export default function ExamForm({ initial, patientId, onSave, onClose, doctorNa
     <div>
       <ScribePanel form={f} onApply={setF} />
       <div role="tablist" aria-label={t('g2.exam.stepsAria', lang)} style={{ display: 'flex', marginBottom: 18, background: C.card, borderRadius: 12, padding: 4 }}>
-        {examStepLabels().map((st, i) => (
+        {stepLabels.map((st, i) => (
           <button
             type="button"
             role="tab"
@@ -52,7 +69,7 @@ export default function ExamForm({ initial, patientId, onSave, onClose, doctorNa
           >{st}</button>
         ))}
       </div>
-      {step === 0 && (
+      {cur === 'data' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <Field label={t('g2.exam.date', lang)}>
             <input style={inp()} type="date" value={f.date} onChange={s('date')} />
@@ -98,7 +115,7 @@ export default function ExamForm({ initial, patientId, onSave, onClose, doctorNa
           </Field>
         </div>
       )}
-      {step === 1 && (
+      {cur === 'clinical' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <SecHead icon="👁" label={t('g2.exam.bcvaHead', lang)} />
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
@@ -217,10 +234,36 @@ export default function ExamForm({ initial, patientId, onSave, onClose, doctorNa
             ))}
           </div>
           <OphthFindings value={f.ophth} onChange={setOphth} />
+          {isEnabled('special_sheets') ? (
+            <SpecialExamSheets
+              value={f.special}
+              onChange={sp => setF(v => ({ ...v, special: sp }))}
+              plan={f.treatmentPlan}
+              onWorkup={list => setF(v => ({ ...v, treatmentPlan: appendWorkup(v.treatmentPlan, list) }))}
+            />
+          ) : null}
         </div>
       )}
-      {step === 2 && (
+      {cur === 'atlas' && (
+        <Suspense fallback={<div style={{ color: C.muted, padding: 12 }}>…</div>}>
+          <ExamAtlasStep
+            patient={patient || { id: patientId, name: '' }}
+            exam={{ id: draftId, patientId, date: f.date, visitId: f.visitId ?? null }}
+            session={session}
+            drawings={Array.isArray(f.atlasDrawings) ? f.atlasDrawings : []}
+            onChange={list => setF(v => ({ ...v, atlasDrawings: list }))}
+          />
+        </Suspense>
+      )}
+      {cur === 'dx' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {isEnabled('ddx') && can(session && session.role, 'ddx', 'read') ? (
+            <DdxPanel
+              exam={f}
+              onDiagnosis={dx => setF(v => ({ ...v, diagnosis: dx }))}
+              onWorkup={list => setF(v => ({ ...v, treatmentPlan: appendWorkup(v.treatmentPlan, list) }))}
+            />
+          ) : null}
           <Field label={t('g2.exam.dx', lang)}>
             <textarea
               style={{ ...inp(), resize: 'none' }}
@@ -255,13 +298,13 @@ export default function ExamForm({ initial, patientId, onSave, onClose, doctorNa
         </div>
       )}
       <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
-        {step > 0 && <Btn outline onClick={() => setStep(prevStep)}>{t('g2.common.prev', lang)}</Btn>}
-        {step < EXAM_LAST_STEP ? (
-          <Btn full onClick={() => setStep(nextStep)}>{t('g2.common.next', lang)}</Btn>
+        {step > 0 && <Btn outline onClick={() => setStep(p => Math.max(0, prevStep(p)))}>{t('g2.common.prev', lang)}</Btn>}
+        {step < lastStep ? (
+          <Btn full onClick={() => setStep(p => Math.min(lastStep, nextStep(p)))}>{t('g2.common.next', lang)}</Btn>
         ) : (
           <>
             <Btn outline full onClick={onClose}>{t('g2.common.cancel', lang)}</Btn>
-            <Btn full onClick={() => onSave(applyOphthToExam(buildExamPayload(f, patientId, Date.now())))}>{t('g2.exam.save', lang)}</Btn>
+            <Btn full onClick={() => onSave(finalizeExamSpecial(applyOphthToExam(buildExamPayload({ ...f, id: f.id || draftId }, patientId, Date.now()))))}>{t('g2.exam.save', lang)}</Btn>
           </>
         )}
       </div>

@@ -77,9 +77,10 @@ function SheetRow({ label, children }) {
 export default function BottomNav({ active, setActive, role }) {
   const lang = useLang();
   const [open, setOpen] = React.useState(false);
+  const features = {}; // the atlas is opened from inside the exam form, not from a tab
   const items = primaryNavItems(role);
-  const moreItems = moreNavItems(role);
-  const moreOn = isMoreActive(active, role);
+  const moreItems = moreNavItems(role, features);
+  const moreOn = isMoreActive(active, role, features);
 
   React.useEffect(() => {
     if (!open) return undefined;

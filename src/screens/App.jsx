@@ -184,7 +184,7 @@ export default function App() {
     } catch { /* storage unavailable (private mode / quota): non-fatal */ }
   };
   if (!session) return <LoginScreen onLogin={handleLogin} />;
-  const effectiveTab = (tab === "accounting" || tab === "whatsapp") && session.role !== "admin" ? "dashboard" : tab;
+  const effectiveTab = ((tab === "accounting" || tab === "whatsapp") && session.role !== "admin") ? "dashboard" : tab;
   if (!pR || !aR || !rR || !eR || !vR || !dR || !prR || !ctR || !clR || !exR || !reR) {
     return (
       <div style={{ minHeight: "100vh", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center", direction: dirOf(lang), fontFamily: "'Segoe UI','Tahoma',Arial,sans-serif" }}>

@@ -14,6 +14,7 @@ import { C } from "../modules/theme/index.js";
 import { inp } from "../modules/ui/atoms.jsx";
 import { sbGet, sbSet, sbMutate } from "../modules/sync/wiring.js";
 import { getSB } from "../modules/data-access/index.js";
+import { stripClinicalDrawings } from "../modules/atlas/drawings.js";
 import { localISO, BOOKING_TABLE, PATIENT_CLINICS, CLINIC_CODE, clinicDisplay } from "../modules/constants/index.js";
 import { t, useLang, dirOf } from "../modules/i18n/index.js";
 import { tv } from "../modules/i18n/tv.js";
@@ -128,7 +129,7 @@ export default function PatientApp({ patient, onLogout }) {
       const [a, rx, ex, v] = await Promise.all([sbGet("iapp_appointments"), sbGet("iapp_prescriptions"), sbGet("iapp_exams"), sbGet("iapp_visits")]);
       if (a) setAppointments(myAppointments(a, patient));
       if (rx) setPrescriptions(ownRecords(rx, patient.id));
-      if (ex) setExams(ownRecords(ex, patient.id));
+      if (ex) setExams(ownRecords(ex, patient.id).map(stripClinicalDrawings)); // clinical atlas drawings never reach the portal
       if (v) {
         const pv = ownRecords(v, patient.id);
         setVisits(pv);

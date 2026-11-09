@@ -22,7 +22,22 @@ import { PrintModal } from '../components/modals/index.js';
 import { C } from '../modules/theme/index.js';
 import { SC, Tag, XRAY_ICON } from '../modules/ui/atoms.jsx';
 import TopBar from '../components/TopBar.jsx';
-import { getPatientFileHTML, printDoc } from '../modules/print/index.js';
+import { getPatientFileHTML, printDoc, lastExamOf } from '../modules/print/index.js';
+import { isEnabled } from '../modules/feature-flags/index.js';
+import { getPrivateStorage } from '../components/atlas/private-instance.js';
+import { printDrawingsOf, prepareDrawingImages } from '../modules/atlas/print-drawings.js';
+
+// Captions of the drawings to print. The plate data is loaded only here (lazy), never in the main bundle.
+async function drawingTitlesFor(exam, role, lang) {
+  const list = printDrawingsOf(exam, role);
+  if (!list.length) return {};
+  try {
+    const { getPlate, pick } = await import('../modules/atlas/model.js');
+    const out = {};
+    for (const d of list) { const p = getPlate(d.plateId); out[d.id] = p ? pick(p.title, lang) : ''; }
+    return out;
+  } catch { return {}; }
+}
 
 // Patient file (full-screen). Presentational only: every useState/useEffect,
 // the Core 360 load, uploads, saves and deletes live in the data layer
@@ -101,7 +116,19 @@ export default function PatientFile({ ctx }) {
             <button
               type="button"
               className="ds-btn"
-              onClick={() => printDoc(getPatientFileHTML(curPatient, visits, patientRecords, rxList, primaryDoctor, clinic))}
+              onClick={() => {
+                const last = lastExamOf(curPatient.id, patientRecords);
+                const role = ctx.session && ctx.session.role;
+                const priv = isEnabled('atlas') ? getPrivateStorage() : null;
+                // Default path stays synchronous (no popup-blocker risk); images are awaited only when drawings were chosen for the report.
+                if (!priv || !last || !printDrawingsOf(last, role).length) {
+                  printDoc(getPatientFileHTML(curPatient, visits, patientRecords, rxList, primaryDoctor, clinic));
+                  return;
+                }
+                Promise.all([prepareDrawingImages({ exam: last, role, cache: priv.cache }), drawingTitlesFor(last, role, lang)])
+                  .then(([imgs, titles]) => printDoc(getPatientFileHTML(curPatient, visits, patientRecords, rxList, primaryDoctor, clinic, imgs, titles)))
+                  .catch(() => printDoc(getPatientFileHTML(curPatient, visits, patientRecords, rxList, primaryDoctor, clinic)));
+              }}
             >
               🖨️ {t("common.print", lang)}
             </button>
@@ -234,6 +261,8 @@ export default function PatientFile({ ctx }) {
           <ExamForm
             doctorNames={doctorNames}
             patientId={curPatient.id}
+            patient={curPatient}
+            session={ctx.session}
             onSave={e => {
               onSaveExam(e);
               setModal(null);
@@ -248,6 +277,8 @@ export default function PatientFile({ ctx }) {
             doctorNames={doctorNames}
             initial={modal.editExam}
             patientId={curPatient.id}
+            patient={curPatient}
+            session={ctx.session}
             onSave={e => {
               onSaveExam(e);
               setModal(null);
