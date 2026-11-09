@@ -8,7 +8,6 @@
 
 import { specialSummary, caseLabel, fieldLabel } from '../special-exam/model.js';
 import { printDrawingsOf, isPrintableDataUrl } from '../atlas/print-drawings.js';
-import { getPlate, pick } from '../atlas/model.js';
 import { t, getLang, dirOf } from '../i18n/index.js';
 import { tv } from '../i18n/tv.js';
 
@@ -98,7 +97,9 @@ export function lastExamOf(patientId, exams) {
 }
 
 // `drawingImages`: { [drawingId]: data URL } prepared by prepareDrawingImages (empty/absent = no drawings printed).
-export function getPatientFileHTMLRaw(patient, visits, exams, prescriptions, primary, clinic, drawingImages) {
+// `drawingTitles`: { [drawingId]: caption } (optional). The plate data is not imported here: it would put every atlas
+// plate into the main bundle; the caller loads it lazily only when drawings are printed.
+export function getPatientFileHTMLRaw(patient, visits, exams, prescriptions, primary, clinic, drawingImages, drawingTitles) {
   const { lang, dir, loc, tr } = ctx();
   const egp = tr("g7.print.egp");
   const p = patient || {};
@@ -115,7 +116,7 @@ export function getPatientFileHTMLRaw(patient, visits, exams, prescriptions, pri
   const pExams = (exams || []).filter(e => e.patientId === p.id && !isRequest(e)).sort(byDateDesc);
   const lastExam = pExams[0];
   const lastExamSpecial = lastExam ? specialSummary(lastExam) : [];
-  const plateName = id => { try { return pick(getPlate(id).title, lang); } catch (e) { return ""; } };
+  const plateName = id => (drawingTitles && typeof drawingTitles[id] === "string" ? drawingTitles[id] : "");
   // drawings the doctor approved and chose to print; role was already checked when the images were prepared
   const lastExamDrawings = lastExam && drawingImages ? printDrawingsOf(lastExam, "doctor").filter(d => isPrintableDataUrl(drawingImages[d.id])) : [];
   const pRx = (prescriptions || []).filter(r => r.patientId === p.id).sort(byDateDesc);
@@ -168,7 +169,7 @@ export function getPatientFileHTMLRaw(patient, visits, exams, prescriptions, pri
   ${lastExamSpecial.map(sp => `<h3>${caseLabel(sp.id, lang)}</h3>
   <table><tr><th></th><th>OD</th><th>OS</th></tr>${sp.rows.map(r => `<tr><td>${fieldLabel(sp.id, r.k, lang)}</td>${r.eyes ? `<td>${r.od || "—"}</td><td>${r.os || "—"}</td>` : `<td colspan="2">${r.value}</td>`}</tr>`).join("")}</table>`).join("")}
   ${lastExamDrawings.length ? `<h3>${tr("atlas.print.title")}</h3>
-  <div style="display:flex;flex-wrap:wrap;gap:10px;margin:6px 0">${lastExamDrawings.map(d => `<div style="width:260px;text-align:center;font-size:11px;page-break-inside:avoid"><img src="${drawingImages[d.id]}" alt="" style="width:100%;border:1px solid #ccc">${plateName(d.plateId)}${d.approvedByName ? " · " + d.approvedByName : ""}${d.approvedAt ? " · " + String(d.approvedAt).slice(0, 10) : ""}</div>`).join("")}</div>` : ""}
+  <div style="display:flex;flex-wrap:wrap;gap:10px;margin:6px 0">${lastExamDrawings.map(d => `<div style="width:260px;text-align:center;font-size:11px;page-break-inside:avoid"><img src="${drawingImages[d.id]}" alt="" style="width:100%;border:1px solid #ccc">${plateName(d.id)}${d.approvedByName ? " · " + d.approvedByName : ""}${d.approvedAt ? " · " + String(d.approvedAt).slice(0, 10) : ""}</div>`).join("")}</div>` : ""}
   ${pExams.length > 1 ? `<h3>${tr("g7.print.examLog")} (${pExams.length})</h3>
   <table><tr><th>${tr("g7.print.thDate")}</th><th>${tr("g7.print.thDoctor")}</th><th>${tr("g7.print.thVAShort")}</th><th>${tr("g7.print.thIOPShort")}</th><th>${tr("g7.print.diagnosis")}</th><th>${tr("g7.print.thPlan")}</th><th>${tr("g7.print.thFollowUp")}</th></tr>
   ${pExams.map(e => `<tr><td>${e.date || "—"}</td><td>${tv(e.doctor) || "—"}</td><td>${e.visualAcuityR || "—"} / ${e.visualAcuityL || "—"}</td><td>${e.iopR || "—"} / ${e.iopL || "—"}</td><td>${tv(e.diagnosis) || "—"}</td><td>${e.treatmentPlan || "—"}</td><td>${e.followUp || "—"}</td></tr>`).join("")}</table>` : ""}

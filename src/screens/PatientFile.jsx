@@ -27,6 +27,18 @@ import { isEnabled } from '../modules/feature-flags/index.js';
 import { getPrivateStorage } from '../components/atlas/private-instance.js';
 import { printDrawingsOf, prepareDrawingImages } from '../modules/atlas/print-drawings.js';
 
+// Captions of the drawings to print. The plate data is loaded only here (lazy), never in the main bundle.
+async function drawingTitlesFor(exam, role, lang) {
+  const list = printDrawingsOf(exam, role);
+  if (!list.length) return {};
+  try {
+    const { getPlate, pick } = await import('../modules/atlas/model.js');
+    const out = {};
+    for (const d of list) { const p = getPlate(d.plateId); out[d.id] = p ? pick(p.title, lang) : ''; }
+    return out;
+  } catch { return {}; }
+}
+
 // Patient file (full-screen). Presentational only: every useState/useEffect,
 // the Core 360 load, uploads, saves and deletes live in the data layer
 // (src/modules/patient-file/use-patient-file.js), which passes its values
@@ -113,8 +125,9 @@ export default function PatientFile({ ctx }) {
                   printDoc(getPatientFileHTML(curPatient, visits, patientRecords, rxList, primaryDoctor, clinic));
                   return;
                 }
-                prepareDrawingImages({ exam: last, role, cache: priv.cache })
-                  .then(imgs => printDoc(getPatientFileHTML(curPatient, visits, patientRecords, rxList, primaryDoctor, clinic, imgs)));
+                Promise.all([prepareDrawingImages({ exam: last, role, cache: priv.cache }), drawingTitlesFor(last, role, lang)])
+                  .then(([imgs, titles]) => printDoc(getPatientFileHTML(curPatient, visits, patientRecords, rxList, primaryDoctor, clinic, imgs, titles)))
+                  .catch(() => printDoc(getPatientFileHTML(curPatient, visits, patientRecords, rxList, primaryDoctor, clinic)));
               }}
             >
               🖨️ {t("common.print", lang)}
