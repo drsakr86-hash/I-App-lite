@@ -22,7 +22,10 @@ import { PrintModal } from '../components/modals/index.js';
 import { C } from '../modules/theme/index.js';
 import { SC, Tag, XRAY_ICON } from '../modules/ui/atoms.jsx';
 import TopBar from '../components/TopBar.jsx';
-import { getPatientFileHTML, printDoc } from '../modules/print/index.js';
+import { getPatientFileHTML, printDoc, lastExamOf } from '../modules/print/index.js';
+import { isEnabled } from '../modules/feature-flags/index.js';
+import { getPrivateStorage } from '../components/atlas/private-instance.js';
+import { printDrawingsOf, prepareDrawingImages } from '../modules/atlas/print-drawings.js';
 
 // Patient file (full-screen). Presentational only: every useState/useEffect,
 // the Core 360 load, uploads, saves and deletes live in the data layer
@@ -101,7 +104,18 @@ export default function PatientFile({ ctx }) {
             <button
               type="button"
               className="ds-btn"
-              onClick={() => printDoc(getPatientFileHTML(curPatient, visits, patientRecords, rxList, primaryDoctor, clinic))}
+              onClick={() => {
+                const last = lastExamOf(curPatient.id, patientRecords);
+                const role = ctx.session && ctx.session.role;
+                const priv = isEnabled('atlas') ? getPrivateStorage() : null;
+                // Default path stays synchronous (no popup-blocker risk); images are awaited only when drawings were chosen for the report.
+                if (!priv || !last || !printDrawingsOf(last, role).length) {
+                  printDoc(getPatientFileHTML(curPatient, visits, patientRecords, rxList, primaryDoctor, clinic));
+                  return;
+                }
+                prepareDrawingImages({ exam: last, role, cache: priv.cache })
+                  .then(imgs => printDoc(getPatientFileHTML(curPatient, visits, patientRecords, rxList, primaryDoctor, clinic, imgs)));
+              }}
             >
               🖨️ {t("common.print", lang)}
             </button>
