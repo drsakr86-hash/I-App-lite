@@ -33,6 +33,11 @@
 | `swift-worker` | whatsapp-webhook (استقبال Meta) | OFF |
 | `quick-task` | whatsapp-worker (معالجة + إرسال) | OFF |
 | `hyper-responder` | whatsapp-send (رد السكرتارية؛ يتحقق من المستخدم والدور داخل الكود) | OFF |
+| `whatsapp-worker` | نفس عامل `quick-task` (الـ cron ينادي هذا الاسم) | OFF |
+| `messenger-webhook` | Messenger/Instagram | OFF |
+| `zz-deploy-probe` | غير مستخدم (يرجع 410) — آمن للحذف يدويًا | ON |
+
+النسخ المنشورة (فحص 2026-11-10): `swift-worker` غلاف على commit `eb78230`، و`quick-task`/`whatsapp-worker` غلاف على `a261b26` (= main)، و`hyper-responder` حزمة قديمة مدمجة. الغلاف يستورد الكود من GitHub بـ commit مثبّت وقت النشر.
 * رابط الـ Webhook: `https://mofdveiwlaymlabvsypu.supabase.co/functions/v1/swift-worker`
 * سر إضافي: `WORKER_FUNCTION=quick-task` (لتسريع المعالجة؛ الـ cron يغطي لو غاب).
 

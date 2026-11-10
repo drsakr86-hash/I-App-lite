@@ -12,3 +12,8 @@ Nothing in this file was executed against any database.
 
 ## Not verified (needs the live project)
 Actual RLS policies, grants on RPCs, whether anon can execute `iapp_*` functions. Run the read-only queries in `docs/security-recommendations.sql` first.
+
+## Server roles and exam storage (verified read-only on 2026-11-10)
+- `iapp_staff` has only `admin` and `secretary`; there is no server-side `doctor` role. The doctor account is the admin, so saving exams (incl. special sheets and atlas drawings) into `iapp_store` works. Adding a second account with role `doctor` would NOT be able to write `iapp_exams` in `iapp_store` (it can write `iapp_examinations_core` and the `clinical-private` bucket). Do not widen `iapp_store` for doctors; design a dedicated store first.
+- `wa_push_claim()` and `wa_push_drop(bigint[])` are service_role only (applied 2026-11-10, docs/sql/whatsapp-push-tighten.sql).
+- Known, accepted: a secretary can read `iapp_trash` (deleted records incl. exams) and rewrite `iapp_audit` (see docs/sql/store-role-rls.sql).

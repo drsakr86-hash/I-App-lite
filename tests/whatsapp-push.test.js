@@ -67,3 +67,14 @@ test('wiring: SQL is staff-checked and service-only where needed; worker calls p
   const pushHandler = sw.slice(sw.indexOf('addEventListener("push"'), sw.indexOf('addEventListener("notificationclick"'));
   assert.doesNotMatch(pushHandler, /event\.data/, 'the push shows a fixed text, never payload content');
 });
+
+test('SQL files: wa_push_claim / wa_push_drop are never granted to authenticated or anon', () => {
+  for (const f of ['docs/sql/whatsapp-push.sql', 'docs/sql/whatsapp-push-tighten.sql']) {
+    const code = fs.readFileSync(f, 'utf8').split('\n').filter(l => !l.trim().startsWith('--')).join('\n');
+    const grants = code.match(/grant\s+execute\s+on\s+function[^;]*;/gi) || [];
+    for (const g of grants.filter(x => /wa_push_claim|wa_push_drop/.test(x))) {
+      const grantees = g.split(/\bto\b/i).pop().replace(';', '').trim();
+      assert.equal(grantees.toLowerCase(), 'service_role', f + ': ' + g);
+    }
+  }
+});
