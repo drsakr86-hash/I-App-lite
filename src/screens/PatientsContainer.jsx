@@ -5,6 +5,7 @@ import LazyFallback from '../components/LazyFallback.jsx';
 import { retryImport } from '../app/chunk-recovery.js';
 const PatientFileContainer = lazy(() => retryImport(() => import('./PatientFileContainer.jsx')));
 import { usePatientsOrchestration } from '../modules/patients/patients-orchestration.js';
+import { useBackClose } from '../hooks/use-back.js';
 
 // Wires the live Patients list + patient-file data layer
 // (src/modules/patients/patients-orchestration.js) to the presentational
@@ -23,6 +24,9 @@ export default function PatientsContainer({
     patients, setPatients, exams, setExams, prescriptions, setRx, visits, setVisits,
     doctorNames, primaryDoctor, prices, clinic, initOpenId, initNewName, onInitDone, customTests
   });
+
+  // Back from an open patient file returns to the patients list (not out of the app).
+  useBackClose(!!openFile, () => setOpenFile(null));
 
   if (openFile) {
     const p = patients.find(x => x.id === openFile);

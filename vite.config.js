@@ -40,7 +40,18 @@ function precacheManifest() {
   };
 }
 
+// Third-party code (React, the router, the Supabase client) changes only when package-lock.json changes, while the
+// app code changes on every deploy. Keeping it in its own content-hashed chunks means an update re-downloads only
+// the app chunk (about 555 kB, was one 930 kB file).
+function vendorChunks(id) {
+  if (!id.includes('node_modules')) return undefined;
+  if (/node_modules\/(@supabase|tslib|iceberg-js)\//.test(id)) return 'vendor-supabase';
+  if (/node_modules\/(react|react-dom|scheduler|react-router|react-router-dom|@remix-run)\//.test(id)) return 'vendor-react';
+  return undefined;
+}
+
 export default defineConfig({
   base: './',
-  plugins: [precacheManifest()]
+  plugins: [precacheManifest()],
+  build: { rollupOptions: { output: { manualChunks: vendorChunks } } }
 });

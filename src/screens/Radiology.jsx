@@ -7,6 +7,7 @@ import {
 import { Btn } from '../components/common.jsx';
 import { t, useLang, dirOf } from '../modules/i18n/index.js';
 import { tv } from '../modules/i18n/tv.js';
+import { useBackClose } from '../hooks/use-back.js';
 import { C } from '../modules/theme/index.js';
 import { Field, inp } from '../modules/ui/atoms.jsx';
 import { sbGet } from '../modules/sync/wiring.js';
@@ -33,6 +34,7 @@ export default function Radiology({ patients, customTests, setCustomTests, setEx
   const [selected, setSelected] = useState({});
   const [notes, setNotes] = useState('');
   const [addModal, setAddModal] = useState(false);
+  useBackClose(addModal, () => setAddModal(false));
   const [newTest, setNewTest] = useState({ name: '', name_ar: '' });
   const [printed, setPrinted] = useState(false);
   const [filterCat, setFilterCat] = useState('الكل');

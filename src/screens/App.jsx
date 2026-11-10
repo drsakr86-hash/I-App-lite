@@ -24,6 +24,21 @@ import { retryImport } from '../app/chunk-recovery.js';
 import { useWaUnread } from '../modules/whatsapp/useWaUnread.js';
 import { useWaWaiting } from '../modules/whatsapp/useWaWaiting.js';
 import WaWaitingBanner from '../components/WaWaitingBanner.jsx';
+import LogoutConfirm from '../components/LogoutConfirm.jsx';
+import { useTabHistory } from '../hooks/use-back.js';
+import { visibleInterval } from '../app/visible-interval.js';
+import { NAV } from '../components/bottomnav-model.js';
+
+// Tabs the shell can show. The last tab survives a reload (pull-to-refresh, a new build) for this browser tab only.
+const TAB_IDS = [...NAV.map(n => n.id), 'settings'];
+const ADMIN_TABS = NAV.filter(n => n.adminOnly).map(n => n.id);
+const TAB_STORE = 'iapp_tab';
+const storedTab = () => {
+  try {
+    const v = sessionStorage.getItem(TAB_STORE);
+    return TAB_IDS.includes(v) ? v : 'dashboard';
+  } catch { return 'dashboard'; }
+};
 const Radiology = lazy(() => retryImport(() => import("./Radiology.jsx")));
 const WhatsAppInbox = lazy(() => retryImport(() => import("./WhatsAppInbox.jsx")));
 const ImagingCenter = lazy(() => retryImport(() => import("./ImagingCenter.jsx")));
@@ -56,7 +71,15 @@ export default function App() {
     saveUsers(list);
     setUsersState(list);
   };
-  const [tab, setTab] = useState("dashboard");
+  const [tab, setTab] = useState(storedTab);
+  useEffect(() => {
+    try { sessionStorage.setItem(TAB_STORE, tab); } catch { /* storage unavailable (private mode / quota): non-fatal */ }
+  }, [tab]);
+  // Android/browser back returns to the previous tab instead of leaving the app.
+  const roleRef = React.useRef(session && session.role);
+  roleRef.current = session && session.role;
+  useTabHistory(tab, setTab, id => TAB_IDS.includes(id) && (roleRef.current === 'admin' || !ADMIN_TABS.includes(id)));
+  const [askLogout, setAskLogout] = useState(false);
   useWaUnread(!!session && session.role === "admin"); // WhatsApp unread count in the browser tab title (admin only)
   const waWaiting = useWaWaiting(!!session && session.role === "admin");
   const [patOpenId, setPatOpenId] = useState(null);
@@ -74,6 +97,17 @@ export default function App() {
     window.addEventListener("iapp-open-settings", openSettings);
     return () => window.removeEventListener("iapp-open-settings", openSettings);
   }, []);
+  // Ctrl/⌘+K opens the global search from anywhere (desktop / tablet keyboards).
+  useEffect(() => {
+    const onKey = e => {
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && String(e.key).toLowerCase() === 'k') {
+        e.preventDefault();
+        setShowSearch(true);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
   const [patients, setRawP, pR] = useDB("iapp_patients", SEED.patients);
   const [appointments, setRawA, aR, refreshAppointments] = useDB("iapp_appointments", SEED.appointments);
   const [prescriptions, setRawRx, rR] = useDB("iapp_prescriptions", SEED.prescriptions);
@@ -88,8 +122,7 @@ export default function App() {
   useEffect(() => {
     if (!session) return;
     refreshAppointments();
-    const iv = setInterval(refreshAppointments, 5000);
-    return () => clearInterval(iv);
+    return visibleInterval(refreshAppointments, 5000); // paused while the tab is hidden; refreshes at once on return
   }, [session, refreshAppointments]);
   const withSync = fn => async v => {
     setSyncing(true);
@@ -177,6 +210,7 @@ export default function App() {
     try {
       sessionStorage.removeItem("iapp_session");
     } catch { /* storage unavailable (private mode / quota): non-fatal */ }
+    setAskLogout(false);
     setSession(null);
     setTab("dashboard");
     try {
@@ -253,15 +287,15 @@ export default function App() {
     }),
     settings: React.createElement(Settings, {
       patients, appointments, prescriptions, exams, visits, doctors, setDoctors,
-      prices, setPrices, clinic, setClinic, onReset: reset, users, setUsers, session, onLogout: handleLogout
+      prices, setPrices, clinic, setClinic, onReset: reset, users, setUsers, session, onLogout: () => setAskLogout(true)
     })
   };
   return (
     <div style={{ minHeight: "100vh", background: C.bg, display: "flex", justifyContent: "center", alignItems: "flex-start" }}>
       <div style={{ width: "100%", maxWidth: "none", minHeight: "100vh", background: C.bg, direction: dirOf(lang), fontFamily: "'Segoe UI','Tahoma',Arial,sans-serif", position: "relative", overflowX: "hidden" }}>
-        <TopBar primary={primary} onSearch={() => setShowSearch(true)} syncing={syncing} session={session} onLogout={handleLogout} />
+        <TopBar primary={primary} onSearch={() => setShowSearch(true)} syncing={syncing} session={session} onLogout={() => setAskLogout(true)} />
         {session.role === "admin" && effectiveTab !== "whatsapp" && <WaWaitingBanner summary={waWaiting} onOpen={() => setTab("whatsapp")} />}
-        <div style={{ overflowY: "auto", maxHeight: "calc(100vh - 128px)", animation: "slideUp 0.25s ease" }}>
+        <div style={{ overflowY: "auto", maxHeight: "calc(100dvh - 128px)", animation: "slideUp 0.25s ease" }}>
           <Suspense fallback={<LazyFallback />}>{screens[effectiveTab]}</Suspense>
         </div>
         <BottomNav active={effectiveTab} setActive={setTab} role={session.role} />
@@ -291,6 +325,7 @@ export default function App() {
             onClose={() => setShowSearch(false)}
           />
         )}
+        {askLogout && <LogoutConfirm onOk={handleLogout} onNo={() => setAskLogout(false)} />}
         {toast && <Toast msg={toast} onDone={() => setToast(null)} />}
       </div>
     </div>

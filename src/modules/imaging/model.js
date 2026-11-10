@@ -5,19 +5,16 @@
 // pending-Core-order retry guard) stays in the screen component unchanged.
 
 import { t } from '../i18n/index.js';
+import { personMatches, textIncludes } from '../search/text.js';
 
-// Patient search dropdown: case-insensitive on name / file code, raw on phone, max 8.
+// Patient search dropdown: Arabic-aware on name / file code, digits on phone, max 8.
 export function filterImagingPatients(patients, patientSearch) {
-  return patients.filter(p => {
-    const q = patientSearch.trim().toLowerCase();
-    if (!q) return true;
-    return String(p.name || "").toLowerCase().includes(q) || String(p.patientCode || "").toLowerCase().includes(q) || String(p.phone || "").includes(q);
-  }).slice(0, 8);
+  return patients.filter(p => personMatches(p, patientSearch)).slice(0, 8);
 }
 
 // Studies list: type filter ("all" = any) + patient name/code search, newest first.
 export function filterStudies(studies, { filter, search }) {
-  return studies.filter(x => (filter === "all" || x.type === filter) && (!search || String(x.patient || "").includes(search) || String(x.patientCode || "").includes(search))).sort((a, b) => String(b.date + b.time).localeCompare(String(a.date + a.time)));
+  return studies.filter(x => (filter === "all" || x.type === filter) && (!String(search || '').trim() || textIncludes(x.patient, search) || textIncludes(x.patientCode, search))).sort((a, b) => String(b.date + b.time).localeCompare(String(a.date + a.time)));
 }
 
 // Open (not reported / cancelled) imaging orders for one patient.

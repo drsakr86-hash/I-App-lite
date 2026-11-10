@@ -1,11 +1,13 @@
 import React from 'react';
 import { C } from '../../modules/theme/index.js';
 import { t, useLang } from '../../modules/i18n/index.js';
+import { useBackClose } from '../../hooks/use-back.js';
 
 // Full-screen image viewer (viewImg) of the patient file.
 export default function ImageViewer({ ctx }) {
   const { setViewImg, viewImg } = ctx;
   const lang = useLang();
+  useBackClose(true, () => setViewImg(null));
   return (
     <div
       style={{

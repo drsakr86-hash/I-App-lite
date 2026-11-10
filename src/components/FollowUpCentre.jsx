@@ -12,10 +12,12 @@ import { waOpen, waFollowUpText } from '../modules/notifications/index.js';
 import { INJ_KEY, dueInjections, overdueFollowUps, followUpKey, hiddenMap, hiddenState, isListedHidden, SNOOZE_DAYS } from '../modules/followups/index.js';
 import { loadHidden, hideFollowUp, unhideFollowUp } from '../modules/followups/hide.js';
 import { t, useLang } from '../modules/i18n/index.js';
+import { useBackClose } from '../hooks/use-back.js';
 import { tv } from '../modules/i18n/tv.js';
 
 export default function FollowUpCentre({ visits, patients, onClose, onPatientClick }) {
   const lang = useLang();
+  useBackClose(true, onClose);
   const [injections, setInjections] = useState([]);
   const [hidden, setHidden] = useState([]);
   const [busy, setBusy] = useState('');

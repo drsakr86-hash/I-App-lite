@@ -1,4 +1,5 @@
 // Pure logic for the WhatsApp inbox (no React, no network): filtering, ordering, window/delivery state and display helpers.
+import { foldText } from '../search/text.js';
 export const WINDOW_MS = 24 * 3600 * 1000;
 
 export const windowOpen = (conv, now = Date.now()) => !!(conv && conv.last_inbound_at && now - new Date(conv.last_inbound_at).getTime() < WINDOW_MS);
@@ -13,15 +14,15 @@ export function ownerOf(conv) {
 
 export const FILTERS = ['all', 'unread', 'handoff', 'mine', 'failed'];
 export function filterConversations(list, { filter = 'all', search = '', me = '', failedIds = new Set() } = {}) {
-  const q = String(search || '').trim().toLowerCase(), digits = q.replace(/\D/g, '');
+  const q = foldText(search), digits = q.replace(/\D/g, '');
   return (list || []).filter(c => {
     if (filter === 'unread' && !(c.unread_count > 0)) return false;
     if (filter === 'handoff' && ownerOf(c) !== 'human') return false;
     if (filter === 'mine' && (!me || String(c.assigned_to || '').toLowerCase() !== String(me).toLowerCase())) return false;
     if (filter === 'failed' && !failedIds.has(c.id)) return false;
     if (!q) return true;
-    const name = String(c.contact && c.contact.profile_name || '').toLowerCase(), wa = String(c.contact && c.contact.wa_id || '');
-    return name.includes(q) || (digits.length >= 3 && wa.includes(digits)) || String(c.last_preview || '').toLowerCase().includes(q);
+    const name = foldText(c.contact && c.contact.profile_name), wa = String(c.contact && c.contact.wa_id || '');
+    return name.includes(q) || (digits.length >= 3 && wa.includes(digits)) || foldText(c.last_preview).includes(q);
   }).sort((a, b) => new Date(b.last_message_at || 0) - new Date(a.last_message_at || 0));
 }
 

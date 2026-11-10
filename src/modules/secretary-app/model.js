@@ -8,6 +8,7 @@
 
 import { t } from '../i18n/index.js';
 import { tv } from '../i18n/tv.js';
+import { textIncludes, digitsInclude } from '../search/text.js';
 
 // ---- Constants (exact legacy strings) --------------------------------------
 
@@ -134,7 +135,7 @@ export const countConfirmed = list => list.filter(a => a.confirmed).length;
 export function filterSecretaryApts(apts, { filterDate, search, filterFromPatient, filterClinic }) {
   return apts.filter(a => {
     const dateOk = filterDate ? a.date === filterDate : true;
-    const searchOk = search ? a.patient?.includes(search) : true;
+    const searchOk = String(search || '').trim() ? !!a.patient && (textIncludes(a.patient, search) || digitsInclude(a.phone, search)) : true;
     const fromOk = filterFromPatient ? isPendingPatientRequest(a) : true;
     const clinicOk = filterClinic ? a.clinic === filterClinic : true;
     return dateOk && searchOk && fromOk && clinicOk;

@@ -42,8 +42,11 @@ export function usePatientsOrchestration({
       setSearch(initNewName);
       if (onInitDone) onInitDone();
     }
+    // Re-run when a new request arrives while this screen is already mounted (global search / follow-up centre
+    // used on the Patients tab itself): with [] the request was ignored and then fired later, on the next visit
+    // to the tab, opening a file nobody asked for.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [initOpenId, initNewName]);
 
   const updP = f => setPatients(patients.map(p => (p.id === f.id ? f : p)));
   const patientsRef = useRef(patients);

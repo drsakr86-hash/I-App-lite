@@ -1,6 +1,7 @@
 // Pure logic for the Radiology (Investigations & Imaging) screen.
 // Kept free of DOM/React/Supabase so it can be unit tested directly.
 
+import { personMatches, textIncludes } from '../search/text.js';
 export const DEFAULT_TESTS = [
   { id: 'oct', name: 'OCT', name_ar: 'تصوير الشبكية المقطعي', cat: 'شبكية' },
   { id: 'ffa', name: 'FFA', name_ar: 'تصوير الأوعية بالفلوريسين', cat: 'شبكية' },
@@ -82,17 +83,12 @@ export function removeCustomTest(customTests, selected, id) {
 }
 
 export function filterVisibleTests(allTests, { filterCat, search }) {
-  const q = (search || '').toLowerCase();
   return allTests.filter(t => (filterCat === 'الكل' || t.cat === filterCat) &&
-    (t.name.toLowerCase().includes(q) || t.name_ar.includes(search || '')));
+    (textIncludes(t.name, search) || textIncludes(t.name_ar, search)));
 }
 
 export function filterPatientResults(patients, patientSearch) {
-  return (patients || []).filter(p => !patientSearch ||
-    (p.name || '').includes(patientSearch) ||
-    (p.patientCode || '').includes(patientSearch) ||
-    (p.phone || '').includes(patientSearch)
-  ).slice(0, 8);
+  return (patients || []).filter(p => personMatches(p, patientSearch)).slice(0, 8);
 }
 
 export function buildRequestedTests(allTests, selected) {

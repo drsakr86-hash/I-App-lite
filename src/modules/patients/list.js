@@ -4,16 +4,9 @@
 
 const DAY_MS = 86400000;
 
-// Strip tashkeel + tatweel, unify alef/yaa/taa-marbuta forms, collapse spaces.
-export function normArabic(s) {
-  return String(s || '').trim()
-    .replace(/[ً-ْـ]/g, '')
-    .replace(/[أإآ]/g, 'ا')
-    .replace(/ى/g, 'ي')
-    .replace(/ة/g, 'ه')
-    .replace(/\s+/g, ' ')
-    .toLowerCase();
-}
+// normArabic now lives in ../search/text.js (shared by every search box); re-exported here for existing callers.
+import { normArabic, normDigits } from '../search/text.js';
+export { normArabic };
 
 // Digits only, with the Egyptian country prefix (20 / 0020) turned into a leading 0.
 export const normPhone = s => String(s || '').replace(/\D/g, '').replace(/^(20|0020)/, '0');
@@ -26,7 +19,7 @@ export function sortPatients(patients) {
 
 // Match name/condition (Arabic-normalised), file code (text or digits) and phone digits.
 export function matchesPatient(p, search) {
-  const q = String(search || '').trim();
+  const q = normDigits(String(search || '').trim()); // ٠١٠… typed with Arabic-Indic digits still matches
   if (!q) return true;
   const qn = normArabic(q);
   const qd = q.replace(/\D/g, '');

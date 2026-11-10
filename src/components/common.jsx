@@ -4,6 +4,7 @@ import {
 } from './common-model.js';
 import { C, useTheme, setTheme } from '../modules/theme/index.js';
 import { useLang, setLang, t, getLang, dirOf } from '../modules/i18n/index.js';
+import { useBackClose } from '../hooks/use-back.js';
 
 // Shared UI atoms for both the React screens and the legacy runtime.
 // Phase 8, batch 6: these used to be duplicated — one copy here, one copy
@@ -33,6 +34,7 @@ export function Modal({ title, onClose, children }) {
   const closeRef = React.useRef(onClose);
   closeRef.current = onClose;
   const [titleId] = React.useState(() => 'modal-title-' + (++modalSeq));
+  useBackClose(true, onClose); // Android/browser back closes the dialog instead of leaving the screen
   useEffect(() => {
     if (typeof document === 'undefined') return undefined; // no DOM (server render / node tests)
     const opener = document.activeElement;

@@ -70,16 +70,16 @@ export default function TopBar({ backLabel, onBack, primary, onSearch, syncing, 
       </div>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
         {!backLabel && onSearch && (
-          <div onClick={onSearch} title={t('g3.topbar.search', lang)} aria-label={t('g3.topbar.search', lang)} style={{
+          <button type="button" onClick={onSearch} title={t('g3.topbar.search', lang)} aria-label={t('g3.topbar.search', lang)} style={{
             width: 34, height: 34, borderRadius: 10, background: C.card, border: `1px solid ${C.border}`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 15
-          }}>🔍</div>
+            display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 15, padding: 0, fontFamily: 'inherit'
+          }}>🔍</button>
         )}
         {!backLabel && onLogout && (
-          <div onClick={onLogout} title={t('g3.topbar.logout', lang)} aria-label={t('g3.topbar.logout', lang)} style={{
+          <button type="button" onClick={onLogout} title={t('g3.topbar.logout', lang)} aria-label={t('g3.topbar.logout', lang)} style={{
             width: 34, height: 34, borderRadius: 10, background: C.card, border: `1px solid ${C.border}`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 15, color: C.danger
-          }}>⏻</div>
+            display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 15, padding: 0, fontFamily: 'inherit', color: C.danger
+          }}>⏻</button>
         )}
         <div style={{
           width: 34, height: 34, borderRadius: '50%',

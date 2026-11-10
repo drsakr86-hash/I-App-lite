@@ -17,6 +17,8 @@ import { getSB } from "../modules/data-access/index.js";
 import { stripClinicalDrawings } from "../modules/atlas/drawings.js";
 import { localISO, BOOKING_TABLE, PATIENT_CLINICS, CLINIC_CODE, clinicDisplay } from "../modules/constants/index.js";
 import { t, useLang, dirOf } from "../modules/i18n/index.js";
+import { useTabHistory } from "../hooks/use-back.js";
+import { visibleInterval } from "../app/visible-interval.js";
 import { tv } from "../modules/i18n/tv.js";
 
 // "⭐ قيّم زيارتك" modal body (only used inside PatientApp).
@@ -109,6 +111,7 @@ function RatingPrompt({ visit, patient, onDone }) {
 export default function PatientApp({ patient, onLogout }) {
   const lang = useLang();
   const [tab, setTab] = useState(initialTab(patient));
+  useTabHistory(tab, setTab); // back returns to the previous tab instead of leaving the portal
   const [appointments, setAppointments] = useState([]);
   const [prescriptions, setPrescriptions] = useState([]);
   const [exams, setExams] = useState([]);
@@ -138,11 +141,10 @@ export default function PatientApp({ patient, onLogout }) {
       }
       setLoading(false);
     })();
-    const iv = setInterval(async () => {
+    return visibleInterval(async () => { // paused while hidden; refreshes at once on return
       const a = await sbGet("iapp_appointments");
       if (a) setAppointments(myAppointments(a, patient));
     }, POLL_INTERVAL_MS);
-    return () => clearInterval(iv);
   }, []);
   const upcomingApts = upcomingAppointments(appointments, today);
   const pastApts = pastAppointments(appointments, today);

@@ -7,6 +7,7 @@ import { XRAY_ICON } from '../modules/ui/atoms.jsx';
 import { primaryNavItems, moreNavItems, isMoreActive, MORE_ID } from './bottomnav-model.js';
 import { ThemeToggle, LangToggle } from './common.jsx';
 import { t, useLang } from '../modules/i18n/index.js';
+import { useBackClose } from '../hooks/use-back.js';
 
 const NAV_HEIGHT = 64;
 
@@ -77,6 +78,7 @@ function SheetRow({ label, children }) {
 export default function BottomNav({ active, setActive, role }) {
   const lang = useLang();
   const [open, setOpen] = React.useState(false);
+  useBackClose(open, () => setOpen(false));
   const features = {}; // the atlas is opened from inside the exam form, not from a tab
   const items = primaryNavItems(role);
   const moreItems = moreNavItems(role, features);

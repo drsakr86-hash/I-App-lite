@@ -1,4 +1,5 @@
 import React from 'react';
+import { useBackClose } from '../../hooks/use-back.js';
 import { tomorrowOf, reminderRows, reminderButtonLabel, reminderTypeLabel } from './reminders-modal-model.js';
 import { C } from '../../modules/theme/index.js';
 import { localISO, clinicLabel } from '../../modules/constants/index.js';
@@ -11,6 +12,7 @@ import { tv } from '../../modules/i18n/tv.js';
 // onMark(apt) is called only when WhatsApp was actually opened (waOpen
 // returned true).
 export default function RemindersModal({ apts, onClose, onMark }) {
+  useBackClose(true, onClose);
   const lang = useLang();
   const tomorrow = localISO(tomorrowOf(new Date()));
   const rows = reminderRows(apts, tomorrow);

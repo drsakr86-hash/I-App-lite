@@ -3,15 +3,27 @@
 // component instead of a legacy function. Its only dependency (C) was
 // already moved in an earlier batch, so this moves as a self-contained
 // component; the filtering itself lives in global-search-model.js.
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useBackClose } from '../hooks/use-back.js';
 import { C } from '../modules/theme/index.js';
-import { globalSearchResults } from './global-search-model.js';
+import { globalSearchResults, patientForResult } from './global-search-model.js';
 import { t, useLang, dirOf } from '../modules/i18n/index.js';
 import { tv } from '../modules/i18n/tv.js';
 
 export default function GlobalSearch({ patients, prescriptions, appointments, onNavigate, onClose }) {
   const lang = useLang();
   const [q, setQ] = useState('');
+  useBackClose(true, onClose);
+  useEffect(() => {
+    const onKey = e => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+  // A prescription/appointment result opens the patient's file when the patient is known; otherwise its tab.
+  const openRecord = (tab, rec) => {
+    const p = patientForResult(patients, rec);
+    if (p) onNavigate('patients', p.id); else onNavigate(tab);
+  };
   const { trimmed, pRes, rRes, aRes, hasResults } = globalSearchResults(patients, prescriptions, appointments, q);
 
   return (
@@ -47,6 +59,8 @@ export default function GlobalSearch({ patients, prescriptions, appointments, on
             autoFocus
             value={q}
             onChange={e => setQ(e.target.value)}
+            type="search"
+            enterKeyHint="search"
             placeholder={t('g3.search.placeholder', lang)}
             aria-label={t('g3.search.placeholder', lang)}
             style={{
@@ -103,7 +117,7 @@ export default function GlobalSearch({ patients, prescriptions, appointments, on
             {rRes.map(r => (
               <div
                 key={r.id}
-                onClick={() => onNavigate('prescriptions')}
+                onClick={() => openRecord('prescriptions', r)}
                 style={{ background: C.card, borderRadius: 10, padding: '10px 12px', marginBottom: 6, cursor: 'pointer' }}
               >
                 <div style={{ color: C.text, fontSize: 13 }}>{r.patient || ''}</div>
@@ -118,7 +132,7 @@ export default function GlobalSearch({ patients, prescriptions, appointments, on
             {aRes.map(a => (
               <div
                 key={a.id}
-                onClick={() => onNavigate('appointments')}
+                onClick={() => openRecord('appointments', a)}
                 style={{ background: C.card, borderRadius: 10, padding: '10px 12px', marginBottom: 6, cursor: 'pointer' }}
               >
                 <div style={{ color: C.text, fontSize: 13 }}>{a.patient || ''}</div>

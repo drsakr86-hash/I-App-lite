@@ -23,6 +23,9 @@ import { loadCollectionState, submitCollection, collectionSnapshot, selectableAc
 import { waOpen, waReminderText } from "../modules/notifications/index.js";
 import WaitingRoom from "./WaitingRoom.jsx";
 import { t, useLang, dirOf } from "../modules/i18n/index.js";
+import LogoutConfirm from "../components/LogoutConfirm.jsx";
+import { useTabHistory } from "../hooks/use-back.js";
+import { visibleInterval } from "../app/visible-interval.js";
 import { tv } from "../modules/i18n/tv.js";
 import WhatsAppInbox from "./WhatsAppInbox.jsx";
 import { useWaUnread } from "../modules/whatsapp/useWaUnread.js";
@@ -70,6 +73,8 @@ export default function SecretaryApp() {
     }
   });
   const [tab, setTab] = useState("apts");
+  useTabHistory(tab, setTab, id => ["apts", "requests", "waiting", "stats", "whatsapp"].includes(id)); // back returns to the previous tab
+  const [askLogout, setAskLogout] = useState(false);
   const [showReminders, setShowReminders] = useState(false);
   const [requests, setRequests] = useState([]);
   const waUnread = useWaUnread(!!session);
@@ -203,9 +208,9 @@ export default function SecretaryApp() {
     } catch (e) {
       channel = null;
     }
-    const iv = setInterval(loadData, 5000);
+    const stopPoll = visibleInterval(loadData, 5000); // paused while hidden; refreshes at once on return
     return () => {
-      clearInterval(iv);
+      stopPoll();
       if (channel) {
         try {
           getSB().removeChannel(channel);
@@ -324,6 +329,7 @@ export default function SecretaryApp() {
     setSession(s);
   };
   const handleLogout = () => {
+    setAskLogout(false);
     try {
       localStorage.removeItem("iapp_session");
     } catch { /* storage unavailable (private mode / quota): non-fatal */ }
@@ -361,7 +367,7 @@ export default function SecretaryApp() {
           <button onClick={() => setModal("add")} style={{ background: `linear-gradient(135deg,${C.accent},${C.teal})`, border: "none", borderRadius: 10, padding: "8px 12px", color: C.bg, fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>{t("g5.sec.new", lang)}</button>
           <ThemeToggle />
           <button onClick={loadData} title={t("g5.sec.refresh", lang)} aria-label={t("g5.sec.refresh", lang)} style={{ background: "transparent", border: "1px solid " + C.border, borderRadius: 10, padding: "8px 10px", color: C.muted, fontSize: 14, cursor: "pointer" }}>🔄</button>
-          <button onClick={handleLogout} title={t("g5.sec.logout", lang)} aria-label={t("g5.sec.logout", lang)} style={{ background: "transparent", border: "1px solid " + C.border, borderRadius: 10, padding: "8px 10px", color: C.danger, fontSize: 14, cursor: "pointer" }}>⏻</button>
+          <button onClick={() => setAskLogout(true)} title={t("g5.sec.logout", lang)} aria-label={t("g5.sec.logout", lang)} style={{ background: "transparent", border: "1px solid " + C.border, borderRadius: 10, padding: "8px 10px", color: C.danger, fontSize: 14, cursor: "pointer" }}>⏻</button>
         </div>
       </div>
 
@@ -569,6 +575,7 @@ export default function SecretaryApp() {
           <CollectModal apt={collectApt} prices={prices} finance={finState ? { accounts: accountsForClinic(finState.accounts, collectApt.clinic), snapshot: collectionSnapshot(finState, collectApt) } : null} onSave={finState ? handleSaveFinanceCollect : handleSaveCollect} onClose={() => setCollectApt(null)} />
         </Modal>
       )}
+      {askLogout && <LogoutConfirm onOk={handleLogout} onNo={() => setAskLogout(false)} />}
       {toast && <Toast msg={toast} onDone={() => setToast(null)} />}
     </div>
   );
