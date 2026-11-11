@@ -9,6 +9,7 @@ import { logAudit } from '../../modules/sync/index.js';
 import { requestAuditDetail } from '../../modules/secretary-app/model.js';
 import { t, useLang } from '../../modules/i18n/index.js';
 import { tv } from '../../modules/i18n/tv.js';
+import { askConfirm } from '../../modules/ui/dialogs.js';
 
 const POLL_MS = 15000;
 
@@ -54,7 +55,7 @@ export default function PendingRequests() {
 
   const reject = async r => {
     if (busy) return;
-    if (!window.confirm(t('g5.req.rejectConfirm', lang, { name: r.patient_name }))) return;
+    if (!await askConfirm(t('g5.req.rejectConfirm', lang, { name: r.patient_name }))) return;
     setBusy(r.id); setNote('');
     const res = await rejectBookingRequest(deps, r);
     setNote(res.message);

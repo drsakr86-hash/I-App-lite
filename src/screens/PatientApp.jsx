@@ -20,6 +20,7 @@ import { t, useLang, dirOf } from "../modules/i18n/index.js";
 import { useTabHistory } from "../hooks/use-back.js";
 import { visibleInterval } from "../app/visible-interval.js";
 import { tv } from "../modules/i18n/tv.js";
+import { notify } from '../modules/ui/dialogs.js';
 
 // "⭐ قيّم زيارتك" modal body (only used inside PatientApp).
 // QUIRK: "لاحقاً" calls the same onDone as a successful submit, so skipping
@@ -151,7 +152,7 @@ export default function PatientApp({ patient, onLogout }) {
   const doBook = async () => {
     const err = bookFormError(bookForm);
     if (err) {
-      alert(err);
+      notify(err);
       return;
     }
     if (bookingLock.current) return;
@@ -164,19 +165,19 @@ export default function PatientApp({ patient, onLogout }) {
       const { error } = await sb.from(BOOKING_TABLE).insert(row);
       if (error) {
         if (isDuplicateBookingError(error)) {
-          alert(t('g6.pa.dupMsg', lang));
+          notify(t('g6.pa.dupMsg', lang));
           setBookForm(clearBookTime);
           setSlotsVersion(x => x + 1);
         } else if (isBookingRateLimitError(error)) {
-          alert(t('g6.pa.rateMsg', lang));
+          notify(t('g6.pa.rateMsg', lang));
         } else {
-          alert(t('g6.pa.failedMsg', lang));
+          notify(t('g6.pa.failedMsg', lang));
         }
       } else {
         setBookDone(true);
       }
     } catch (e) {
-      alert(t('g6.pa.failedMsg', lang));
+      notify(t('g6.pa.failedMsg', lang));
     } finally {
       bookingLock.current = false;
       setBooking(false);

@@ -24,3 +24,5 @@ jobs:
       - run: npm run test:smoke:accounting
       - run: npm run build
       - run: npm run verify:dist
+      # Real-browser tests on the built app (uses the runner's preinstalled Chrome; fully offline, seeded fake data).
+      - run: npm run test:e2e

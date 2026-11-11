@@ -12,6 +12,7 @@ import { getSB } from '../../modules/data-access/index.js';
 import { logError } from '../../services/logger.js';
 import { t, useLang, dirOf } from '../../modules/i18n/index.js';
 import { tv } from '../../modules/i18n/tv.js';
+import { notify } from '../../modules/ui/dialogs.js';
 
 const STEP_KEYS = { 'بياناتك': 'details', 'العيادة': 'clinic', 'التاريخ': 'date', 'الوقت': 'time', 'تأكيد': 'confirm' };
 
@@ -149,7 +150,7 @@ export default function BookingForm({ patient, bookForm, setBookForm, booking, o
             onClick={() => {
               const err = guestInfoError(bookForm);
               if (err) {
-                alert(err);
+                notify(err);
                 return;
               }
               setStep(2);

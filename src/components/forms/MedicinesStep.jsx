@@ -9,6 +9,7 @@ import {
   loadRxTemplates, refreshRxTemplates, addRxTemplate, deleteRxTemplate
 } from '../../modules/prescriptions/index.js';
 import { parseMedicines, serializeMedicines, medicinesTextForTemplate } from './medicines-step-model.js';
+import { askConfirm, notify } from '../../modules/ui/dialogs.js';
 
 // The "medicines" step of RxForm's 3-step wizard: a drug picker (with a
 // custom-drug list stored locally), a dosing-frequency chooser, and a small
@@ -52,12 +53,12 @@ export default function MedicinesStep({ medicines, onChange }) {
     setNewDrug('');
     setAddingNew(false);
   };
-  const handleDeleteDrug = drugName => {
+  const handleDeleteDrug = async drugName => {
     if (DEFAULT_DRUGS.includes(drugName)) {
-      alert(t('g2.meds.cantDeleteDefault', lang));
+      notify(t('g2.meds.cantDeleteDefault', lang));
       return;
     }
-    if (!window.confirm(t('g2.meds.confirmDelDrug', lang, { name: drugName }))) return;
+    if (!await askConfirm(t('g2.meds.confirmDelDrug', lang, { name: drugName }))) return;
     deleteDrug(drugName);
     setDrugList(loadDrugs());
   };
@@ -77,13 +78,13 @@ export default function MedicinesStep({ medicines, onChange }) {
           onClick: async () => {
             const txt = medicinesTextForTemplate(meds);
             if (!txt) {
-              alert(t('g2.meds.addFirst', lang));
+              notify(t('g2.meds.addFirst', lang));
               return;
             }
             const name = window.prompt(t('g2.meds.tplNamePrompt', lang));
             if (!name || !name.trim()) return;
             const next = await addRxTemplate({ name: name.trim(), medicines: txt });
-            if (next) setTemplates(next); else alert(t('g2.meds.tplSaveFail', lang));
+            if (next) setTemplates(next); else notify(t('g2.meds.tplSaveFail', lang));
           },
           style: { color: C.teal, fontSize: 11, cursor: 'pointer', background: C.teal + '22', borderRadius: 8, padding: '3px 9px' }
         }, t('g2.meds.saveAsTpl', lang))
@@ -104,7 +105,7 @@ export default function MedicinesStep({ medicines, onChange }) {
               }, tpl.name),
               React.createElement('span', {
                 onClick: async () => {
-                  if (!window.confirm(t('g2.meds.confirmDelTpl', lang, { name: tpl.name }))) return;
+                  if (!await askConfirm(t('g2.meds.confirmDelTpl', lang, { name: tpl.name }))) return;
                   const next = await deleteRxTemplate(tpl.id);
                   if (next) setTemplates(next);
                 },

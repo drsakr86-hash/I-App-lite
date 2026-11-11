@@ -12,6 +12,7 @@
 //  * no automatic retry of any write.
 
 import { t } from '../i18n/index.js';
+import { friendlyError } from '../errors/friendly.js';
 
 const errText = e => (e && (e.message || e.hint || e.details)) || String(e || 'error');
 
@@ -165,6 +166,6 @@ export async function resyncInvestigationRequest(deps, rec, patient) {
     return { status: 'synced', steps, patch };
   } catch (e) {
     steps.push({ name: 'core', ok: false, error: errText(e) });
-    return { status: 'failed', message: t('g1.req.syncFailed') + ': ' + errText(e), steps };
+    return { status: 'failed', message: t('g1.req.syncFailed') + ': ' + friendlyError(e), steps };
   }
 }

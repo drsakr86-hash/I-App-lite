@@ -3,6 +3,7 @@ import { C } from '../../modules/theme/index.js';
 import { Field, XRAY_ICON, inp } from '../../modules/ui/atoms.jsx';
 import { t, useLang } from '../../modules/i18n/index.js';
 import { tv } from '../../modules/i18n/tv.js';
+import { askConfirm } from '../../modules/ui/dialogs.js';
 
 // Patient file — "images" tab. Presentational port of the legacy PatientFile JSX;
 // all state and handlers come from the legacy function through ctx.
@@ -257,8 +258,8 @@ export default function ImagesTab({ ctx }) {
                   </div>
                 )}
                 <div
-                  onClick={() => {
-                    if (window.confirm(t("g1.img.delConfirm", lang))) delImage(img.id);
+                  onClick={async () => {
+                    if (await askConfirm(t("g1.img.delConfirm", lang))) delImage(img.id);
                   }}
                   style={{
                     flex: img.src ? 0 : 1,

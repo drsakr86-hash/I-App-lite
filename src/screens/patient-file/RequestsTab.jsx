@@ -7,6 +7,7 @@ import { getRadiologyHTML, printDoc } from '../../modules/print/index.js';
 import { GAP_LABEL, BASIS_LABEL } from '../../modules/patient-file/investigation-links.js';
 import { t, useLang } from '../../modules/i18n/index.js';
 import { tv } from '../../modules/i18n/tv.js';
+import { notify } from '../../modules/ui/dialogs.js';
 
 const GROUP_LABEL = { pending: ['ds-badge--warn', 'status.pending'], done: ['ds-badge--ok', 'status.done'], cancelled: ['ds-badge--mute', 'status.cancelled'], other: ['ds-badge--info', 'status.other'] };
 
@@ -174,7 +175,7 @@ export default function RequestsTab({ ctx }) {
             outline
             onClick={() => {
               const html = getRadiologyHTML(requestTests, curPatient, requestNotes, primaryDoctor, allRequestTests, clinic);
-              if (Object.keys(requestTests).length) printDoc(html);else alert(t("g1.req.pickFirst", lang));
+              if (Object.keys(requestTests).length) printDoc(html);else notify(t("g1.req.pickFirst", lang));
             }}
           >
             🖨️ {t("common.print", lang)}

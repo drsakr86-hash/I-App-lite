@@ -14,6 +14,7 @@ import { loadHidden, hideFollowUp, unhideFollowUp } from '../modules/followups/h
 import { t, useLang } from '../modules/i18n/index.js';
 import { useBackClose } from '../hooks/use-back.js';
 import { tv } from '../modules/i18n/tv.js';
+import { askConfirm } from '../modules/ui/dialogs.js';
 
 export default function FollowUpCentre({ visits, patients, onClose, onPatientClick }) {
   const lang = useLang();
@@ -39,7 +40,7 @@ export default function FollowUpCentre({ visits, patients, onClose, onPatientCli
 
   // Never retried automatically: on failure the card stays and a message is shown.
   const hide = async (type, v) => {
-    if (type === 'dismissed' && !window.confirm(t('g5.fu.dismissConfirm', lang, { name: v.patientName }))) return;
+    if (type === 'dismissed' && !await askConfirm(t('g5.fu.dismissConfirm', lang, { name: v.patientName }))) return;
     const k = followUpKey(v.patientId, v.nextVisit);
     setBusy(k); setErr('');
     const rec = await hideFollowUp(type, v);

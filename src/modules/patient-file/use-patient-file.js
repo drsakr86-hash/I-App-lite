@@ -34,6 +34,8 @@ import { buildLongitudinal } from './longitudinal.js';
 import { buildInvestigationLinks } from './investigation-links.js';
 import { logError } from '../../services/logger.js';
 import { t } from '../i18n/index.js';
+import { askConfirm } from '../ui/dialogs.js';
+import { friendlyError } from '../errors/friendly.js';
 
 const CLD_CLOUD = 'daihhusnc';
 const CLD_PRESET = 'iapp_clinic';
@@ -41,7 +43,7 @@ const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 const dirtyModalMsg = () => t('g1.hook.dirtyConfirm');
 
 const isCoreOnly = rec => !!rec && Array.isArray(rec._sources) && rec._sources.length > 0 && !rec._sources.includes('legacy');
-const errMsg = e => (e && (e.message || e.hint)) || String(e || t('g1.hook.unknownError'));
+const errMsg = e => friendlyError((e && (e.message || e.hint)) || String(e || t('g1.hook.unknownError')));
 
 export function usePatientFile({
   patient, allExams, allRx, allVisits, onClose, onUpdatePatient,
@@ -75,13 +77,20 @@ export function usePatientFile({
   }, []);
 
   // ---- modal handling with unsaved-changes protection ------------------------
+  const askingClose = useRef(false);
   const setModal = useCallback(next => {
-    if (next === null) {
-      if (modalDirty.current && !window.confirm(dirtyModalMsg())) return;
-      modalDirty.current = false;
-    } else {
-      modalDirty.current = false;
+    if (next === null && modalDirty.current) {
+      if (askingClose.current) return; // the question is already on screen (double ESC / back + ×)
+      askingClose.current = true;
+      askConfirm(dirtyModalMsg()).then(ok => {
+        askingClose.current = false;
+        if (!ok) return;
+        modalDirty.current = false;
+        setModalRaw(null);
+      });
+      return;
     }
+    modalDirty.current = false;
     setModalRaw(next);
   }, []);
   const closeModalClean = useCallback(() => { modalDirty.current = false; setModalRaw(null); }, []);
@@ -514,9 +523,9 @@ export function usePatientFile({
     });
   };
 
-  const onDeleteRx = rx => {
+  const onDeleteRx = async rx => {
     if (isCoreOnly(rx)) { report('failed', t('g1.hook.rxCoreOnly')); return; }
-    if (!window.confirm(t('g1.hook.rxTrashConfirm'))) return;
+    if (!await askConfirm(t('g1.hook.rxTrashConfirm'))) return;
     exclusive('delrx:' + rx.id, async () => {
       try {
         await trashPut('iapp_prescriptions', rx, 'روشتة');

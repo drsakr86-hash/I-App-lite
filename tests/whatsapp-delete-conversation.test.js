@@ -19,7 +19,7 @@ test('SQL: admin only, active chats refused, audited, not callable by anon', () 
 test('service and UI: delete is wired, admin only, behind a confirm', () => {
   assert.match(svc, /deleteConv = id => rpc\('wa_staff_delete_conversation'/);
   assert.match(ui, /session\.role === 'admin' && <button[^>]*onClick=\{removeConv\}/);
-  assert.match(ui, /window\.confirm\(t\('g9\.wa\.deleteConfirm'/);
+  assert.match(ui, /askConfirm\(t\('g9\.wa\.deleteConfirm'/);
 });
 
 test('both languages have the delete strings', () => {

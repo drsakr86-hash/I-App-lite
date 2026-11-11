@@ -6,6 +6,7 @@ import { inp } from '../modules/ui/atoms.jsx';
 import { broadcastCall, callChannel } from '../modules/realtime/index.js';
 import { t, useLang } from '../modules/i18n/index.js';
 import { tv } from '../modules/i18n/tv.js';
+import { askConfirm } from '../modules/ui/dialogs.js';
 
 const clinicName = c => tv(clinicLabel(c));
 
@@ -99,12 +100,12 @@ export default function WaitingRoom({ apts, today, onUpdateApt, onCollect, docto
     onUpdateApt(upd);
     broadcastCall(upd);
   };
-  const cancelStatus = a => {
-    if (!window.confirm(t('g5.wait.confirmCancelStatus', lang, { name: a.patient }))) return;
+  const cancelStatus = async a => {
+    if (!await askConfirm(t('g5.wait.confirmCancelStatus', lang, { name: a.patient }))) return;
     return go(a, 'cancelStatus');
   };
   const closeStale = async () => {
-    if (!window.confirm(t('g5.wait.confirmCloseStale', lang, { n: stale.length }))) return;
+    if (!await askConfirm(t('g5.wait.confirmCloseStale', lang, { n: stale.length }))) return;
     for (const a of stale) await onUpdateApt(transitions.cancelArrival(a));
   };
 

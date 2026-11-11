@@ -21,6 +21,8 @@ import { singleImagingOrderParams as imagingSingleOrderParams } from "../modules
 import { logError } from "../services/logger.js";
 import { t, useLang, dirOf, getLang } from "../modules/i18n/index.js";
 import { tv } from "../modules/i18n/tv.js";
+import { askConfirm, notify } from '../modules/ui/dialogs.js';
+import { friendlyError } from '../modules/errors/friendly.js';
 
 export default function ImagingCenter({ patients, primary, clinic }) {
   const lang = useLang();
@@ -135,11 +137,11 @@ export default function ImagingCenter({ patients, primary, clinic }) {
   };
   const saveStudy = async () => {
     if (!selectedPatient) {
-      alert(t('g6.img.pickPatient', lang));
+      notify(t('g6.img.pickPatient', lang));
       return;
     }
     if (!files.length && !report.trim() && !notes.trim()) {
-      alert(t('g6.img.addContent', lang));
+      notify(t('g6.img.addContent', lang));
       return;
     }
     setUploading(true);
@@ -247,20 +249,20 @@ export default function ImagingCenter({ patients, primary, clinic }) {
         try { localStorage.removeItem("iapp_pending_core_imaging_order"); } catch (_) { /* storage unavailable (private mode / quota): non-fatal */ }
       }
       if (coreSyncError && coreSyncError !== "offline") {
-        alert(t('g6.img.savedSyncFailed', lang, { err: coreSyncError }));
+        notify(t('g6.img.savedSyncFailed', lang, { err: friendlyError(coreSyncError, lang) }));
       } else if (coreSyncError === "offline") {
-        alert(t('g6.img.savedOffline', lang));
+        notify(t('g6.img.savedOffline', lang));
       } else {
-        alert(t('g6.img.savedDone', lang));
+        notify(t('g6.img.savedDone', lang));
       }
     } catch (e) {
-      alert(t('g6.img.saveFailed', lang, { msg: e.message }));
+      notify(t('g6.img.saveFailed', lang, { msg: friendlyError(e, lang) }));
     } finally {
       setUploading(false);
     }
   };
   const deleteStudy = async id => {
-    if (!confirm(t('g6.img.confirmDelete', lang))) return;
+    if (!await askConfirm(t('g6.img.confirmDelete', lang))) return;
     const remote = await sbGet("iapp_imaging_studies");
     const base = Array.isArray(remote) ? remote : studies;
     const target = base.find(x => x.id === id);

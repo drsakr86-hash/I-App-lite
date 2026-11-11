@@ -16,6 +16,8 @@ import { t, useLang } from '../modules/i18n/index.js';
 import { tv } from '../modules/i18n/tv.js';
 import DataTools from '../components/DataTools.jsx';
 import { getUsers } from '../modules/auth/staff-login.js';
+import { notify } from '../modules/ui/dialogs.js';
+import { friendlyError } from '../modules/errors/friendly.js';
 
 export default function Settings({
   patients, appointments, prescriptions, exams, visits, doctors, setDoctors, prices, setPrices,
@@ -86,7 +88,7 @@ export default function Settings({
     const decision = canDeleteUser(cur, id, session.id);
     if (decision.action === 'ignore') return;
     if (decision.action === 'blocked') {
-      alert(lastAdminDeleteAlert());
+      notify(lastAdminDeleteAlert());
       return;
     }
     setUsers(decision.next);
@@ -111,7 +113,7 @@ export default function Settings({
     }
     const upd = await sb.auth.updateUser({ password: pwForm.new1 });
     if (upd.error) {
-      setPwMsg({ err: '❌ ' + (upd.error.message || t('g4.settings.pwChangeFail')) });
+      setPwMsg({ err: '❌ ' + (upd.error.message ? friendlyError(upd.error) : t('g4.settings.pwChangeFail')) });
       return;
     }
     setPwMsg({ ok: t('g4.settings.pwOk') });
@@ -147,7 +149,7 @@ export default function Settings({
       document.body.removeChild(link);
       setTimeout(() => URL.revokeObjectURL(url), 3000);
     } catch (e) {
-      alert(t('g4.settings.exportFail', { msg: e.message }));
+      notify(t('g4.settings.exportFail', { msg: friendlyError(e) }));
     }
   };
 
@@ -167,7 +169,7 @@ export default function Settings({
     };
     img.onerror = () => {
       URL.revokeObjectURL(url);
-      alert(t('g4.settings.imgReadFail'));
+      notify(t('g4.settings.imgReadFail'));
     };
     img.src = url;
     e.target.value = '';

@@ -10,10 +10,11 @@
 // every destination that was attempted succeeded.
 
 import { t } from '../i18n/index.js';
+import { friendlyError } from '../errors/friendly.js';
 
 export const SAVE_KINDS = Object.freeze(['saving', 'retrying', 'saved', 'local-only', 'partial', 'failed', 'invalid']);
 
-const coreText = e => (e && e !== 'offline' ? ` (${String(e).slice(0, 120)})` : '');
+const coreText = e => (e && e !== 'offline' ? ` (${friendlyError(e).slice(0, 120)})` : '');
 
 export function interpretSaveResult(what, r) {
   if (r == null || typeof r !== 'object') {

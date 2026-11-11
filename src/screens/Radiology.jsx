@@ -13,6 +13,7 @@ import { Field, inp } from '../modules/ui/atoms.jsx';
 import { sbGet } from '../modules/sync/wiring.js';
 import { localISO } from '../modules/constants/misc.js';
 import { getRadiologyHTML, printDoc } from '../modules/print/index.js';
+import { notify } from '../modules/ui/dialogs.js';
 
 export default function Radiology({ patients, customTests, setCustomTests, setExams, primary, clinic }) {
   const lang = useLang();
@@ -60,11 +61,11 @@ export default function Radiology({ patients, customTests, setCustomTests, setEx
 
   const saveRequest = async () => {
     if (selectedIds.length === 0) {
-      alert(t('g6.rad.pickOne', lang));
+      notify(t('g6.rad.pickOne', lang));
       return;
     }
     if (!selectedPatient) {
-      alert(t('g6.rad.pickPatient', lang));
+      notify(t('g6.rad.pickPatient', lang));
       return;
     }
     const tests = buildRequestedTests(allTests, selected);

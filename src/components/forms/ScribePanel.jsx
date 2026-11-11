@@ -5,6 +5,7 @@ import { useLang, t } from '../../modules/i18n/index.js';
 import { localISO } from '../../modules/constants/misc.js';
 import { draftRows, defaultSelection, applyDraft, formatClock, SCRIBE_MAX_SECONDS } from '../../modules/ai-scribe/model.js';
 import { recorderSupported, startRecording, analyzeRecording } from '../../modules/ai-scribe/service.js';
+import { friendlyError } from '../../modules/errors/friendly.js';
 
 // AI scribe card at the top of ExamForm: record -> server draft -> doctor ticks rows -> applied to the form.
 // Nothing is stored here; the exam is saved only by the form's own save button.
@@ -45,7 +46,7 @@ export default function ScribePanel({ form, onApply }) {
       const d = await analyzeRecording(blob, localISO());
       const rs = draftRows(formRef.current, d);
       setDraft(d); setRows(rs); setSel(defaultSelection(rs)); setPhase('review');
-    } catch (e) { setErr(e && e.message ? e.message : String(e)); setPhase('error'); }
+    } catch (e) { setErr(friendlyError(e, lang)); setPhase('error'); }
   }
   const apply = () => {
     const res = applyDraft(formRef.current, rows, sel, { model: draft && draft.model, at: new Date().toISOString() });

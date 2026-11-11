@@ -206,10 +206,12 @@ test('a modal with unsaved edits asks before closing; a clean one closes', async
   act(() => h.ctx.setModal('addExam'));
   act(() => h.ctx.markModalDirty());
   act(() => h.ctx.setModal(null));
+  await settle();                              // the question is asynchronous now (in-app dialog)
   assert.equal(asked, 1);
   assert.equal(h.ctx.modal, 'addExam');       // user declined: stays open
   globalThis.window.confirm = () => true;
   act(() => h.ctx.setModal(null));
+  await settle();
   assert.equal(h.ctx.modal, null);
   h.unmount();
 });

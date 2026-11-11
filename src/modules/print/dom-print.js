@@ -4,6 +4,7 @@
 // any other legacy state, so they move as a self-contained trio.
 
 import { t } from '../i18n/index.js';
+import { notify } from '../ui/dialogs.js';
 
 export function whenPrintReady(doc, cb) {
   let done = false;
@@ -86,7 +87,7 @@ export function printViaIframe(html) {
       fw.focus();
       fw.print();
     } catch (e) {
-      alert(t('g7.print.printFailed'));
+      notify(t('g7.print.printFailed'));
     }
     setTimeout(() => {
       try {

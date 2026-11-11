@@ -6,6 +6,7 @@
 import { clinicLabel } from '../constants/clinics.js';
 import { t } from '../i18n/index.js';
 import { tv } from '../i18n/tv.js';
+import { notify } from '../ui/dialogs.js';
 
 // normPhone (the generic phone-digit normalizer) is used all over
 // app-runtime.js well outside this batch's scope (patient search, patient
@@ -28,7 +29,7 @@ function waNumber(phone) {
 export function waOpen(phone, text) {
   const n = waNumber(phone);
   if (!n) {
-    alert(t('g5.wa.noPhone'));
+    notify(t('g5.wa.noPhone'));
     return false;
   }
   window.open('https://wa.me/' + n + '?text=' + encodeURIComponent(text), '_blank');

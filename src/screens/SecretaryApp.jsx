@@ -32,6 +32,8 @@ import { useWaUnread } from "../modules/whatsapp/useWaUnread.js";
 import { useWaWaiting } from "../modules/whatsapp/useWaWaiting.js";
 import WaWaitingBanner from "../components/WaWaitingBanner.jsx";
 import { waTabLabel } from "../modules/whatsapp/model.js";
+import { askConfirm, notify } from '../modules/ui/dialogs.js';
+import { friendlyError } from '../modules/errors/friendly.js';
 
 const clinicName = c => tv(clinicLabel(c));
 
@@ -175,7 +177,7 @@ export default function SecretaryApp() {
     setReqBusy(null);
   };
   const rejectRequest = async r => {
-    if (!window.confirm(t("g5.sec.rejectConfirm", lang, { name: r.patient_name }))) return;
+    if (!await askConfirm(t("g5.sec.rejectConfirm", lang, { name: r.patient_name }))) return;
     setReqBusy(r.id);
     try {
       const res = await getSB().from(BOOKING_TABLE).update({
@@ -225,7 +227,7 @@ export default function SecretaryApp() {
     if (res.ok) {
       setAptsState(res.data);
       setToast(okMsg || t("g5.sec.toastSaved", lang));
-    } else alert(mutateErrorMessage(res.error));
+    } else notify(mutateErrorMessage(res.error));
     return res.ok;
   };
   const markReminded = a => mutateApts(list => markRemindedIn(list, a.id, localISO()), null, t("g5.sec.toastReminded", lang));
@@ -277,10 +279,10 @@ export default function SecretaryApp() {
     try {
       r = await submitCollection(finState, { apt, cost, collected, method, accountId, paymentId: collectPayId.current }, { by: session.name || session.username, role: session.role });
     } catch (e) {
-      alert(e instanceof FinanceError ? t("g8.err." + e.code, lang) : String(e && e.message || e));
+      notify(e instanceof FinanceError ? t("g8.err." + e.code, lang) : friendlyError(e, lang));
       return;
     }
-    if (!r.ok) { alert(t("g8.collect.commitFailed", lang)); return; }
+    if (!r.ok) { notify(t("g8.collect.commitFailed", lang)); return; }
     await mirrorLegacy(apt, r.plan.mirror.cost, r.plan.mirror.paid);
     finishCollect(apt, r.plan.mirror.cost, r.plan.mirror.paid);
     // a part payment: say so (the legacy flag is only true when everything is paid)
@@ -473,7 +475,7 @@ export default function SecretaryApp() {
                   {a.phone && <a href={"tel:" + a.phone} title={t("g5.sec.call", lang)} aria-label={t("g5.sec.call", lang)} style={{ background: C.teal + "22", border: "1px solid " + C.teal + "33", borderRadius: 8, padding: "7px 12px", color: C.teal, fontSize: 14, textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "center" }}>📞</a>}
                   <div onClick={() => setCollectApt(a)} style={{ flex: "1 1 70px", background: a.paid ? C.success + "22" : C.gold + "22", border: "1px solid " + (a.paid ? C.success : C.gold), borderRadius: 8, padding: "7px 0", color: a.paid ? C.success : C.gold, fontSize: 11, fontWeight: 700, cursor: "pointer", textAlign: "center" }}>{"💰 "}{a.paid ? (a.cost || "") + t("g5.unit.egpShort", lang) : balMap[a.id] ? t("g5.sec.partialLabel", lang, { paid: fmtMinor(balMap[a.id].paid), cost: fmtMinor(balMap[a.id].fee) }) : t("g5.sec.collect", lang)}</div>
                   <div onClick={() => setModal({ edit: a })} title={t("g5.sec.edit", lang)} aria-label={t("g5.sec.edit", lang)} style={{ background: C.accent + "22", border: "1px solid " + C.accent + "33", borderRadius: 8, padding: "7px 12px", color: C.accent, fontSize: 14, cursor: "pointer" }}>✏️</div>
-                  {session.role === "admin" && <div onClick={() => { if (window.confirm(t("g5.sec.deleteConfirm", lang, { name: a.patient }))) deleteApt(a.id); }} title={t("g5.sec.delete", lang)} aria-label={t("g5.sec.delete", lang)} style={{ background: C.danger + "22", border: "1px solid " + C.danger + "33", borderRadius: 8, padding: "7px 12px", color: C.danger, fontSize: 14, cursor: "pointer" }}>🗑️</div>}
+                  {session.role === "admin" && <div onClick={async () => { if (await askConfirm(t("g5.sec.deleteConfirm", lang, { name: a.patient }))) deleteApt(a.id); }} title={t("g5.sec.delete", lang)} aria-label={t("g5.sec.delete", lang)} style={{ background: C.danger + "22", border: "1px solid " + C.danger + "33", borderRadius: 8, padding: "7px 12px", color: C.danger, fontSize: 14, cursor: "pointer" }}>🗑️</div>}
                 </div>
               </div>
             ))}

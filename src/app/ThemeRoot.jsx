@@ -3,6 +3,7 @@ import { useTheme } from '../modules/theme/index.js';
 import { useLang } from '../modules/i18n/index.js';
 import UnifiedErrorBoundary from './UnifiedErrorBoundary.jsx';
 import UnifiedRouter from './UnifiedRouter.jsx';
+import DialogHost from '../components/DialogHost.jsx';
 
 // Exact port of the legacy runtime's ThemeRoot (public/legacy/app-runtime.js).
 export default function ThemeRoot() {
@@ -11,6 +12,7 @@ export default function ThemeRoot() {
   return (
     <UnifiedErrorBoundary>
       <UnifiedRouter key={lang} />
+      <DialogHost />
     </UnifiedErrorBoundary>
   );
 }

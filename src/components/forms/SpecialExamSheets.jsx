@@ -7,6 +7,7 @@ import {
   specialSummary
 } from '../../modules/special-exam/model.js';
 import { suggest, workupLine } from '../../modules/special-exam/ddx.js';
+import { askConfirm } from '../../modules/ui/dialogs.js';
 
 const chip = (active, color) => ({
   minHeight: 40, padding: '6px 12px', borderRadius: 10, cursor: 'pointer', font: 'inherit', fontSize: 12, fontWeight: 700,
@@ -124,8 +125,8 @@ export default function SpecialExamSheets({ value, onChange, plan, onWorkup }) {
   const special = normalizeSpecial(value);
   const active = CASES.filter(c => special[c.id]);
   const inactive = CASES.filter(c => !special[c.id]);
-  const remove = id => {
-    if (!caseIsEmpty(id, special[id]) && !window.confirm(t('g11.sp.removeConfirm', lang))) return;
+  const remove = async id => {
+    if (!caseIsEmpty(id, special[id]) && !await askConfirm(t('g11.sp.removeConfirm', lang))) return;
     const next = { ...special };
     delete next[id];
     onChange(next);

@@ -12,6 +12,7 @@ import { localISO, ROLE_LABEL } from '../modules/constants/misc.js';
 import { t, useLang } from '../modules/i18n/index.js';
 import { tv } from '../modules/i18n/tv.js';
 import { findDuplicatePatients, mergePatients, restoreSnapshot, trashRestore, trashDrop } from '../modules/datatools/index.js';
+import { askConfirm, notify } from '../modules/ui/dialogs.js';
 
 export default function DataTools({ isAdmin }) {
   const lang = useLang();
@@ -76,7 +77,7 @@ export default function DataTools({ isAdmin }) {
     const file = e.target.files && e.target.files[0];
     e.target.value = '';
     if (!file) return;
-    if (!window.confirm(t('g4.dt.importConfirm', lang))) return;
+    if (!await askConfirm(t('g4.dt.importConfirm', lang))) return;
     setBusy('import');
     try {
       const text = await file.text();
@@ -87,7 +88,7 @@ export default function DataTools({ isAdmin }) {
         note(res.error || t('g4.dt.restoreFail', lang), true);
         return;
       }
-      alert(t('g4.dt.importOk', lang, { n: res.count }));
+      await notify(t('g4.dt.importOk', lang, { n: res.count })); // reload only after the user has read it
       location.reload();
     } catch (err) {
       setBusy('');
@@ -95,7 +96,7 @@ export default function DataTools({ isAdmin }) {
     }
   };
   const restoreBackup = async b => {
-    if (!window.confirm(t('g4.dt.restoreBackupConfirm', lang, { date: fmt(b.at) }))) return;
+    if (!await askConfirm(t('g4.dt.restoreBackupConfirm', lang, { date: fmt(b.at) }))) return;
     setBusy('restore');
     const res = await restoreSnapshot(b.data, t('g4.dt.restoreLabel', 'ar', { date: fmt(b.at) }));
     setBusy('');
@@ -103,7 +104,7 @@ export default function DataTools({ isAdmin }) {
       note(res.error || t('g4.dt.restoreFail', lang), true);
       return;
     }
-    alert(t('g4.dt.restoreOk', lang));
+    await notify(t('g4.dt.restoreOk', lang));
     location.reload();
   };
   const downloadBackup = b => {
@@ -140,7 +141,7 @@ export default function DataTools({ isAdmin }) {
     } else note(t('g4.dt.restoreFail', lang), true);
   };
   const doDropTrash = async en => {
-    if (!window.confirm(t('g4.dt.dropConfirm', lang))) return;
+    if (!await askConfirm(t('g4.dt.dropConfirm', lang))) return;
     await trashDrop(en.id);
     setTrash(list => (list || []).filter(x => x.id !== en.id));
     logAudit(t('g4.audit.trashDrop', 'ar'), en.label || en.storeKey);
@@ -303,7 +304,7 @@ export default function DataTools({ isAdmin }) {
                     {p.patientCode || '—'} · {p.phone || t('g4.dt.noPhone', lang)} · {p.name}{idx === 0 ? t('g4.dt.primaryTag', lang) : ''}
                   </span>
                   {idx > 0 && btn(C.gold, async () => {
-                    if (!window.confirm(t('g4.dt.mergeConfirm', lang, { from: p.patientCode || '', to: g[0].patientCode || '' }))) return;
+                    if (!await askConfirm(t('g4.dt.mergeConfirm', lang, { from: p.patientCode || '', to: g[0].patientCode || '' }))) return;
                     setBusy('m' + p.id);
                     const ok = await mergePatients(g[0], p);
                     setBusy('');

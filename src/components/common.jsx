@@ -29,6 +29,7 @@ export function Btn({ children, onClick, danger, full, small, outline, color }) 
 // Clicks inside the sheet do not reach the backdrop.
 const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]):not([type="hidden"]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
 let modalSeq = 0;
+const openModals = []; // mount order; only the last (top-most) dialog reacts to ESC / Tab
 export function Modal({ title, onClose, children }) {
   const ref = React.useRef(null);
   const closeRef = React.useRef(onClose);
@@ -43,7 +44,10 @@ export function Modal({ title, onClose, children }) {
       const first = node.querySelector(FOCUSABLE);
       try { (first || node).focus(); } catch { /* element not focusable: non-fatal */ }
     }
+    const me = {};
+    openModals.push(me);
     const onKey = e => {
+      if (openModals[openModals.length - 1] !== me) return; // a dialog opened above this one owns the keyboard
       if (e.key === 'Escape') { e.stopPropagation(); closeRef.current && closeRef.current(); return; }
       if (e.key !== 'Tab' || !ref.current) return;
       const items = Array.from(ref.current.querySelectorAll(FOCUSABLE));
@@ -56,6 +60,8 @@ export function Modal({ title, onClose, children }) {
     document.addEventListener('keydown', onKey, true);
     return () => {
       document.removeEventListener('keydown', onKey, true);
+      const at = openModals.indexOf(me);
+      if (at !== -1) openModals.splice(at, 1);
       try { if (opener && opener.focus && document.contains(opener)) opener.focus(); } catch { /* opener gone: non-fatal */ }
     };
   }, []);

@@ -10,6 +10,8 @@ import {
 import * as svc from '../modules/whatsapp/service.js';
 import { pushStatus, enablePush, disablePush, pushDiagnostics } from '../modules/whatsapp/push.js';
 import { QUICK_REPLIES, applyQuickReply } from '../modules/whatsapp/quickReplies.js';
+import { askConfirm } from '../modules/ui/dialogs.js';
+import { friendlyError } from '../modules/errors/friendly.js';
 
 const POLL_MS = 5000;
 const pill = (color, text, key) => <span key={key} style={{ background: color + '22', color, border: '1px solid ' + color + '44', borderRadius: 20, padding: '2px 8px', fontSize: 10, fontWeight: 700, whiteSpace: 'nowrap' }}>{text}</span>;
@@ -54,7 +56,7 @@ export default function WhatsAppInbox({ session }) {
   useEffect(() => { if (endRef.current && endRef.current.scrollIntoView) endRef.current.scrollIntoView({ block: 'end' }); }, [msgs.length, selId]);
 
   const shown = useMemo(() => filterConversations(state.rows, { filter, search, me, failedIds: state.failedIds }), [state.rows, state.failedIds, filter, search, me]);
-  const act = async fn => { setErr(''); try { await fn(); await loadList(); await loadThread(); } catch (e) { logError('whatsapp.act', e); setErr(e.message || t('g9.wa.error', lang)); } };
+  const act = async fn => { setErr(''); try { await fn(); await loadList(); await loadThread(); } catch (e) { logError('whatsapp.act', e); setErr(e.message ? friendlyError(e, lang) : t('g9.wa.error', lang)); } };
 
   const togglePush = async () => {
     if (pushBusy) return;
@@ -70,23 +72,23 @@ export default function WhatsAppInbox({ session }) {
 
   const toggleErrors = async () => {
     if (errPanel) { setErrPanel(null); return; }
-    try { setErrPanel(buildErrorRows(await svc.loadSystemErrors())); } catch (e) { logError('whatsapp.errors', e); setErr(e.message || t('g9.wa.error', lang)); }
+    try { setErrPanel(buildErrorRows(await svc.loadSystemErrors())); } catch (e) { logError('whatsapp.errors', e); setErr(e.message ? friendlyError(e, lang) : t('g9.wa.error', lang)); }
   };
 
   const removeConv = async () => {
     if (!sel) return;
     if (owner === 'ai') { setErr(t('g9.wa.deleteActive', lang)); return; }
-    if (!window.confirm(t('g9.wa.deleteConfirm', lang))) return;
+    if (!await askConfirm(t('g9.wa.deleteConfirm', lang))) return;
     setErr('');
     try { await svc.deleteConv(sel.id); setSelId(null); await loadList(); }
-    catch (e) { logError('whatsapp.delete', e); setErr(/conversation_active/.test(String(e && e.message)) ? t('g9.wa.deleteActive', lang) : (e.message || t('g9.wa.error', lang))); }
+    catch (e) { logError('whatsapp.delete', e); setErr(/conversation_active/.test(String(e && e.message)) ? t('g9.wa.deleteActive', lang) : (e.message ? friendlyError(e, lang) : t('g9.wa.error', lang))); }
   };
 
   const send = async () => {
     const text = draft.trim(); if (!text || !sel || busy) return;
     setBusy(true); setErr('');
     try { await svc.sendManual(sel.id, text, clientId.current); setDraft(''); clientId.current = newClientId(); await loadThread(); await loadList(); }
-    catch (e) { setErr(e.code === 'WINDOW_CLOSED' ? t('g9.wa.windowClosed', lang) : (t('g9.wa.sendFail', lang) + (e.message ? ': ' + e.message : ''))); }
+    catch (e) { setErr(e.code === 'WINDOW_CLOSED' ? t('g9.wa.windowClosed', lang) : (t('g9.wa.sendFail', lang) + (e.message ? ': ' + friendlyError(e, lang) : ''))); }
     finally { setBusy(false); }
   };
 

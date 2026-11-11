@@ -8,6 +8,7 @@ import { sbGet } from '../modules/sync/wiring.js';
 import { localISO, newId } from '../modules/constants/misc.js';
 import { INJ_KEY, INJ_DRUGS } from '../modules/followups/index.js';
 import { saveInjection, deleteInjection } from '../modules/followups/injections.js';
+import { askConfirm, notify } from '../modules/ui/dialogs.js';
 
 // Intravitreal-injection log shown in the patient file's Visits tab. Exact
 // port of the legacy runtime's InjectionsSection (public/legacy/
@@ -45,7 +46,7 @@ export default function InjectionsSection({ patient }) {
 
   const save = async () => {
     if (!form.drug || !form.date) {
-      alert(t('g2.inj.needDrugDate', lang));
+      notify(t('g2.inj.needDrugDate', lang));
       return;
     }
     setBusy(true);
@@ -54,11 +55,11 @@ export default function InjectionsSection({ patient }) {
     if (next) {
       setList(next.filter(x => x.patientId === patient.id));
       setForm(null);
-    } else alert(t('g2.inj.saveFail', lang));
+    } else notify(t('g2.inj.saveFail', lang));
   };
 
   const del = async x => {
-    if (!window.confirm(t('g2.inj.confirmDel', lang))) return;
+    if (!await askConfirm(t('g2.inj.confirmDel', lang))) return;
     const next = await deleteInjection(x.id, x);
     if (next) setList(next.filter(y => y.patientId === patient.id));
   };

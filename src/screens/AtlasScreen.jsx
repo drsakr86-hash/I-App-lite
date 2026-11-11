@@ -12,6 +12,7 @@ import StampIcon from '../components/atlas/StampGlyph.jsx';
 import AtlasViewer from '../components/atlas/AtlasViewer.jsx';
 import { privateStorageEnabled } from '../services/private-storage.js';
 import { canApproveDrawing } from '../modules/atlas/drawings.js';
+import { askConfirm } from '../modules/ui/dialogs.js';
 // loaded only when the private-storage flag is on and the role may approve (keeps the sync layer out of the plain atlas)
 const AttachDrawing = lazy(() => import('../components/atlas/AttachDrawing.jsx'));
 
@@ -203,7 +204,7 @@ export default function AtlasScreen({ role = null, user = null, context = null, 
           ))}
         </span>
         <button style={btn(false)} disabled={!annotations.length} onClick={() => commit(undo(annotations))}>{t('atlas.undo', lang)}</button>
-        <button style={btn(false)} disabled={!annotations.length} onClick={() => { if (window.confirm(t('atlas.clear.confirm', lang))) commit([]); }}>{t('atlas.clear', lang)}</button>
+        <button style={btn(false)} disabled={!annotations.length} onClick={async () => { if (await askConfirm(t('atlas.clear.confirm', lang))) commit([]); }}>{t('atlas.clear', lang)}</button>
         {plate.blank ? (
           <>
             <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" onChange={addImage} style={{ display: 'none' }} aria-label={t('atlas.bg.add', lang)} />
