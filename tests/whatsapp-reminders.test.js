@@ -87,3 +87,85 @@ test('a reply cut by the token limit is trimmed to its last complete sentence', 
   await run(st, llm, 'عايز حجز');
   assert.doesNotMatch(st.out.at(-1).body, /طلب الحج$/);
 });
+
+// ---- "احجز موعد المتابعة" / "احجز الكشف": the patient is not asked again for what the clinic already knows -----------------------
+import { buildSystemPrompt, isBookButton } from '../supabase/functions/_shared/assistant.js';
+
+const runFlow = async (st, llm, text, flow = {}) => {
+  const env = { store: st, llm, conv: { id: 1 }, contact: { wa_id: WA, consent: 'service', reminders_opt_in: true }, waId: WA, config: st.cfg, now: () => NOW, log: () => {}, flow, unprocessed: [{ id: 50, body: text, kind: 'text' }] };
+  await processConversation(env);
+  return env.flow;
+};
+
+test('follow-up button: name and last-visit clinic come from the reminder; the reply asks only for the day, without the model', async () => {
+  const st = fakeStore(), llm = scriptedLlm([say('x')]);
+  st.reminderContext = async conv => { assert.equal(conv, 1); return { kind: 'followup', name: 'عبدالستار سالم صقر', clinic: 'الرحمانية' }; };
+  const flow = await runFlow(st, llm, 'احجز موعد المتابعه');
+  assert.equal(llm.calls.length, 0);
+  const body = st.out.at(-1).body;
+  assert.match(body, /باسم عبدالستار سالم صقر/);
+  assert.match(body, /عيادة الرحمانية/);
+  assert.match(body, /اليوم/);
+  assert.doesNotMatch(body, /أنهي عيادة|اسم المريض|رقم/);
+  assert.equal(flow.booking_context.clinic, 'الرحمانية');
+  assert.equal(flow.booking_context.name, 'عبدالستار سالم صقر');
+  assert.equal(st.flow.booking_context.kind, 'followup', 'saved with the conversation');
+});
+
+test('follow-up button: unknown clinic -> asks only for the clinic and the day (name already known)', async () => {
+  const st = fakeStore(), llm = scriptedLlm([say('x')]);
+  st.reminderContext = async () => ({ kind: 'checkup', name: 'منى أحمد', clinic: null });
+  const flow = await runFlow(st, llm, 'احجز الكشف');
+  const body = st.out.at(-1).body;
+  assert.match(body, /الكشف الدوري باسم منى أحمد/);
+  assert.match(body, /أنهي عيادة/);
+  assert.doesNotMatch(body, /اسم المريض/);
+  assert.equal(flow.booking_context.clinic, null);
+});
+
+test('follow-up button: placeholder name ("حضرتك") is not used as a name', async () => {
+  const st = fakeStore(), llm = scriptedLlm([say('x')]);
+  st.reminderContext = async () => ({ kind: 'followup', name: 'حضرتك', clinic: 'دمنهور' });
+  const flow = await runFlow(st, llm, 'احجز موعد المتابعة');
+  assert.equal(flow.booking_context.name, null);
+  assert.match(st.out.at(-1).body, /اسم المريض بالكامل/);
+});
+
+test('follow-up button with no reminder found (or a lookup error) falls through to the model', async () => {
+  for (const ctx of [async () => null, async () => { throw new Error('db'); }]) {
+    const st = fakeStore(), llm = scriptedLlm([say('أهلاً بحضرتك')]);
+    st.reminderContext = ctx;
+    await runFlow(st, llm, 'احجز موعد المتابعة');
+    assert.equal(llm.calls.length, 1);
+  }
+});
+
+test('follow-up context reaches the model on the next messages and stops it asking again; it expires', () => {
+  const info = { topics: {} };
+  const config = { clinic_tz: 'Africa/Cairo', booking_mode: 'request' };
+  const ctx = { kind: 'followup', name: 'عبدالستار سالم صقر', clinic: 'الرحمانية', expires_at: new Date(NOW.getTime() + 3600000).toISOString() };
+  const p = buildSystemPrompt({ info, now: NOW, config, flow: { booking_context: ctx } });
+  assert.match(p, /الاسم المسجل "عبدالستار سالم صقر"/);
+  assert.match(p, /العيادة "الرحمانية"/);
+  assert.match(p, /لا تسأله عن الاسم أو العيادة أو رقم التليفون/);
+  const old = buildSystemPrompt({ info, now: NOW, config, flow: { booking_context: { ...ctx, expires_at: new Date(NOW.getTime() - 1).toISOString() } } });
+  assert.doesNotMatch(old, /الاسم المسجل/);
+});
+
+test('follow-up context is cleared once the booking is done', async () => {
+  const st = fakeStore(), llm = scriptedLlm([say('x')]);
+  const flow = {
+    booking_context: { kind: 'followup', name: 'عبدالستار سالم صقر', clinic: 'الرحمانية', expires_at: new Date(NOW.getTime() + 3600000).toISOString() },
+    pending: { kind: 'book', created_msg_id: 10, expires_at: new Date(NOW.getTime() + 3600000).toISOString(), args: { clinic: 'الرحمانية', date: '2026-01-17', time: '16:00', name: 'عبدالستار سالم صقر', type: 'متابعة' } }
+  };
+  const out = await runFlow(st, llm, 'تمام');
+  void out;
+  const after = await runFlow(st, llm, 'تمام', flow);
+  assert.equal(st.created.length, 1);
+  assert.equal(after.booking_context, undefined);
+});
+
+test('book buttons are recognised exactly (not free text)', () => {
+  for (const w of ['احجز موعد المتابعة', 'احجز موعد المتابعه', ' احجز الكشف ']) assert.ok(isBookButton(w), w);
+  for (const w of ['عايز احجز موعد المتابعة بكرة', 'احجز', 'تأكيد الحضور']) assert.ok(!isBookButton(w), w);
+});

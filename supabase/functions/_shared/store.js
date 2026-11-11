@@ -65,6 +65,34 @@ export function createStore(sb) {
     retryPending: () => rpc('wa_retry_pending_statuses'),
     enqueueReminders: () => rpc('wa_enqueue_reminders'),
     confirmFromReminder: conv => rpc('wa_confirm_from_reminder', { p_conv: conv }),     // docs/sql/wa-patient-reminders.sql
+    // Who a follow-up / periodic check-up reminder was about, so its "احجز…" button does not make the patient repeat what the clinic
+    // already knows. Read-only: the reminder's own row (name = template param 1, record = idempotency key) and the patient's latest
+    // visit that has a clinic. Returns null when there is no delivered reminder of that kind in the last 14 days.
+    async reminderContext(convId) {
+      const since = new Date(Date.now() - 14 * 86400000).toISOString();
+      const m = must(await sb.from('wa_messages').select('id,purpose,idempotency_key,template_params')
+        .eq('conversation_id', convId).eq('direction', 'out').in('purpose', ['followup', 'checkup']).in('status', ['sent', 'delivered', 'read'])
+        .gte('created_at', since).order('id', { ascending: false }).limit(1).maybeSingle(), 'reminderContext');
+      if (!m) return null;
+      const params = Array.isArray(m.template_params) ? m.template_params : [];
+      const key = String(m.idempotency_key || '').split(':');      // fu:v<visit>:<date> | fu:e<exam>:<date> | ck:<patient>:<date>
+      let pid = null;
+      if (key[0] === 'ck') pid = key[1] || null;
+      else if (key[0] === 'fu' && /^v\d+$/.test(key[1] || '')) {
+        const v = must(await sb.from('iapp_visits').select('patient_id').eq('id', key[1].slice(1)).maybeSingle(), 'reminderContext.visit');
+        pid = v && v.patient_id != null ? String(v.patient_id) : null;
+      } else if (key[0] === 'fu' && /^e\d+$/.test(key[1] || '')) {
+        const r = must(await sb.rpc('wa_latest_records').eq('src', key[1]).maybeSingle(), 'reminderContext.exam');
+        pid = r && r.pid ? String(r.pid) : null;
+      }
+      let clinic = null;
+      if (pid && /^\d+$/.test(pid)) {
+        const v = must(await sb.from('iapp_visits').select('clinic,date').eq('patient_id', pid).not('clinic', 'is', null).neq('clinic', '')
+          .order('date', { ascending: false }).limit(1).maybeSingle(), 'reminderContext.clinic');
+        clinic = v ? v.clinic : null;
+      }
+      return { kind: m.purpose, name: params[0] == null ? null : String(params[0]), clinic };
+    },
     purge: () => rpc('wa_purge')
   };
 }

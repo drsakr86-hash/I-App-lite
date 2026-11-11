@@ -26,6 +26,12 @@ const MSG = {
 // Quick-reply button of the appointment_reminder template (docs/sql/wa-patient-reminders.sql).
 export const CONFIRM_BUTTON = ['تأكيد الحضور', 'تاكيد الحضور', 'اكيد الحضور', 'تأكيد الموعد'];
 export const isConfirmButton = t => { const n = normArabic(sanitizeIncoming(t)); return CONFIRM_BUTTON.some(w => n === normArabic(w)); };
+// Quick-reply button of the followup_reminder / periodic_checkup_reminder templates.
+export const BOOK_BUTTON = ['احجز موعد المتابعة', 'احجز الكشف'];
+export const isBookButton = t => { const n = normArabic(sanitizeIncoming(t)); return BOOK_BUTTON.some(w => n === normArabic(w)); };
+export const BOOK_CONTEXT_HOURS = 24;
+// The registered name, unless the reminder fell back to the neutral placeholder.
+const usableName = n => { const s = String(n || '').trim(); return s && s !== 'حضرتك' ? s : null; };
 const attendanceText = r => `شكرًا لتأكيد حضورك ✅\n📍 ${r.clinic}\n📅 ${r.date_text}\n⏰ ${r.time_text}\nفي انتظارك.`;
 // A model text that says something was done. Only the server may say that.
 const FALSE_SUCCESS = /(تم\s+(تأكيد|حجز|إلغاء|الغاء|تعديل|تغيير|تسجيل)|اتحجز|اتأكد|اتلغ|اتعدل|حجزتلك|حجزتلكم|ألغيتلك|الغيتلك|سجلتلك|booking\s+(is\s+)?confirmed|has\s+been\s+(booked|cancel+ed|rescheduled)|successfully\s+(booked|cancel+ed))/i;
@@ -46,6 +52,8 @@ export function buildSystemPrompt({ info, now, config, flow, channel = 'whatsapp
   const wa = channel === 'whatsapp';
   const cn = clinicNow(now, config.clinic_tz || 'Africa/Cairo');
   const hh = String(Math.floor(cn.minutes / 60)).padStart(2, '0') + ':' + String(cn.minutes % 60).padStart(2, '0');
+  const bc = flow && flow.booking_context && new Date(flow.booking_context.expires_at).getTime() > now.getTime() ? flow.booking_context : null;
+  const bookingCtx = bc ? `\nالمريض ضغط زر الحجز في رسالة ${bc.kind === 'checkup' ? 'الكشف الدوري' : 'المتابعة'} اللي العيادة بعتتها، والنظام عارف بياناته: ${bc.name ? `الاسم المسجل "${bc.name}"` : 'الاسم غير معروف'}${bc.clinic ? `، والعيادة "${bc.clinic}" (عيادة آخر زيارة)` : ''}. رقم التليفون معروف من واتساب. لا تسأله عن ${[bc.name && 'الاسم', bc.clinic && 'العيادة', 'رقم التليفون'].filter(Boolean).join(' أو ')} من تاني: استخدمها في list_available_slots و propose_booking (visit_type "${bc.kind === 'checkup' ? 'فحص روتيني' : 'متابعة'}")${bc.clinic ? '، إلا لو المريض طلب عيادة تانية بنفسه' : ''}. اسأله بس عن اللي ناقص.` : '';
   const pending = flow && flow.pending ? `\nيوجد اقتراح معلّق منتظر تأكيد المريض (${flow.pending.kind}). لا تنفذه: النظام ينفذه لو المريض رد بتأكيد. لو المريض غيّر رأيه اعرض اقتراح جديد.` : '';
   return `أنت موظف الاستقبال الآلي لعيادات "د. عبدالستار صقر للعيون والليزر" (ده الاسم الرسمي، استخدمه بالظبط في الترحيب) على ${CHANNEL_LABEL[channel] || 'واتساب'}. اتكلم بالعربية بلهجة مصرية مهذبة ومختصرة (جمل قصيرة، من غير مبالغة).
 اليوم: ${dayLabel(cn.date)} الساعة ${hh} (توقيت القاهرة).
@@ -62,7 +70,7 @@ ${wa ? '5) لمواعيد موجودة: اطلب اسم المريض المسج�
 8) ممنوع تكتب "تصحيح" أو تعتذر عن رسائلك السابقة إلا لو نتيجة أداة أظهرت فعلاً إن معلومة قلتها غلط؛ وفي الحالة دي صحّح المعلومة نفسها بس. لا تقل إن مواعيد سابقة "مش مراجعة" ولا تحصر المواعيد المتاحة في يوم واحد لمجرد إنك فحصت يوم واحد.
 9) رسائل التذكير اللي العيادة بعتتها ظاهرة في المحادثة. لو المريض رد عليها بـ "إلغاء" أو "تغيير الموعد" فده طلب إلغاء أو نقل الموعد المذكور في التذكير: اطلب اسمه المسجل لو مش معروف، ثم list_my_appointments، ثم propose_cancel أو اسأله عن اليوم المناسب واعرض المتاح ثم propose_reschedule. لو رد بـ "احجز موعد المتابعة" أو "احجز الكشف" فده طلب حجز جديد بنوع زيارة "متابعة" أو "فحص روتيني": اسأله عن العيادة واليوم المناسب.
 10) خاطب المريض بـ "حضرتك" ولا تناديه باسم من عندك (الاسم المكتوب للحجز ممكن يكون لمريض تاني، ومينفعش تخمن الاسم الأول أو النوع). لو المريض كتب الاسم بالكامل مرة، لا تطلب منه تأكيده تاني: الملخص النهائي قبل التأكيد يكفي.
-11) الحجز في نفس اليوم مسموح لو فيه مواعيد متاحة لسه (list_available_slots بيحدد ده). ردودك قصيرة: لا تعلّق على طلبات أو مواعيد سابقة إلا لو المريض سأل عنها.${pending}
+11) الحجز في نفس اليوم مسموح لو فيه مواعيد متاحة لسه (list_available_slots بيحدد ده). ردودك قصيرة: لا تعلّق على طلبات أو مواعيد سابقة إلا لو المريض سأل عنها.${bookingCtx}${pending}
 معلومات للتوجيه: العيادات المتاحة للحجز: ${CLINICS.map(c => c.code).join('، ')}.`;
 }
 
@@ -141,6 +149,7 @@ async function executePending(env, pending) {
       return fail(MSG.writeProblem, 'write_failed');
     }
     let text = confirmationText(wa ? config.booking_mode : 'request', pending.kind, clinic, a);
+    if (pending.kind === 'book') delete env.flow.booking_context;   // the reminder's booking is done
     if (!wa) text += `\n📞 السكرتارية هتتصل بيك على ${a.phone}.`;
     // Reminders go out the evening BEFORE the appointment: a same-day booking would never get one, so it is not offered then.
     const sameDay = a.date === clinicNow(now, tz).date;
@@ -192,6 +201,29 @@ export async function processConversation(env) {
   if (channel === 'whatsapp' && isConfirmButton(text) && store.confirmFromReminder) {
     let r = null; try { r = await store.confirmFromReminder(conv.id); } catch (e) { env.log && env.log('confirm_reminder_error', { err: String(e && e.message || e).slice(0, 100) }); }
     if (r && r.ok) { await send(attendanceText(r), 'system', 'confirmation', 'k'); return done(); }
+  }
+
+  // 1c) "احجز موعد المتابعة" / "احجز الكشف" button of a follow-up / check-up reminder: the clinic already knows who this is (name from the
+  //     reminder, clinic of the last visit, phone = this WhatsApp number). Remember it for the model and ask only for what is missing.
+  if (channel === 'whatsapp' && isBookButton(text) && store.reminderContext) {
+    let ctx = null; try { ctx = await store.reminderContext(conv.id); } catch (e) { env.log && env.log('reminder_context_error', { err: String(e && e.message || e).slice(0, 100) }); }
+    if (ctx) {
+      const clinic = findClinic(ctx.clinic || '');
+      const name = usableName(ctx.name);
+      env.flow.booking_context = { kind: ctx.kind === 'checkup' ? 'checkup' : 'followup', name, clinic: clinic ? clinic.code : null,
+        expires_at: new Date(now.getTime() + BOOK_CONTEXT_HOURS * 3600000).toISOString() };
+      delete env.flow.pending;
+      const what = ctx.kind === 'checkup' ? 'الكشف الدوري' : 'موعد المتابعة';
+      let reply = `أهلاً بحضرتك 🙏 هنحجز ${what}${name ? ` باسم ${name}` : ''}${clinic ? ` في ${clinic.name}` : ''}.`;
+      if (clinic) {
+        let alts = []; try { alts = await alternatives(store, clinic, config, now); } catch (_) { /* the model can still list slots */ }
+        reply += alts.length ? `\nأقرب المواعيد المتاحة:\n${alts.join('\n')}\nقولّي اليوم والساعة اللي تناسب حضرتك.` : '\nقولّي اليوم اللي يناسب حضرتك.';
+      } else {
+        reply += `\nحضرتك تحب الحجز في أنهي عيادة: ${CLINICS.map(c => c.code).join('، ')}؟ وإيه اليوم اللي يناسبك؟`;
+      }
+      if (!name) reply += '\nواكتب اسم المريض بالكامل من فضلك.';
+      await send(reply, 'system', 'reply', 'b'); return done();
+    }
   }
 
   // 2) deterministic yes/no for an open offer or proposal (the patient's own words, in a LATER message than the one that created it)
