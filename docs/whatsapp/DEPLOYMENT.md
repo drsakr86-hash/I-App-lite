@@ -37,7 +37,7 @@
 | `messenger-webhook` | Messenger/Instagram | OFF |
 | `zz-deploy-probe` | غير مستخدم (يرجع 410) — آمن للحذف يدويًا | ON |
 
-النسخ المنشورة (فحص 2026-11-10): `swift-worker` غلاف على commit `eb78230`، و`quick-task`/`whatsapp-worker` غلاف على `a261b26` (= main)، و`hyper-responder` حزمة قديمة مدمجة. الغلاف يستورد الكود من GitHub بـ commit مثبّت وقت النشر.
+النسخ المنشورة (فحص 2026-11-10): `swift-worker` غلاف على commit `eb78230`، و`quick-task`/`whatsapp-worker` غلاف على `c891513` (نُشر 2026-11-11: زر حجز المتابعة يعرف المريض)، و`hyper-responder` حزمة قديمة مدمجة. الغلاف يستورد الكود من GitHub بـ commit مثبّت وقت النشر.
 * رابط الـ Webhook: `https://mofdveiwlaymlabvsypu.supabase.co/functions/v1/swift-worker`
 * سر إضافي: `WORKER_FUNCTION=quick-task` (لتسريع المعالجة؛ الـ cron يغطي لو غاب).
 
