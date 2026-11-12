@@ -35,3 +35,7 @@
 - Tests: rolled-back production assertions PASS (draft+author, direct sign refused, sync can't overwrite signed, direct edit/delete refused, amend needs reason, OS untouched when OD amended, history append-only, secretary refused); unit tests 1090/1090; build OK.
 - Known residual: signed content is authoritative in Core; the legacy JSON mirror on a stale offline device could still differ until it syncs (the app refuses local edits once it knows the exam is signed). Sign/amend need connectivity by design.
 - Rollback: docs/sql/phase3-packageA-clinical-records-rollback.sql
+
+## Package C — specialty templates (client only; no DB change)
+- Added 6 recording sheets to the existing special-sheets framework (flag `special_sheets` unchanged): AMD, RVO, RD, Cornea & dry eye, Cataract pre-op, Paediatric & amblyopia. Per-eye OD/OS fields; VA/IOP/refraction/CMT deliberately not repeated (they live in Package A / ophth). Stored in `exam.special` (old records untouched). No DDx rules attached: they are recording aids, not diagnostic tools.
+- Tests: 1093/1093 (incl. i18n coverage ar/en), build OK.

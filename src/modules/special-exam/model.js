@@ -93,6 +93,99 @@ export const CASES = Object.freeze([
       { k: 'hba1c' },
       { k: 'duration' }
     ]
+  },
+  // Package C: specialty recording sheets (no diagnostic logic). VA, IOP, refraction and CMT live in the
+  // structured exam (ophth) and are intentionally NOT repeated here.
+  {
+    id: 'amd',
+    icon: '🟡',
+    fields: [
+      { k: 'stage', eyes: true, opts: ['Early', 'Intermediate', 'Late dry (GA)', 'Neovascular'] },
+      { k: 'drusen', eyes: true, opts: ['None', 'Small', 'Intermediate', 'Large', 'Confluent'] },
+      { k: 'pigment', eyes: true, opts: ['None', 'Hyperpigmentation', 'Hypopigmentation', 'RPE atrophy'] },
+      { k: 'fluid', eyes: true, opts: ['None', 'Subretinal', 'Intraretinal', 'Both', 'PED'] },
+      { k: 'ga', eyes: true, opts: ['None', 'Extrafoveal', 'Foveal-involving'] },
+      { k: 'cnv', eyes: true, opts: ['None', 'Suspected', 'Present'] },
+      { k: 'amsler', eyes: true, opts: ['Normal', 'Distortion', 'Scotoma'] },
+      { k: 'antiVegf' }
+    ]
+  },
+  {
+    id: 'rvo',
+    icon: '🔴',
+    fields: [
+      { k: 'type', eyes: true, opts: ['None', 'BRVO', 'CRVO non-ischaemic', 'CRVO ischaemic', 'Hemi-RVO'] },
+      { k: 'haemorrhages', eyes: true, opts: ['None', 'Few', 'Moderate', 'Extensive'] },
+      { k: 'ischaemia', eyes: true, opts: ['Not assessed', 'Perfused', 'Non-perfused < 10 DD', 'Non-perfused ≥ 10 DD'] },
+      { k: 'neovasc', eyes: true, opts: ['None', 'NVD', 'NVE', 'NVI', 'NVA'] },
+      { k: 'me', eyes: true, opts: ['None', 'Non-centre', 'Centre-involving'] },
+      { k: 'prior', eyes: true, opts: ['None', 'Anti-VEGF', 'Steroid', 'Laser'] },
+      { k: 'riskFactors' }
+    ]
+  },
+  {
+    id: 'rd',
+    icon: '🟣',
+    fields: [
+      { k: 'type', eyes: true, opts: ['None', 'Rhegmatogenous', 'Tractional', 'Exudative'] },
+      { k: 'macula', eyes: true, opts: ['On', 'Off', 'Not assessed'] },
+      { k: 'extent', eyes: true },
+      { k: 'breaks', eyes: true },
+      { k: 'pvr', eyes: true, opts: ['None', 'A', 'B', 'C', 'D'] },
+      { k: 'surgery', eyes: true, opts: ['None', 'Laser retinopexy', 'Cryopexy', 'Pneumatic', 'Scleral buckle', 'PPV', 'PPV + oil'] },
+      { k: 'onset' },
+      { k: 'fellowEye', opts: ['Normal', 'Lattice', 'Break', 'Other'] }
+    ]
+  },
+  {
+    id: 'cornea',
+    icon: '💧',
+    fields: [
+      { k: 'tbut', eyes: true },
+      { k: 'schirmer', eyes: true },
+      { k: 'staining', eyes: true, opts: ['None', 'Mild', 'Moderate', 'Severe'] },
+      { k: 'meibomian', eyes: true, opts: ['Normal', 'Mild MGD', 'Moderate MGD', 'Severe MGD'] },
+      { k: 'epithelium', eyes: true, opts: ['Intact', 'Punctate erosions', 'Epithelial defect'] },
+      { k: 'infiltrate', eyes: true, opts: ['None', 'Present'] },
+      { k: 'edema', eyes: true, opts: ['None', 'Mild', 'Moderate', 'Severe'] },
+      { k: 'sensation', eyes: true, opts: ['Normal', 'Reduced', 'Absent'] },
+      { k: 'contactLens' },
+      { k: 'osdi' }
+    ]
+  },
+  {
+    id: 'cataract',
+    icon: '⚪',
+    fields: [
+      { k: 'lensGrade', eyes: true, opts: ['Clear', 'Mild', 'Moderate', 'Dense', 'Brunescent'] },
+      { k: 'lensType', eyes: true, opts: ['Nuclear', 'Cortical', 'PSC', 'Mixed', 'Congenital', 'Traumatic'] },
+      { k: 'dilation', eyes: true, opts: ['Good', 'Fair', 'Poor'] },
+      { k: 'zonules', eyes: true, opts: ['Normal', 'Phacodonesis', 'Subluxated'] },
+      { k: 'corneaStatus', eyes: true, opts: ['Clear', 'Guttata', 'Scar', 'Dystrophy'] },
+      { k: 'acDepth', eyes: true, opts: ['Normal', 'Shallow', 'Deep'] },
+      { k: 'fundusView', eyes: true, opts: ['Normal view', 'Poor view', 'Pathology present'] },
+      { k: 'axialLength', eyes: true },
+      { k: 'iolPlan', eyes: true },
+      { k: 'anaesthesia', opts: ['Topical', 'Peribulbar', 'Sub-Tenon', 'General'] },
+      { k: 'consent', opts: ['Obtained', 'Pending'] },
+      { k: 'risks' }
+    ]
+  },
+  {
+    id: 'paeds',
+    icon: '🧒',
+    fields: [
+      { k: 'fixation', eyes: true, opts: ['Central steady maintained', 'Central unsteady', 'Eccentric', 'Unable to assess'] },
+      { k: 'amblyopia', eyes: true, opts: ['None', 'Mild', 'Moderate', 'Severe'] },
+      { k: 'redReflex', eyes: true, opts: ['Normal', 'Abnormal', 'Absent'] },
+      { k: 'cycloRef', eyes: true },
+      { k: 'cause', opts: ['None', 'Anisometropia', 'Strabismic', 'Deprivation', 'Bilateral ametropia'] },
+      { k: 'preference', opts: ['None', 'OD', 'OS'] },
+      { k: 'occlusion' },
+      { k: 'stereo' },
+      { k: 'birthHistory' },
+      { k: 'development' }
+    ]
   }
 ]);
 
