@@ -46,3 +46,7 @@
 - Linkage report on live data (counts only): 6 studies (6 without order, 4 without visit), 47 orders (45 without visit, 47 without study); 0 studies have a same-patient candidate order → nothing can or was linked. No auto-linking performed; audit table empty.
 - Tests (rolled back on production): report works, cross-patient link refused, note required, same-patient link audited, secretary refused. PASS.
 - Rollback: docs/sql/phase3-packageD-imaging-chain-rollback.sql
+
+## Package E — decision support review (client only)
+- Existing rule-based, explainable, per-eye DDx kept. Added: versioned rule set metadata (`RULESET` 1.0.0) that states honestly "not yet clinically reviewed" (reviewer fields stay null until a named ophthalmologist signs off — Dr. Sakr should review the rules and set them); accept (adds to diagnosis by tap, recorded) / dismiss with required reason; append-only `exam.ddxReview` (rule-set version, who, when); dismissed items hidden with a toggle. No auto-diagnosis, no LLM involvement.
+- Tests 1096/1096, build OK.

@@ -272,6 +272,8 @@ export default function ExamForm({ initial, patientId, patient = null, session =
           {isEnabled('ddx') && can(session && session.role, 'ddx', 'read') ? (
             <DdxPanel
               exam={f}
+              by={(session && session.email) || ''}
+              onReviews={list => setF(v => ({ ...v, ddxReview: list }))}
               onDiagnosis={dx => setF(v => ({ ...v, diagnosis: dx }))}
               onWorkup={list => setF(v => ({ ...v, treatmentPlan: appendWorkup(v.treatmentPlan, list) }))}
             />
