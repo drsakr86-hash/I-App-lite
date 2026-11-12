@@ -18,6 +18,7 @@ import DataTools from '../components/DataTools.jsx';
 import { getUsers } from '../modules/auth/staff-login.js';
 import { notify } from '../modules/ui/dialogs.js';
 import { friendlyError } from '../modules/errors/friendly.js';
+import { pushStaffRole, removeStaffRole } from '../modules/settings/staff-sync.js';
 
 export default function Settings({
   patients, appointments, prescriptions, exams, visits, doctors, setDoctors, prices, setPrices,
@@ -65,6 +66,8 @@ export default function Settings({
     setUsers([...getUsers(), rec]);
     setUserErr('');
     setUserModal(null);
+    const sr = await pushStaffRole(rec);
+    if (!sr.ok) notify(t('g3.user.staffSyncFail') + sr.error);
     logAudit(t('g4.audit.addUser', 'ar'), userAuditDetail(mail, rec.role, ROLE_LABEL));
   };
   const editUser = async f => {
@@ -80,6 +83,8 @@ export default function Settings({
     setUsers(replaceUser(getUsers(), f.id, rec));
     setUserErr('');
     setUserModal(null);
+    const sr = await pushStaffRole(rec);
+    if (!sr.ok) notify(t('g3.user.staffSyncFail') + sr.error);
     logAudit(t('g4.audit.editUser', 'ar'), userAuditDetail(mail, rec.role, ROLE_LABEL));
   };
   const delUserFn = id => {
@@ -91,7 +96,9 @@ export default function Settings({
       notify(lastAdminDeleteAlert());
       return;
     }
+    const gone = cur.find(u => u.id === id);
     setUsers(decision.next);
+    if (gone && gone.email) removeStaffRole(gone.email);
   };
 
   const handleChangePassword = async () => {
@@ -437,12 +444,12 @@ export default function Settings({
 
       {userModal === 'add' && (
         <Modal title={t('g4.settings.addUserTitle', lang)} onClose={() => setUserModal(null)}>
-          <UserForm error={userErr} onSave={addUser} onClose={() => setUserModal(null)} />
+          <UserForm doctors={doctors} error={userErr} onSave={addUser} onClose={() => setUserModal(null)} />
         </Modal>
       )}
       {userModal && userModal.edit && (
         <Modal title={t('g4.settings.editUserTitle', lang)} onClose={() => setUserModal(null)}>
-          <UserForm initial={userModal.edit} error={userErr} onSave={editUser} onClose={() => setUserModal(null)} />
+          <UserForm doctors={doctors} initial={userModal.edit} error={userErr} onSave={editUser} onClose={() => setUserModal(null)} />
         </Modal>
       )}
       {delUser && (

@@ -15,3 +15,11 @@
 - Secretary permissions, backup, Atlas, AI Scribe, gemini-assist: unchanged.
 - Tests: SQL assertions (rolled back) PASS; RLS as secretary/admin/doctor PASS. Data counts unchanged afterwards.
 - Rollback: docs/sql/phase3-stage2-clinical-integrity-rollback.sql
+
+## Stage 3 — multiple doctors (migration `phase3_stage3_multi_doctor`)
+- Gap fixed: `iapp_store` had no doctor policy (a doctor account could not sync). Added `store_doctor_rw` (clinical/operational keys + `iapp_imgmeta_*`) and `store_doctor_ro` (users/doctors/clinic). Doctors have no access to expenses, backups, or unknown keys. Admin/secretary policies untouched.
+- `iapp_staff` += `doctor_key`, `display_name` (nullable). New: `iapp_current_doctor_key()`, admin-only `iapp_admin_set_staff()` / `iapp_admin_remove_staff()` (last-admin protected).
+- Client: UserForm links a doctor account to a doctor profile; Settings mirrors add/edit/delete to the server via the RPCs (failure notifies, local save kept).
+- Tests: rolled-back production RLS test with 2 doctors (admin-only keys hidden, iapp_users not writable, admin RPCs refused for doctor/secretary, secretary access unchanged) PASS; unit tests 1086/1086; build OK.
+- Manual step: create the doctor's auth user in Supabase → Authentication → Users (password), then add the user in Settings (role = doctor, link profile).
+- Rollback: docs/sql/phase3-stage3-multi-doctor-rollback.sql

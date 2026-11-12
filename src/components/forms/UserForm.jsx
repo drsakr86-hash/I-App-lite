@@ -11,7 +11,7 @@ import { t, useLang } from '../../modules/i18n/index.js';
 // UserForm (public/legacy/app-runtime.js). The form only checks email/name
 // shape; duplicate and last-admin checks happen in the awaited onSave (the
 // Settings screen), whose message comes back as `error`.
-export default function UserForm({ initial, onSave, onClose, error }) {
+export default function UserForm({ initial, onSave, onClose, error, doctors = [] }) {
   const lang = useLang();
   const [f, setF] = useState(() => initialUserState(initial));
   const s = k => e => setF(v => ({ ...v, [k]: e.target.value }));
@@ -47,6 +47,14 @@ export default function UserForm({ initial, onSave, onClose, error }) {
           {USER_ROLE_OPTIONS.map(o => <option key={o.v} value={o.v}>{t('g3.user.role.' + o.v, lang)}</option>)}
         </select>
       </Field>
+      {f.role === 'doctor' && (
+        <Field label={t('g3.user.linkedDoctor', lang)}>
+          <select style={inp()} value={f.doctorId || ''} onChange={s('doctorId')}>
+            <option value="">{t('g3.user.linkedDoctorNone', lang)}</option>
+            {(doctors || []).map(d => <option key={d.id} value={String(d.id)}>{d.name}</option>)}
+          </select>
+        </Field>
+      )}
       {error && (
         <div
           style={{

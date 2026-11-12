@@ -27,14 +27,25 @@ export function addUserError(cur, mail, emailKey) {
 }
 
 export function buildNewUserRecord(f, mail, id) {
-  return {
+  const rec = {
     id,
     email: mail,
     username: mail,
     name: f.name.trim(),
     role: f.role
   };
+  // A doctor account is linked to a doctor profile (iapp_doctors) for author attribution.
+  if (f.role === 'doctor' && f.doctorId) rec.doctorId = f.doctorId;
+  return rec;
 }
+
+// Arguments of the admin-only server RPC iapp_admin_set_staff for a user record.
+export const staffRpcArgs = rec => ({
+  p_email: String(rec.email || '').trim().toLowerCase(),
+  p_role: rec.role,
+  p_doctor_key: rec.role === 'doctor' && rec.doctorId ? String(rec.doctorId) : null,
+  p_display_name: rec.name || null
+});
 
 // Demoting the only remaining admin is not allowed.
 export function canRemoveAdminRole(prev, nextRole, cur) {
@@ -63,6 +74,8 @@ export function buildEditedUserRecord(prev, f, mail) {
   delete rec.pw;
   delete rec.password;
   delete rec.mustChange;
+  if (f.role === 'doctor' && f.doctorId) rec.doctorId = f.doctorId;
+  else delete rec.doctorId;
   return rec;
 }
 
