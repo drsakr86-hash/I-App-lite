@@ -27,3 +27,11 @@
 ## Package A — prepared, NOT yet applied
 - Files ready: docs/sql/phase3-packageA-clinical-records.sql (+ rollback, + pre-change sync function capture in docs/sql/pre-phase3/).
 - apply_migration was paused awaiting the owner's confirmation prompt (statement includes DROP CONSTRAINT/TRIGGER/POLICY IF EXISTS on objects it creates itself). Verified afterwards: nothing was applied (no new columns, RPCs, table or trigger).
+
+## Package A — APPLIED (migrations `phase3_packageA_clinical_records`, `phase3_packageA_rpc_security_definer`)
+- examinations_core += findings_od/os, findings_schema, status (draft|signed), version_no, author_email/doctor_key, signed_by/at. New append-only `iapp_clinical_record_versions`. Triggers: signed exam immutable (only iapp_amend_examination with a reason ≥5 chars), cannot be deleted, cannot be signed except via iapp_sign_examination. `iapp_sync_examination_core` same signature; skips signed exams; stores per-eye findings + author. Sign/amend RPCs are SECURITY DEFINER with an internal admin/doctor check.
+- Existing 51 exams: status NULL (legacy), no invented author/signature.
+- Client: clinical-record.js (per-eye findings, sign/amend wrappers), ExamForm (status banner, Save & sign, amendment with reason), saveExam blocks edits to signed exams, report prints status/version/signer/time.
+- Tests: rolled-back production assertions PASS (draft+author, direct sign refused, sync can't overwrite signed, direct edit/delete refused, amend needs reason, OS untouched when OD amended, history append-only, secretary refused); unit tests 1090/1090; build OK.
+- Known residual: signed content is authoritative in Core; the legacy JSON mirror on a stale offline device could still differ until it syncs (the app refuses local edits once it knows the exam is signed). Sign/amend need connectivity by design.
+- Rollback: docs/sql/phase3-packageA-clinical-records-rollback.sql

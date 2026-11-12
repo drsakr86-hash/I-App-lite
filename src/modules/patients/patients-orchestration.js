@@ -18,13 +18,15 @@ import { createClinicalVisitCore } from '../visits/core.js';
 import { prescriptionParamsFromLegacy } from '../prescriptions/prescription.mapper.js';
 import { logError } from '../../services/logger.js';
 import { preserveDrawings } from '../atlas/drawings.js';
+import { isSigned, canSignExam, withEyeFindings, signExamination, amendExamination, signedFields, withAmendment } from '../patient-file/clinical-record.js';
+import { notify } from '../ui/dialogs.js';
 
 const rxCoreParams = (rx, visitId, today) => prescriptionParamsFromLegacy(rx, { visitId, today });
 
 export function usePatientsOrchestration({
   patients, setPatients, exams, setExams, prescriptions, setRx, visits, setVisits,
   doctorNames = [], primaryDoctor, prices = [], clinic, initOpenId, initNewName, onInitDone,
-  customTests = []
+  customTests = [], session = null
 }) {
   // Always-current view of the visits list for writes that happen after an
   // `await` (a render-time closure would be seconds stale by then and a
@@ -119,6 +121,9 @@ export function usePatientsOrchestration({
 
   const saveExam = async (f0, opts = {}) => {
     const ex = exams.find(e => e.id === f0.id);
+    // Package A: a signed examination is changed only by an amendment (server-verified, with a reason).
+    if (isSigned(ex) && opts.amend) return amendSigned(ex, f0, opts);
+    if (isSigned(ex)) { notify('هذا الفحص موقّع ولا يُعدَّل إلا بتعديل مسبَّب (Amend).'); return { legacyResult: null, coreSynced: false, coreError: 'signed', status: 'blocked', steps: [] }; }
     const f = preserveDrawings(ex, f0); // a form opened before an atlas drawing was approved must not erase it
     const next = ex ? exams.map(e => (e.id === f.id ? f : e)) : [...exams, f];
     const legacyResult = await setExams(next);
@@ -140,7 +145,7 @@ export function usePatientsOrchestration({
       const sb = getSB();
       if (sb && !offlineNow()) {
         const stored = readExamMarkers(f.id);
-        const examForSync = { ...f, _coreSync: { ...stored, ...(f._coreSync || {}) } };
+        const examForSync = { ...withEyeFindings(f), _coreSync: { ...stored, ...(f._coreSync || {}) } };
         sync = await runExamCoreSync({
           exam: examForSync,
           patientCode: patients.find(p => p.id === f.patientId)?.patientCode || '',
@@ -173,7 +178,29 @@ export function usePatientsOrchestration({
     if (!coreSynced && coreError && legacyResult?.queued !== true) {
       console.warn('Examination saved in legacy store; Core sync pending', coreError);
     }
+    if (opts.sign) {
+      if (!canSignExam(session?.role)) notify('التوقيع للطبيب أو المدير فقط.');
+      else if (!coreSynced) notify('التوقيع يحتاج اتصالاً بالخادم ومزامنة الفحص أولاً. تم حفظ المسودة.');
+      else {
+        const r = await signExamination((name, args) => iappRpc(getSB(), name, args), f);
+        if (!r.ok) notify('تعذر التوقيع: ' + r.error);
+        else {
+          const sf = signedFields(r.result, session?.email);
+          try { await sbMutate('iapp_exams', list => list.map(e => (String(e.id) === String(f.id) ? { ...e, ...sf } : e))); } catch (e2) { logError('exam.sign.local', e2, { examId: f.id }); }
+        }
+      }
+    }
     return { legacyResult, coreSynced, coreError, status: sync.status, steps: sync.steps };
+  };
+
+  const amendSigned = async (ex, f0, opts) => {
+    if (offlineNow() || !getSB()) { notify('التعديل على فحص موقّع يحتاج اتصالاً بالخادم.'); return { status: 'blocked', coreError: 'offline', steps: [] }; }
+    const f = preserveDrawings(ex, { ...f0, recStatus: ex.recStatus, recVersion: ex.recVersion, signedAt: ex.signedAt, signedBy: ex.signedBy, amendments: ex.amendments });
+    const r = await amendExamination((name, args) => iappRpc(getSB(), name, args), f, opts.reason);
+    if (!r.ok) { notify('تعذر حفظ التعديل: ' + (r.error === 'reason' ? 'سبب التعديل مطلوب (5 أحرف على الأقل)' : r.error)); return { status: 'blocked', coreError: r.error, steps: [] }; }
+    const next = withAmendment(f, r.result, session?.email, opts.reason);
+    const legacyResult = await setExams(exams.map(e => (e.id === next.id ? next : e)));
+    return { legacyResult, coreSynced: true, status: 'amended', steps: [] };
   };
 
   const saveRadiologyRequest = async rec => {

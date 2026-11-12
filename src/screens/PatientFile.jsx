@@ -263,8 +263,8 @@ export default function PatientFile({ ctx }) {
             patientId={curPatient.id}
             patient={curPatient}
             session={ctx.session}
-            onSave={e => {
-              onSaveExam(e);
+            onSave={(e, o) => {
+              onSaveExam(e, o);
               setModal(null);
             }}
             onClose={() => setModal(null)}
@@ -279,8 +279,8 @@ export default function PatientFile({ ctx }) {
             patientId={curPatient.id}
             patient={curPatient}
             session={ctx.session}
-            onSave={e => {
-              onSaveExam(e);
+            onSave={(e, o) => {
+              onSaveExam(e, o);
               setModal(null);
             }}
             onClose={() => setModal(null)}

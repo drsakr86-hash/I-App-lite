@@ -62,7 +62,7 @@ export function buildEyeReport({
     clinic: clinic || {},
     doctor: str(doctor) || (ex ? str(ex.doctor) : ''),
     patient: patient ? { name: str(patient.name), code: str(patient.patientCode), age: patient.age, gender: str(patient.gender), phone: str(patient.phone), allergies: str(patient.allergies) } : null,
-    exam: ex ? { date: day(ex.date), doctor: str(ex.doctor), complaint: str(ex.chiefComplaint), colorVision: str(ex.colorVision), coverTest: str(ex.coverTest), contrast: str(ex.contrast), notes: str(ex.notes) } : null,
+    exam: ex ? { date: day(ex.date), doctor: str(ex.doctor), complaint: str(ex.chiefComplaint), colorVision: str(ex.colorVision), coverTest: str(ex.coverTest), contrast: str(ex.contrast), notes: str(ex.notes), status: ex.recStatus === 'signed' ? 'signed' : ex.recStatus === 'draft' ? 'draft' : 'legacy', version: ex.recVersion || null, signedBy: str(ex.signedBy), signedAt: str(ex.signedAt) } : null,
     va, iop, iopMethod: o ? str(o.iop.method) : '', refraction, anterior, posterior,
     anteriorText: ex ? plainText(ex.anteriorSegment) : '', posteriorText: ex ? plainText(ex.posteriorSegment) : '',
     cd: metric('cd'), cmt: metric('cmt'), vfMd: metric('vfMd'),
@@ -130,6 +130,7 @@ function pageHTML(m, lang) {
     h += `<p style="margin-top:12px">${escHTML(L('report.noExam'))}</p>`;
   } else {
     h += `<h2>${escHTML(L('report.examDate'))}: ${escHTML(e.date)} · ${escHTML(L('report.doctor'))}: ${v(e.doctor)}</h2>`;
+    h += `<p class="sub"><b>${escHTML(L('report.recStatus'))}:</b> ${escHTML(L('report.rec.' + e.status))}${e.status === 'signed' ? ' · v' + escHTML(String(e.version || 1)) + ' · ' + escHTML(e.signedBy) + ' · ' + escHTML(e.signedAt.slice(0, 16).replace('T', ' ')) : ''}</p>`;
     if (has(e.complaint)) h += `<p><b>${escHTML(L('report.complaint'))}:</b> ${term(e.complaint)}</p>`;
 
     // vision

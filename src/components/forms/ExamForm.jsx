@@ -1,5 +1,6 @@
 import React, { useState, lazy, Suspense } from 'react';
 import { Btn } from '../common.jsx';
+import { isSigned, canSignExam, validAmendReason, examStatus } from '../../modules/patient-file/clinical-record.js';
 import { DEFAULT_DOCTOR_NAMES } from './visit-form-model.js';
 import {
   examStepLabels, EXAM_LAST_STEP, EXAM_COMPLAINTS, VA_OPTIONS, IOP_OPTIONS, EXAM_SELECT_ROWS,
@@ -41,9 +42,20 @@ export default function ExamForm({ initial, patientId, patient = null, session =
   const s = k => e => setF(v => ({ ...v, [k]: e.target.value }));
   const setOphth = o => setF(v => ({ ...v, ophth: o }));
   const iopHigh = anyIopHigh(f.iopR, f.iopL);
+  const signed = isSigned(initial);
+  const [amendReason, setAmendReason] = useState('');
+  const payload = () => finalizeExamSpecial(applyOphthToExam(buildExamPayload({ ...f, id: f.id || draftId }, patientId, Date.now())));
+  const stLabel = examStatus(initial);
   return (
     <div>
-      <ScribePanel form={f} onApply={setF} />
+      {initial && initial.id && (
+        <div style={{ background: signed ? C.success + '18' : C.gold + '14', border: `1px solid ${signed ? C.success : C.gold}44`, borderRadius: 10, padding: '8px 12px', marginBottom: 10, fontSize: 12, lineHeight: 1.7 }}>
+          {t('g3.rec.status.' + stLabel, lang)}
+          {signed && ` · v${initial.recVersion || 1} · ${initial.signedBy || ''} · ${String(initial.signedAt || '').slice(0, 16).replace('T', ' ')}`}
+          {signed && <div>{t('g3.rec.amendNote', lang)}</div>}
+        </div>
+      )}
+      {!signed && <ScribePanel form={f} onApply={setF} />}
       <div role="tablist" aria-label={t('g2.exam.stepsAria', lang)} style={{ display: 'flex', marginBottom: 18, background: C.card, borderRadius: 12, padding: 4 }}>
         {stepLabels.map((st, i) => (
           <button
@@ -304,7 +316,17 @@ export default function ExamForm({ initial, patientId, patient = null, session =
         ) : (
           <>
             <Btn outline full onClick={onClose}>{t('g2.common.cancel', lang)}</Btn>
-            <Btn full onClick={() => onSave(finalizeExamSpecial(applyOphthToExam(buildExamPayload({ ...f, id: f.id || draftId }, patientId, Date.now()))))}>{t('g2.exam.save', lang)}</Btn>
+            {signed ? (
+              <>
+                <input style={{ flex: 2, minWidth: 0 }} value={amendReason} onChange={e => setAmendReason(e.target.value)} placeholder={t('g3.rec.reasonPh', lang)} />
+                <Btn full disabled={!validAmendReason(amendReason)} onClick={() => validAmendReason(amendReason) && onSave(payload(), { amend: true, reason: amendReason })}>{t('g3.rec.saveAmend', lang)}</Btn>
+              </>
+            ) : (
+              <>
+                <Btn full onClick={() => onSave(payload())}>{t('g2.exam.save', lang)}</Btn>
+                {canSignExam(session && session.role) && <Btn full color={C.success} onClick={() => onSave(payload(), { sign: true })}>{t('g3.rec.saveSign', lang)}</Btn>}
+              </>
+            )}
           </>
         )}
       </div>

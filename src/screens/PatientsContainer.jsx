@@ -22,7 +22,7 @@ export default function PatientsContainer({
     saveExam, saveRadiologyRequest, delExam, saveVisit, saveRx, delVisit
   } = usePatientsOrchestration({
     patients, setPatients, exams, setExams, prescriptions, setRx, visits, setVisits,
-    doctorNames, primaryDoctor, prices, clinic, initOpenId, initNewName, onInitDone, customTests
+    doctorNames, primaryDoctor, prices, clinic, initOpenId, initNewName, onInitDone, customTests, session
   });
 
   // Back from an open patient file returns to the patients list (not out of the app).
