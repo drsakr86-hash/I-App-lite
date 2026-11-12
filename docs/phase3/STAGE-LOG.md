@@ -39,3 +39,10 @@
 ## Package C — specialty templates (client only; no DB change)
 - Added 6 recording sheets to the existing special-sheets framework (flag `special_sheets` unchanged): AMD, RVO, RD, Cornea & dry eye, Cataract pre-op, Paediatric & amblyopia. Per-eye OD/OS fields; VA/IOP/refraction/CMT deliberately not repeated (they live in Package A / ophth). Stored in `exam.special` (old records untouched). No DDx rules attached: they are recording aids, not diagnostic tools.
 - Tests: 1093/1093 (incl. i18n coverage ar/en), build OK.
+
+## Package D — imaging chain (migration `phase3_packageD_imaging_chain`)
+- New: append-only `iapp_imaging_link_audit`; `iapp_imaging_linkage_report()` (read-only, admin/doctor; suggestions only); `iapp_link_imaging_study()` (admin/doctor; same patient only; fills EMPTY links only; requires a verification note; audited); `iapp_imaging_history()` (longitudinal list). Stage 2 already made report versions writable + approved reports immutable.
+- No storage migration; Cloudinary URLs untouched; private storage flag unchanged.
+- Linkage report on live data (counts only): 6 studies (6 without order, 4 without visit), 47 orders (45 without visit, 47 without study); 0 studies have a same-patient candidate order → nothing can or was linked. No auto-linking performed; audit table empty.
+- Tests (rolled back on production): report works, cross-patient link refused, note required, same-patient link audited, secretary refused. PASS.
+- Rollback: docs/sql/phase3-packageD-imaging-chain-rollback.sql
