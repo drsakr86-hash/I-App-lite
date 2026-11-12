@@ -55,7 +55,7 @@ export default function ExamForm({ initial, patientId, patient = null, session =
           {signed && <div>{t('g3.rec.amendNote', lang)}</div>}
         </div>
       )}
-      {!signed && <ScribePanel form={f} onApply={setF} />}
+      {!signed && session && session.role === 'admin' && <ScribePanel form={f} onApply={setF} by={session.email || session.username || ''} />}
       <div role="tablist" aria-label={t('g2.exam.stepsAria', lang)} style={{ display: 'flex', marginBottom: 18, background: C.card, borderRadius: 12, padding: 4 }}>
         {stepLabels.map((st, i) => (
           <button

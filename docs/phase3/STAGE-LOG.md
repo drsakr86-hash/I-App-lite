@@ -50,3 +50,9 @@
 ## Package E — decision support review (client only)
 - Existing rule-based, explainable, per-eye DDx kept. Added: versioned rule set metadata (`RULESET` 1.0.0) that states honestly "not yet clinically reviewed" (reviewer fields stay null until a named ophthalmologist signs off — Dr. Sakr should review the rules and set them); accept (adds to diagnosis by tap, recorded) / dismiss with required reason; append-only `exam.ddxReview` (rule-set version, who, when); dismissed items hidden with a toggle. No auto-diagnosis, no LLM involvement.
 - Tests 1096/1096, build OK.
+
+## Package F — AI Scribe consent (client only; Scribe + gemini-assist untouched and operational)
+- Consent is now a per-recording record {version 'scribe-consent-v1', user, time}, created when the clinician ticks the disclosure for THAT recording, saved in `exam.aiScribe.consent` with the list of accepted fields; no longer hard-coded `true`; reset after each recording. No recording is sent without a valid record (client check). Disclosure text (ar/en) states audio is recorded, sent to Google Gemini, not stored, and enters the record only after review. Output was already a draft the clinician ticks and saves.
+- Server review: `ai-scribe` v9 logs only status/latency/field count (no audio or clinical text); `gemini-assist` v10 (not in repo): verify_jwt on + admin-only check via service role, no content logging, wildcard CORS (token-protected). NOT modified (fixed decision: keep operational).
+- Limitation / decision for the owner: both functions allow role `admin` only, so a doctor account cannot use the Scribe/Gemini (the panel is shown to admin only to avoid a guaranteed 403). Allowing `doctor` requires redeploying `ai-scribe` with `role in ('admin','doctor')`; not done to avoid touching the live function without your explicit go-ahead.
+- Tests 1099/1099, build OK.

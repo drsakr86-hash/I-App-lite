@@ -36,12 +36,27 @@ export function draftRows(form, draft) {
 
 export const defaultSelection = rows => Object.fromEntries(rows.map(r => [r.key, r.checked]));
 
+// Consent is never assumed: a record is created only when the clinician ticks the disclosure for THIS recording,
+// and it is stored on the exam (version of the wording, who confirmed, when). Old exams carry `consent: true` (legacy).
+export const CONSENT_VERSION = 'scribe-consent-v1';
+export function buildConsent({ by = '', at = new Date().toISOString(), version = CONSENT_VERSION } = {}) {
+  return { version, by: String(by || ''), at };
+}
+export const consentValid = c => !!c && typeof c === 'object' && !!c.version && !!c.by && !!c.at;
+
 // Ticked rows overwrite the form; the exam records that the scribe was used and the consent was confirmed.
 export function applyDraft(form, rows, selection, meta = {}) {
   const next = { ...form };
   let n = 0;
   for (const r of rows) if (selection[r.key] && !r.same) { next[r.key] = r.value; n++; }
-  if (n) next.aiScribe = { used: true, consent: true, model: meta.model || '', at: meta.at || '' };
+  if (n) {
+    next.aiScribe = {
+      used: true,
+      consent: consentValid(meta.consent) ? meta.consent : null, // never hard-coded to true
+      model: meta.model || '', at: meta.at || '',
+      fields: rows.filter(r => selection[r.key] && !r.same).map(r => r.key) // what the clinician accepted
+    };
+  }
   return { form: next, applied: n };
 }
 

@@ -2,6 +2,7 @@
 export const ar = {
   "ai.scribe.title": "المسجّل الذكي",
   "ai.scribe.hint": "سجّل الكشف وسيملأ الشيت كمسودة تراجعها قبل الحفظ.",
+  "ai.scribe.disclosure": "سيُسجَّل الصوت ويُرسَل إلى مزوّد الذكاء الاصطناعي (Google Gemini) ليُفرَّغ كمسودة. لا يُحفظ التسجيل في النظام، والمسودة لا تدخل السجل إلا بعد مراجعتك. تأكيد الموافقة يُسجَّل في الفحص (النسخة + المستخدم + الوقت).",
   "ai.scribe.consent": "المريض وقّع موافقة التسجيل",
   "ai.scribe.start": "🎙 تسجيل الكشف",
   "ai.scribe.stop": "⏹ إيقاف وتحليل",
@@ -28,6 +29,7 @@ export const ar = {
 export const en = {
   "ai.scribe.title": "AI scribe",
   "ai.scribe.hint": "Record the visit and the sheet is filled as a draft you review before saving.",
+  "ai.scribe.disclosure": "The audio will be recorded and sent to the AI provider (Google Gemini) to be transcribed into a draft. The recording is not stored in the system, and the draft enters the record only after your review. Your consent confirmation is saved on the exam (wording version + user + time).",
   "ai.scribe.consent": "Patient signed recording consent",
   "ai.scribe.start": "🎙 Record visit",
   "ai.scribe.stop": "⏹ Stop and analyse",

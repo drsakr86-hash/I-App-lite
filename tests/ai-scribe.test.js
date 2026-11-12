@@ -126,7 +126,9 @@ test('panel model: rows, conflicts, apply', () => {
   assert.equal(res.form.iopR, '15');
   assert.equal(res.form.iopL, '19');
   assert.equal(res.form.colorVision, 'غير طبيعي');
-  assert.deepEqual(res.form.aiScribe, { used: true, consent: true, model: 'm', at: 'T' });
+  assert.equal(res.form.aiScribe.consent, null, 'consent is never hard-coded when none was recorded');
+  assert.equal(res.form.aiScribe.used, true);
+  assert.ok(Array.isArray(res.form.aiScribe.fields) && res.form.aiScribe.fields.length === res.applied);
   const none = applyDraft(form, rows, {}, {});
   assert.equal(none.applied, 0);
   assert.equal(none.form.aiScribe, undefined);

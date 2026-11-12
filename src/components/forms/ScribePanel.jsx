@@ -3,16 +3,17 @@ import { Btn } from '../common.jsx';
 import { C } from '../../modules/theme/index.js';
 import { useLang, t } from '../../modules/i18n/index.js';
 import { localISO } from '../../modules/constants/misc.js';
-import { draftRows, defaultSelection, applyDraft, formatClock, SCRIBE_MAX_SECONDS } from '../../modules/ai-scribe/model.js';
+import { draftRows, defaultSelection, applyDraft, formatClock, SCRIBE_MAX_SECONDS, buildConsent } from '../../modules/ai-scribe/model.js';
 import { recorderSupported, startRecording, analyzeRecording } from '../../modules/ai-scribe/service.js';
 import { friendlyError } from '../../modules/errors/friendly.js';
 
 // AI scribe card at the top of ExamForm: record -> server draft -> doctor ticks rows -> applied to the form.
 // Nothing is stored here; the exam is saved only by the form's own save button.
-export default function ScribePanel({ form, onApply }) {
+export default function ScribePanel({ form, onApply, by = '' }) {
   const lang = useLang();
   const [phase, setPhase] = useState('idle'); // idle | recording | analyzing | review | done | error
   const [consent, setConsent] = useState(false);
+  const consentRef = useRef(null); // the record of THIS recording's consent
   const [secs, setSecs] = useState(0);
   const [draft, setDraft] = useState(null);
   const [rows, setRows] = useState([]);
@@ -27,6 +28,7 @@ export default function ScribePanel({ form, onApply }) {
   const stopTimer = () => { clearInterval(timer.current); timer.current = null; };
   const start = async () => {
     setErr('');
+    consentRef.current = buildConsent({ by });
     try { rec.current = await startRecording(); }
     catch { setErr(t('ai.scribe.micDenied', lang)); setPhase('error'); return; }
     setSecs(0); setPhase('recording');
@@ -43,14 +45,15 @@ export default function ScribePanel({ form, onApply }) {
     setPhase('analyzing');
     try {
       const blob = await r.stop();
-      const d = await analyzeRecording(blob, localISO());
+      const d = await analyzeRecording(blob, localISO(), consentRef.current);
       const rs = draftRows(formRef.current, d);
       setDraft(d); setRows(rs); setSel(defaultSelection(rs)); setPhase('review');
     } catch (e) { setErr(friendlyError(e, lang)); setPhase('error'); }
   }
   const apply = () => {
-    const res = applyDraft(formRef.current, rows, sel, { model: draft && draft.model, at: new Date().toISOString() });
+    const res = applyDraft(formRef.current, rows, sel, { model: draft && draft.model, at: new Date().toISOString(), consent: consentRef.current });
     if (res.applied) onApply(res.form);
+    consentRef.current = null; setConsent(false); // consent is per recording, never carried over
     setPhase('done');
   };
 
@@ -68,11 +71,12 @@ export default function ScribePanel({ form, onApply }) {
       {(phase === 'idle' || phase === 'done') && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div style={small}>{phase === 'done' ? t('ai.scribe.applied', lang) : t('ai.scribe.hint', lang)}</div>
+          <div style={{ ...small, color: C.gold }}>{t('ai.scribe.disclosure', lang)}</div>
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, minHeight: 32 }}>
             <input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} />
             {t('ai.scribe.consent', lang)}
           </label>
-          <Btn full color={consent ? undefined : C.muted} onClick={consent ? start : undefined}>{t('ai.scribe.start', lang)}</Btn>
+          <Btn full color={consent && by ? undefined : C.muted} onClick={consent && by ? start : undefined}>{t('ai.scribe.start', lang)}</Btn>
         </div>
       )}
 

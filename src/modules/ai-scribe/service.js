@@ -1,6 +1,6 @@
 // Network + recorder layer of the AI scribe. The Gemini key lives only in the ai-scribe Edge Function secrets.
 import { getSB } from '../data-access/index.js';
-import { pickMime } from './model.js';
+import { pickMime, consentValid, CONSENT_VERSION } from './model.js';
 
 // Name the function was deployed under (the folder is supabase/functions/ai-scribe).
 export const SCRIBE_FUNCTION = 'ai-scribe';
@@ -34,13 +34,14 @@ const blobToBase64 = blob => new Promise((resolve, reject) => {
   r.readAsDataURL(blob);
 });
 
-export async function analyzeRecording(blob, today) {
+export async function analyzeRecording(blob, today, consent) {
+  if (!consentValid(consent)) throw new Error('consent required'); // no recording leaves the browser without a recorded consent
   const client = sb();
   const { data } = await client.auth.getSession();
   const token = data && data.session && data.session.access_token; if (!token) throw new Error('not signed in');
   const url = String(client.supabaseUrl || '').replace(/\/$/, '') + '/functions/v1/' + SCRIBE_FUNCTION;
   const audio = await blobToBase64(blob);
-  const res = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + token }, body: JSON.stringify({ audio, mime_type: blob.type, today, consent: true }) });
+  const res = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + token }, body: JSON.stringify({ audio, mime_type: blob.type, today, consent: true, consent_version: consent.version || CONSENT_VERSION }) });
   let body = {}; try { body = await res.json(); } catch { /* empty */ }
   if (!res.ok) { const e = new Error(body.message || body.error || 'scribe failed'); e.status = res.status; e.code = body.error; throw e; }
   return body;
