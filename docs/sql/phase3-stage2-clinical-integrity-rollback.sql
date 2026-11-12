@@ -1,0 +1,6 @@
+drop trigger if exists trg_iapp_guard_report_version_immutable on public.iapp_imaging_report_versions_core;
+drop function if exists public.iapp_guard_report_version_immutable();
+drop policy if exists iapp_imaging_report_versions_clinical_update on public.iapp_imaging_report_versions_core;
+drop policy if exists iapp_imaging_report_versions_clinical_insert on public.iapp_imaging_report_versions_core;
+drop trigger if exists trg_iapp_guard_visit_delete on public.iapp_visits_core;
+drop function if exists public.iapp_guard_visit_delete();
