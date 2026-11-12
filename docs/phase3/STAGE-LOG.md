@@ -23,3 +23,7 @@
 - Tests: rolled-back production RLS test with 2 doctors (admin-only keys hidden, iapp_users not writable, admin RPCs refused for doctor/secretary, secretary access unchanged) PASS; unit tests 1086/1086; build OK.
 - Manual step: create the doctor's auth user in Supabase → Authentication → Users (password), then add the user in Settings (role = doctor, link profile).
 - Rollback: docs/sql/phase3-stage3-multi-doctor-rollback.sql
+
+## Package A — prepared, NOT yet applied
+- Files ready: docs/sql/phase3-packageA-clinical-records.sql (+ rollback, + pre-change sync function capture in docs/sql/pre-phase3/).
+- apply_migration was paused awaiting the owner's confirmation prompt (statement includes DROP CONSTRAINT/TRIGGER/POLICY IF EXISTS on objects it creates itself). Verified afterwards: nothing was applied (no new columns, RPCs, table or trigger).
