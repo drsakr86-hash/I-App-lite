@@ -2,7 +2,7 @@
 import React from 'react';
 import AtlasScreen from '../../screens/AtlasScreen.jsx';
 
-export default function ExamAtlasStep({ patient, exam, session, drawings, onChange }) {
+export default function ExamAtlasStep({ patient, exam, session, drawings, onChange, priorExams = null }) {
   const user = { id: session.id != null ? session.id : session.username, name: session.name || session.username || '' };
-  return <AtlasScreen embedded role={session.role} user={user} context={{ patient, exam }} drawings={drawings} onDrawingsChange={onChange} />;
+  return <AtlasScreen embedded role={session.role} user={user} context={{ patient, exam, priorExams }} drawings={drawings} onDrawingsChange={onChange} />;
 }

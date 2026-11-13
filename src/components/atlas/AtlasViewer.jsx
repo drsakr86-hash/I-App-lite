@@ -6,6 +6,7 @@ import {
   zoomAt, panBy, clientToPlate, unitsPerPx, pinchFactor, wheelFactor, viewBoxString, labelFontUnits, zoomLevel, defaultLabelMode
 } from '../../modules/atlas/viewport.js';
 import { pen, arrow, penPath, arrowHead } from '../../modules/atlas/annotations.js';
+import { levelPath, levelStyle } from '../../modules/atlas/levels.js';
 import { PlacedStamp } from './StampGlyph.jsx';
 
 const PAPER = '#fbf9f4';
@@ -55,7 +56,7 @@ function outline(sh, key, axis) {
 }
 
 export default function AtlasViewer({
-  plate, lang, selectedId, onSelect, labelMode, bothLangs, tool, color, annotations, onAnnotate, onTextPoint, onStamp, view, onViewChange, svgRef, background = null
+  plate, lang, selectedId, onSelect, labelMode, bothLangs, tool, color, annotations, onAnnotate, onTextPoint, onStamp, view, onViewChange, svgRef, background = null, ghost = null
 }) {
   const wrapRef = useRef(null);
   const localSvg = useRef(null);
@@ -190,6 +191,26 @@ export default function AtlasViewer({
   const zoomed = zoomLevel(view, base) > 1.001;
   const sel = selectedId ? plate.parts.find(p => p.id === selectedId) : null;
 
+  // One saved annotation as SVG (used for the live drawing and for the faint layer of the previous visit).
+  const renderAnnotation = (a, key) => {
+    if (a.type === 'stamp') return <PlacedStamp key={key} a={a} />;
+    if (a.type === 'level') {
+      if (!plate.ac) return null;
+      const st = levelStyle(a.kind);
+      return <path key={key} data-level={a.kind} d={levelPath(plate.ac, a.frac)} fill={st.f} fillOpacity={st.o} stroke={st.s} strokeWidth={2} vectorEffect="non-scaling-stroke" />;
+    }
+    if (a.type === 'pen') return <path key={key} d={penPath(a.points)} fill="none" stroke={a.color} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />;
+    if (a.type === 'arrow') {
+      return (
+        <g key={key}>
+          <line x1={a.points[0][0]} y1={a.points[0][1]} x2={a.points[1][0]} y2={a.points[1][1]} stroke={a.color} strokeWidth={3} strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+          <polygon points={arrowHead(a.points[0], a.points[1], 13 * upx)} fill={a.color} />
+        </g>
+      );
+    }
+    return <text key={key} x={a.points[0][0]} y={a.points[0][1]} fontSize={14 * upx} fill={a.color} fontWeight={700} direction="ltr" stroke={PAPER} strokeWidth={3 * upx} paintOrder="stroke">{a.text}</text>;
+  };
+
   return (
     <div ref={wrapRef} style={{ width: '100%' }}>
       <style>{'.atlas-part{cursor:pointer}.atlas-part:hover{filter:brightness(1.07)}.atlas-part:focus{outline:none}.atlas-part:focus-visible{filter:drop-shadow(0 0 3px #e8590c)}'}</style>
@@ -254,20 +275,13 @@ export default function AtlasViewer({
             })}
           </g>
         ) : null}
+        {ghost && ghost.length ? (
+          <g data-ui="1" data-layer="ghost" pointerEvents="none" opacity={0.35} fontFamily="'Segoe UI',Tahoma,Arial,sans-serif">
+            {ghost.map(a => renderAnnotation(a, `g${a.id}`))}
+          </g>
+        ) : null}
         <g data-layer="annotations" pointerEvents="none" fontFamily="'Segoe UI',Tahoma,Arial,sans-serif">
-          {annotations.map(a => {
-            if (a.type === 'stamp') return <PlacedStamp key={a.id} a={a} />;
-            if (a.type === 'pen') return <path key={a.id} d={penPath(a.points)} fill="none" stroke={a.color} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />;
-            if (a.type === 'arrow') {
-              return (
-                <g key={a.id}>
-                  <line x1={a.points[0][0]} y1={a.points[0][1]} x2={a.points[1][0]} y2={a.points[1][1]} stroke={a.color} strokeWidth={3} strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-                  <polygon points={arrowHead(a.points[0], a.points[1], 13 * upx)} fill={a.color} />
-                </g>
-              );
-            }
-            return <text key={a.id} x={a.points[0][0]} y={a.points[0][1]} fontSize={14 * upx} fill={a.color} fontWeight={700} direction="ltr" stroke={PAPER} strokeWidth={3 * upx} paintOrder="stroke">{a.text}</text>;
-          })}
+          {annotations.map(a => renderAnnotation(a, a.id))}
           {draft && draft.type === 'pen' ? <path d={penPath(draft.points.map(p => [Math.round(p[0] * 10) / 10, Math.round(p[1] * 10) / 10]))} fill="none" stroke={color} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" /> : null}
           {draft && draft.type === 'arrow' ? (
             <g>

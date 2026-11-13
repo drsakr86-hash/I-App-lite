@@ -26,7 +26,7 @@ const ExamAtlasStep = lazy(() => import('../atlas/ExamAtlasStep.jsx'));
 
 // Three-step examination add/edit form. Exact port of the legacy runtime's
 // ExamForm (public/legacy/app-runtime.js).
-export default function ExamForm({ initial, patientId, patient = null, session = null, onSave, onClose, doctorNames = DEFAULT_DOCTOR_NAMES }) {
+export default function ExamForm({ initial, patientId, patient = null, session = null, onSave, onClose, doctorNames = DEFAULT_DOCTOR_NAMES, priorExams = null }) {
   const lang = useLang();
   const [f, setF] = useState(() => initialExamState(initial ? examForEditing(initial) : initial, localISO()));
   const atlasOn = isEnabled('atlas') && can(session && session.role, 'atlas', 'read');
@@ -263,6 +263,7 @@ export default function ExamForm({ initial, patientId, patient = null, session =
             exam={{ id: draftId, patientId, date: f.date, visitId: f.visitId ?? null }}
             session={session}
             drawings={Array.isArray(f.atlasDrawings) ? f.atlasDrawings : []}
+            priorExams={priorExams}
             onChange={list => setF(v => ({ ...v, atlasDrawings: list }))}
           />
         </Suspense>

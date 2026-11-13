@@ -7,7 +7,7 @@ import { moreNavItems, isMoreActive, NAV, atlasTabAllowed } from '../src/compone
 
 test('atlas: the seven original plates exist first, in order, then the supplied image plates', () => {
   assert.deepEqual(PLATES.slice(0, 7).map(p => p.id), ['general-eye', 'retina-layers', 'vitreoretinal-interface', 'extraocular-muscles', 'visual-pathway', 'anterior-segment-angle', 'lens-pupil']);
-  assert.deepEqual(PLATES.slice(7).map(p => p.id), ['fundus-photo-od', 'fundus-photo-os', 'fundus-illustration-od', 'fundus-illustration-os', 'extraocular-muscles-od', 'extraocular-muscles-os', 'anterior-segment-section', 'blank-canvas']);
+  assert.deepEqual(PLATES.slice(7).map(p => p.id), ['fundus-photo-od', 'fundus-photo-os', 'fundus-illustration-od', 'fundus-illustration-os', 'extraocular-muscles-od', 'extraocular-muscles-os', 'anterior-segment-section', 'fundus-chart-od', 'fundus-chart-os', 'macula-chart-od', 'macula-chart-os', 'anterior-chart-od', 'anterior-chart-os', 'blank-canvas']);
   assert.deepEqual(listPlates().slice(0, 7).map(p => p.count > 4), PLATES.slice(0, 7).map(() => true));
 });
 test('atlas: every plate passes validation (bilingual text, licence, bounds, whitelisted shape keys)', () => {

@@ -15,7 +15,7 @@ const PATHDATA = /^[MmLlHhVvCcSsQqTtAaZz0-9\s.,-]+$/;
 const POINTS = /^[\d\s.,-]+$/;
 const DASH = /^[\d\s.,]+$/;
 
-export const listPlates = () => PLATES.map(p => ({ id: p.id, title: p.title, subtitle: p.subtitle, count: p.parts.length, status: p.status }));
+export const listPlates = () => PLATES.map(p => ({ id: p.id, title: p.title, subtitle: p.subtitle, count: p.parts.length, status: p.status, chart: p.chart || null }));
 export const getPlate = id => PLATES.find(p => p.id === id) || null;
 export const getPart = (plate, partId) => (plate ? plate.parts.find(p => p.id === partId) || null : null);
 export const firstPlateId = () => (PLATES[0] ? PLATES[0].id : null);
@@ -102,7 +102,27 @@ function validateShape(sh, where, out) {
   if (sh.t === 'polygon' && !(typeof sh.points === 'string' && POINTS.test(sh.points))) out.push(`${where}: bad points`);
   const need = { circle: ['cx', 'cy', 'r'], ellipse: ['cx', 'cy', 'rx', 'ry'], rect: ['x', 'y', 'width', 'height'], line: ['x1', 'y1', 'x2', 'y2'], text: ['x', 'y'] }[sh.t] || [];
   for (const k of need) if (!num(sh[k])) out.push(`${where}: ${sh.t} needs ${k}`);
-  if (sh.t === 'text') bilingual(sh.text, `${where}.text`, out);
+  // numerals and symbols ("XII", "1/3") read the same in both languages, so they need no Arabic letters
+  if (sh.t === 'text') bilingual(sh.text, `${where}.text`, out, { arabicRequired: !(sh.text && sh.text.ar === sh.text.en) });
+}
+
+export const CHART_KINDS = Object.freeze(['fundus', 'macula', 'anterior']);
+export const EYES = Object.freeze(['OD', 'OS']);
+// A chart is a plate made for one eye: it names the eye, may carry a colour legend, and (anterior chart) the circle of the anterior chamber.
+function validateChart(plate, out) {
+  const id = plate.id;
+  if (!CHART_KINDS.includes(plate.chart)) out.push(`${id}: bad chart kind ${plate.chart}`);
+  if (!EYES.includes(plate.eye)) out.push(`${id}: a chart needs eye OD or OS`);
+  if (plate.eye && !String(id).endsWith('-' + String(plate.eye).toLowerCase())) out.push(`${id}: id must end with the eye`);
+  (plate.legend || []).forEach((it, i) => {
+    if (!it || !COLOR.test(String(it.c)) || it.c === 'none') out.push(`${id}.legend[${i}]: bad colour`);
+    bilingual(it, `${id}.legend[${i}]`, out);
+  });
+  if (plate.ac != null) {
+    const a = plate.ac;
+    const vb = plate.viewBox;
+    if (!a || !num(a.cx) || !num(a.cy) || !num(a.r) || a.r <= 0 || a.cx - a.r < vb[0] || a.cx + a.r > vb[0] + vb[2] || a.cy - a.r < vb[1] || a.cy + a.r > vb[1] + vb[3]) out.push(`${id}: bad anterior chamber circle`);
+  }
 }
 
 export function validatePlate(plate) {
@@ -124,6 +144,7 @@ export function validatePlate(plate) {
   }
   if (!plate.source || !plate.source.license || !plate.source.author) out.push(`${id}: source needs author and licence`);
   if (!Array.isArray(plate.references) || !plate.references.length) out.push(`${id}: references missing`);
+  if (plate.chart != null) validateChart(plate, out);
   (plate.decor || []).forEach((sh, i) => validateShape(sh, `${id}.decor[${i}]`, out));
   if (plate.blank === true) { if (Array.isArray(plate.parts) && plate.parts.length) out.push(`${id}: a blank plate has no parts`); return out; }
   if (!Array.isArray(plate.parts) || !plate.parts.length) { out.push(`${id}: no parts`); return out; }
@@ -156,6 +177,14 @@ export const plateImageUrl = plate => {
 // The library of anatomy plates is switched off in the UI: the doctor works on the blank canvas (free drawing + own image).
 // The plates stay in the data (old saved drawings still resolve their plate); flip this to bring the library back.
 export const LIBRARY_VISIBLE = false;
-export const visiblePlates = (showLibrary = LIBRARY_VISIBLE) => listPlates().filter(p => showLibrary || PLATES.find(q => q.id === p.id).blank === true);
+// Always visible: the blank canvas and the per-eye charts (OD / OS). The rest of the library follows LIBRARY_VISIBLE.
+// The blank canvas comes first and is the default: no eye is implied until the doctor picks the right or left chart on purpose.
+export const visiblePlates = (showLibrary = LIBRARY_VISIBLE) => {
+  const isBlank = p => PLATES.find(q => q.id === p.id).blank === true;
+  const list = listPlates().filter(p => showLibrary || p.chart || isBlank(p));
+  return [...list.filter(isBlank), ...list.filter(p => !isBlank(p))];
+};
+// Charts of one kind for both eyes, right eye first.
+export const chartsOf = kind => PLATES.filter(p => p.chart === kind).sort((a, b) => (a.eye === 'OD' ? -1 : 1) - (b.eye === 'OD' ? -1 : 1));
 export const plateAttribution = plate => `${plate.source.author} — ${plate.source.license}`;
 export const isApproved = plate => plate.status === CONTENT_STATUS.APPROVED;

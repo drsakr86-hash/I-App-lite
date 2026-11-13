@@ -56,10 +56,11 @@ test('image plates: bilingual part names and a URL that resolves next to the app
   assert.equal(plateImageUrl(PLATES[0]), null);
 });
 
-test('blank canvas: the only plate shown by default, no anatomy, validates; the library can be switched back on', async () => {
+test('blank canvas: shown first (the default) next to the per-eye charts, no anatomy, validates; the library can be switched back on', async () => {
   const { visiblePlates, LIBRARY_VISIBLE } = await import('../src/modules/atlas/model.js');
   assert.equal(LIBRARY_VISIBLE, false);
-  assert.deepEqual(visiblePlates().map(p => p.id), ['blank-canvas']);
+  assert.deepEqual(visiblePlates().map(p => p.id), ['blank-canvas', 'fundus-chart-od', 'fundus-chart-os', 'macula-chart-od', 'macula-chart-os', 'anterior-chart-od', 'anterior-chart-os']);
+  assert.equal(visiblePlates()[0].id, 'blank-canvas');
   assert.equal(visiblePlates(true).length, PLATES.length);
   const blank = getPlate('blank-canvas');
   assert.equal(blank.blank, true); assert.equal(blank.parts.length, 0);

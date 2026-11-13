@@ -7,9 +7,11 @@ import { visiblePlates, LIBRARY_VISIBLE, getPlate, firstPlateId, partName, pick,
 import { zoomCentered, ZOOM_STEP } from '../modules/atlas/viewport.js';
 import { checkBackgroundFile, scaledSize, fitRect } from '../modules/atlas/background.js';
 import { ANNOTATION_COLORS, ANNOTATION_COLOR_NAMES, loadAnnotations, saveAnnotations, annotationScope, add, undo, note, stamp as makeStamp } from '../modules/atlas/annotations.js';
-import { STAMPS, STAMP_SIZES, getStamp, nextRotation, stampColor } from '../modules/atlas/stamps.js';
+import { STAMP_SIZES, STAMP_GROUPS, stampsFor, getStamp, nextRotation, stampColor } from '../modules/atlas/stamps.js';
+import { priorDrawing, carryForward } from '../modules/atlas/followup.js';
 import StampIcon from '../components/atlas/StampGlyph.jsx';
 import AtlasViewer from '../components/atlas/AtlasViewer.jsx';
+import LevelPanel from '../components/atlas/LevelPanel.jsx';
 import { privateStorageEnabled } from '../services/private-storage.js';
 import { canApproveDrawing } from '../modules/atlas/drawings.js';
 import { askConfirm } from '../modules/ui/dialogs.js';
@@ -77,6 +79,8 @@ export default function AtlasScreen({ role = null, user = null, context = null, 
   const [textValue, setTextValue] = useState('');
   const [query, setQuery] = useState('');
   const [stampSel, setStampSel] = useState({ id: 'hemorrhage', size: 'm', rot: 0 });
+  const [stampGroup, setStampGroup] = useState('all'); // which symbols the palette shows: all, retina or anterior
+  const [ghostOn, setGhostOn] = useState(false); // the previous visit's drawing, shown faintly under today's
   const [message, setMessage] = useState('');
   const svgRef = useRef(null);
   const plates = useMemo(() => visiblePlates(showLibrary), [showLibrary]);
@@ -87,16 +91,26 @@ export default function AtlasScreen({ role = null, user = null, context = null, 
   const scope = annotationScope(plateId, context);
   // switching plate: reset the view and selection, load that plate's saved drawing
   useEffect(() => {
-    setSelectedId(null); setPendingText(null); setMessage(''); setBg(null);
+    setSelectedId(null); setPendingText(null); setMessage(''); setBg(null); setGhostOn(false);
+    setStampGroup(plate.chart === 'anterior' ? 'anterior' : plate.chart ? 'retina' : 'all');
     try { setAnnotations(loadAnnotations(localStorage, scope)); } catch { setAnnotations([]); }
-  }, [scope]);
+  }, [scope]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const commit = useCallback(list => {
     setAnnotations(list);
     try { saveAnnotations(localStorage, scope, list); } catch { /* storage unavailable: the drawing stays for this visit only */ }
   }, [scope]);
 
-  const results = useMemo(() => (normalizeText(query).length >= 2 ? searchParts(query).slice(0, 8) : []), [query]);
+  const results = useMemo(() => (normalizeText(query).length >= 2 ? searchParts(query, plates.map(p => getPlate(p.id))).slice(0, 8) : []), [query, plates]);
+
+  // follow-up: the last approved drawing of this same chart (same eye) for this patient, if any
+  const prior = useMemo(() => (context && context.priorExams && context.patient && plate.chart
+    ? priorDrawing({ exams: context.priorExams, patientId: context.patient.id, plateId, excludeExamId: context.exam ? context.exam.id : null, role }) : null), [context, plateId, role, plate.chart]);
+  const copyPrior = async () => {
+    if (!prior) return;
+    if (annotations.length && !(await askConfirm(t('atlas.prior.copyConfirm', lang)))) return;
+    commit(carryForward(prior.annotations)); setGhostOn(false);
+  };
   const selected = selectedId ? plate.parts.find(p => p.id === selectedId) : null;
   const other = lang === 'ar' ? 'en' : 'ar';
 
@@ -154,7 +168,7 @@ export default function AtlasScreen({ role = null, user = null, context = null, 
   };
 
   const card = { background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: 12 };
-  const modeNow = labelMode || 'auto';
+  const modeNow = labelMode || (plate.chart ? 'off' : 'auto'); // charts start with the labels hidden: the sheet is for drawing on
 
   return (
     <div style={{ padding: embedded ? 0 : 12, paddingBottom: embedded ? 12 : 90, direction: dirOf(lang), color: C.text, maxWidth: 1100, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -229,8 +243,13 @@ export default function AtlasScreen({ role = null, user = null, context = null, 
 
       {tool === 'stamp' ? (
         <div style={{ ...card, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div role="group" aria-label={t('atlas.tool.stamp', lang)} style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {['all', ...STAMP_GROUPS].map(g => (
+              <button key={g} type="button" aria-pressed={stampGroup === g} style={btn(stampGroup === g)} onClick={() => setStampGroup(g)}>{t(`atlas.stamp.group.${g}`, lang)}</button>
+            ))}
+          </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(128px, 1fr))', gap: 6 }}>
-            {STAMPS.map(st => (
+            {stampsFor(stampGroup).map(st => (
               <button key={st.id} type="button" aria-pressed={stampSel.id === st.id} onClick={() => setStampSel(v => ({ ...v, id: st.id }))} style={{ ...btn(stampSel.id === st.id), display: 'flex', alignItems: 'center', gap: 6, textAlign: 'start', padding: '5px 8px', fontSize: 12 }}>
                 <StampIcon stamp={st} color={color} />
                 <span>{pick(st.name, lang)}</span>
@@ -256,15 +275,40 @@ export default function AtlasScreen({ role = null, user = null, context = null, 
         </form>
       ) : tool === 'text' ? <div style={{ fontSize: 12, color: C.muted }}>{t('atlas.text.hint', lang)}</div> : null}
 
+      {plate.ac ? <LevelPanel lang={lang} annotations={annotations} onChange={commit} /> : null}
+
+      {prior ? (
+        <div style={{ ...card, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ fontSize: 14, fontWeight: 800 }}>{t('atlas.prior.title', lang)}</div>
+          <div style={{ fontSize: 13, color: C.muted }}>{t('atlas.prior.date', lang)}: {prior.examDate || String(prior.approvedAt).slice(0, 10)}</div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            <button type="button" style={btn(ghostOn)} aria-pressed={ghostOn} onClick={() => setGhostOn(v => !v)}>{t(ghostOn ? 'atlas.prior.hide' : 'atlas.prior.show', lang)}</button>
+            <button type="button" style={btn(false)} onClick={copyPrior}>{t('atlas.prior.copy', lang)}</button>
+          </div>
+          <div style={{ fontSize: 12, color: C.muted }}>{t('atlas.prior.hint', lang)}</div>
+        </div>
+      ) : null}
+
       <AtlasViewer
         key={plate.id}
         plate={plate} lang={lang} selectedId={selectedId} onSelect={setSelectedId}
-        labelMode={labelMode} bothLangs={bothLangs} tool={tool} color={color} annotations={annotations}
+        labelMode={labelMode || (plate.chart ? 'off' : null)} bothLangs={bothLangs} tool={tool} color={color} annotations={annotations} ghost={ghostOn && prior ? prior.annotations : null}
         onAnnotate={a => commit(add(annotations, a))} onTextPoint={p => { setPendingText(p); setTextValue(''); }}
         onStamp={p => { const st = getStamp(stampSel.id); if (st) commit(add(annotations, makeStamp(p, st.id, STAMP_SIZES[stampSel.size], stampSel.rot, stampColor(st, color)))); }}
         view={view} onViewChange={setView} svgRef={svgRef} background={bg}
       />
       {plate.blank ? <div style={{ fontSize: 12, color: C.muted }}>{t('atlas.bg.hint', lang)}</div> : null}
+      {plate.legend ? (
+        <div style={{ ...card, display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ fontSize: 12, color: C.muted }}>{t('atlas.legend', lang)}</div>
+          {plate.legend.map(it => (
+            <div key={it.c + it.en} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 12, lineHeight: 1.6 }}>
+              <span aria-hidden="true" style={{ flex: '0 0 auto', width: 14, height: 14, marginTop: 3, borderRadius: 3, background: it.c }} />
+              <span>{pick(it, lang)}</span>
+            </div>
+          ))}
+        </div>
+      ) : null}
       <div style={{ fontSize: 11, color: C.muted }}>{t('atlas.hint.gestures', lang)} {t('atlas.local', lang)}</div>
       {message ? <div role="alert" style={{ color: C.danger, fontSize: 13 }}>{message}</div> : null}
 

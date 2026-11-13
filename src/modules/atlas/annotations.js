@@ -1,16 +1,18 @@
 // Pure annotation model for the atlas canvas: freehand pen strokes, arrows, text notes and ready-made lesion stamps drawn on top of a plate.
 // Annotations live in plate coordinates (so they follow zoom), are kept per plate in this browser only, and never
 // contain patient data -- attaching a drawing to a patient/exam is a later, doctor-approved step (see docs/ATLAS.md).
-export const ANNOTATION_TYPES = Object.freeze(['pen', 'arrow', 'text', 'stamp']);
-export const ANNOTATION_COLORS = Object.freeze(['#d62828', '#1d4ed8', '#15803d', '#111827']);
+export const ANNOTATION_TYPES = Object.freeze(['pen', 'arrow', 'text', 'stamp', 'level']);
+// red / blue / green / black plus yellow and brown, the colours of the retinal chart convention (exudates, choroid)
+export const ANNOTATION_COLORS = Object.freeze(['#d62828', '#1d4ed8', '#15803d', '#111827', '#d4a017', '#78350f']);
 // Spoken names of the colours above (i18n keys atlas.color.<name>), for screen readers.
-export const ANNOTATION_COLOR_NAMES = Object.freeze(['red', 'blue', 'green', 'black']);
+export const ANNOTATION_COLOR_NAMES = Object.freeze(['red', 'blue', 'green', 'black', 'yellow', 'brown']);
 export const MAX_ANNOTATIONS = 200;
 export const MAX_POINTS = 600;
 export const MAX_TEXT = 80;
 export const STORAGE_PREFIX = 'iapp_atlas_ann_v1:';
 
 import { STAMP_IDS, STAMP_ROTATIONS } from './stamps.js';
+import { LEVEL_KINDS, clampLevel } from './levels.js';
 
 const num = v => typeof v === 'number' && Number.isFinite(v);
 const COORD_LIMIT = 5000;
@@ -28,6 +30,11 @@ export const arrow = (from, to, color) => ({ id: newId(), type: 'arrow', color, 
 export const STAMP_MIN = 10, STAMP_MAX = 200;
 const HEX = /^#[0-9a-f]{6}$/i;
 export const stamp = (at, symbol, size, rot, color) => ({ id: newId(), type: 'stamp', symbol, color, size: Math.round(size), rot: STAMP_ROTATIONS.includes(rot) ? rot : 0, points: [[r1(at.x), r1(at.y)]] });
+// A blood / pus level in the anterior chamber (anterior chart only). One per kind: setting it again replaces the old one.
+export const level = (kind, frac) => ({ id: newId(), type: 'level', kind, frac: clampLevel(frac) });
+export const levelOf = (list, kind) => list.find(a => a.type === 'level' && a.kind === kind) || null;
+export const setLevel = (list, kind, frac) => (LEVEL_KINDS.includes(kind) ? [...list.filter(a => !(a.type === 'level' && a.kind === kind)), level(kind, frac)] : list);
+export const removeLevel = (list, kind) => list.filter(a => !(a.type === 'level' && a.kind === kind));
 export const note = (at, text, color) => ({ id: newId(), type: 'text', color, points: [[r1(at.x), r1(at.y)]], text: cleanText(text) });
 
 // Drop points closer than `min` plate units to the previous one (keeps strokes light), always keep the last point.
@@ -77,6 +84,11 @@ export function sanitize(raw) {
       if (!STAMP_IDS.includes(a.symbol) || !HEX.test(String(a.color)) || typeof a.id !== 'string' || !/^[a-z0-9]{3,40}$/i.test(a.id)) continue;
       if (!Array.isArray(a.points) || a.points.length !== 1 || !okPoint(a.points[0]) || !num(a.size) || a.size < STAMP_MIN || a.size > STAMP_MAX) continue;
       out.push({ id: a.id, type: 'stamp', symbol: a.symbol, color: a.color, size: Math.round(a.size), rot: STAMP_ROTATIONS.includes(a.rot) ? a.rot : 0, points: [[a.points[0][0], a.points[0][1]]] });
+      continue;
+    }
+    if (a.type === 'level') {
+      if (!LEVEL_KINDS.includes(a.kind) || typeof a.id !== 'string' || !/^[a-z0-9]{3,40}$/i.test(a.id) || typeof a.frac !== 'number' || !(a.frac > 0 && a.frac <= 1)) continue;
+      out.push({ id: a.id, type: 'level', kind: a.kind, frac: clampLevel(a.frac) });
       continue;
     }
     if (!ANNOTATION_COLORS.includes(a.color) || typeof a.id !== 'string' || !/^[a-z0-9]{3,40}$/i.test(a.id)) continue;
