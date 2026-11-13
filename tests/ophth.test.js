@@ -85,3 +85,33 @@ test('fillNormalSegment fills only empty fields of the chosen eye', async () => 
   assert.equal(u.posterior.disc.os, 'طبيعي');
   assert.equal(u.cd.od, '');
 });
+
+import { fillNormalAll, URGENCY_OPTIONS } from '../src/modules/patient-file/ophth.js';
+
+test('ophth: whole-exam normal fills both segments for the chosen eyes and never overwrites', () => {
+  const start = normalizeOphth({ anterior: { cornea: { od: 'قرحة قرنية' } } });
+  const o = fillNormalAll(start, ['od', 'os']);
+  assert.equal(o.anterior.cornea.od, 'قرحة قرنية');
+  assert.equal(o.anterior.cornea.os, ANTERIOR_OPTIONS.cornea[0]);
+  assert.equal(o.posterior.macula.od, POSTERIOR_OPTIONS.macula[0]);
+  assert.equal(o.posterior.periphery.os, POSTERIOR_OPTIONS.periphery[0]);
+  const odOnly = fillNormalAll(blankOphth(), ['od']);
+  assert.equal(odOnly.posterior.disc.os, '');
+  assert.equal(odOnly.anterior.lens.od, ANTERIOR_OPTIONS.lens[0]);
+});
+
+test('ophth: urgency tier is stored, mirrored once into the plan, and old records are unaffected', () => {
+  assert.equal(new Set(URGENCY_OPTIONS).size, URGENCY_OPTIONS.length);
+  assert.equal(URGENCY_OPTIONS[0], 'نفس اليوم');
+  assert.equal(blankOphth().plan.urgency, '');
+  const e = applyOphthToExam({ treatmentPlan: 'حقن', ophth: { plan: { investigation: 'OCT', urgency: 'خلال أسبوع' } } });
+  assert.equal(e.ophth.plan.urgency, 'خلال أسبوع');
+  assert.ok(e.treatmentPlan.includes('فحوصات مطلوبة: OCT'));
+  assert.ok(e.treatmentPlan.includes('درجة الاستعجال: خلال أسبوع'));
+  assert.deepEqual(applyOphthToExam(e), e);
+  assert.equal(examForEditing(e).treatmentPlan, 'حقن');
+  const only = applyOphthToExam({ ophth: { plan: { urgency: 'نفس اليوم' } } });
+  assert.ok(only.treatmentPlan.includes('درجة الاستعجال: نفس اليوم'));
+  const old = applyOphthToExam({ id: 1, treatmentPlan: 'متابعة' });
+  assert.equal(old.treatmentPlan, 'متابعة');
+});

@@ -2,7 +2,7 @@ import React from 'react';
 import { C } from '../../modules/theme/index.js';
 import { inp } from '../../modules/ui/atoms.jsx';
 import {
-  normalizeOphth, fillNormalSegment, ANTERIOR_PARTS, POSTERIOR_PARTS, IOP_METHODS,
+  normalizeOphth, fillNormalSegment, fillNormalAll, URGENCY_OPTIONS, ANTERIOR_PARTS, POSTERIOR_PARTS, IOP_METHODS,
   SPH_OPTIONS, CYL_OPTIONS, AXIS_OPTIONS, CD_OPTIONS, ANTERIOR_OPTIONS, POSTERIOR_OPTIONS,
   DX_OPTIONS, INVESTIGATION_OPTIONS, FOLLOWUP_REASON_OPTIONS
 } from '../../modules/patient-file/ophth.js';
@@ -110,8 +110,8 @@ function NormalRow({ o, onChange, group }) {
   return (
     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
       {[['OD', ['od']], ['OS', ['os']], ['OU', ['od', 'os']]].map(([l, eyes]) => (
-        <button key={l} type="button" style={btn} onClick={() => onChange(fillNormalSegment(o, group, eyes))}>
-          {t('g2.ophth.normal', lang)} <span dir="ltr">{l}</span>
+        <button key={l} type="button" style={btn} onClick={() => onChange(group === 'all' ? fillNormalAll(o, eyes) : fillNormalSegment(o, group, eyes))}>
+          {t(group === 'all' ? 'g2.ophth.normalAll' : 'g2.ophth.normal', lang)} <span dir="ltr">{l}</span>
         </button>
       ))}
     </div>
@@ -152,6 +152,7 @@ export function OphthFindings({ value, onChange }) {
           ))}
         </div>
       ))}
+      <NormalRow o={o} onChange={onChange} group="all" />
       <div className="ds-h" style={{ marginTop: 4 }}>{t('g2.exam.anterior', lang)}</div>
       <NormalRow o={o} onChange={onChange} group="anterior" />
       {ANTERIOR_PARTS.map(([k, l]) => <PairInputs key={k} o={o} onChange={onChange} group="anterior" part={k} label={tv(l)} options={ANTERIOR_OPTIONS[k]} />)}
@@ -178,6 +179,9 @@ export function OphthPlan({ value, onChange }) {
       ))}
       <Eye label={t('g2.ophth.investigations', lang)}>
         <Pick label={t('g2.ophth.investigations', lang)} options={INVESTIGATION_OPTIONS} value={o.plan.investigation} onChange={v => onChange(setPath(o, ['plan', 'investigation'], v))} />
+      </Eye>
+      <Eye label={t('g2.ophth.urgency', lang)}>
+        <Pick label={t('g2.ophth.urgency', lang)} options={URGENCY_OPTIONS} value={o.plan.urgency} onChange={v => onChange(setPath(o, ['plan', 'urgency'], v))} />
       </Eye>
       <Eye label={t('g2.ophth.followUpReason', lang)}>
         <Pick label={t('g2.ophth.followUpReason', lang)} options={FOLLOWUP_REASON_OPTIONS} value={o.plan.followUpReason} onChange={v => onChange(setPath(o, ['plan', 'followUpReason'], v))} />

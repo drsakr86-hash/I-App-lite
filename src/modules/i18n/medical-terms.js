@@ -47,7 +47,10 @@ const PAIRS = [
   ['قياس سُمك القرنية (Pachymetry)', 'Corneal pachymetry'], ['موجات صوتية (B-scan)', 'B-scan ultrasound'], ['قياس الانكسار بالتقطير (Cycloplegic)', 'Cycloplegic refraction'],
   // follow-up reasons
   ['متابعة ضغط العين', 'IOP follow-up'], ['تقييم الاستجابة بعد الحقن', 'Post-injection response assessment'], ['جرعة حقن قادمة', 'Next injection'],
-  ['مراجعة نتيجة فحص', 'Review of test result'], ['متابعة سكري', 'Diabetic follow-up'], ['بعد عملية', 'Post-operative review'], ['متابعة روتينية', 'Routine follow-up'], ['قياس نظارة', 'Glasses prescription']
+  ['مراجعة نتيجة فحص', 'Review of test result'], ['متابعة سكري', 'Diabetic follow-up'], ['بعد عملية', 'Post-operative review'], ['متابعة روتينية', 'Routine follow-up'], ['قياس نظارة', 'Glasses prescription'],
+  // follow-up urgency tiers
+  ['نفس اليوم', 'Same day'], ['خلال أسبوع', 'Within 1 week'], ['خلال أسبوعين', 'Within 2 weeks'], ['خلال شهر', 'Within 1 month'],
+  ['خلال 3 أشهر', 'Within 3 months'], ['خلال 6 أشهر', 'Within 6 months'], ['خلال 12 شهراً', 'Within 12 months']
 ];
 
 export const AR_TO_EN = Object.freeze(Object.fromEntries([...PAIRS, ...EXTRA_PAIRS]));

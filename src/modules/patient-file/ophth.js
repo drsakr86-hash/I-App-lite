@@ -45,7 +45,7 @@ export function blankOphth() {
     cmt: eyePair(),
     vfMd: eyePair(),
     dx: { od: '', os: '', ou: '' },
-    plan: { investigation: '', followUpReason: '' }
+    plan: { investigation: '', followUpReason: '', urgency: '' }
   };
 }
 
@@ -186,11 +186,10 @@ export function applyOphthToExam(exam) {
   e.anteriorSegment = joinDerived(e.anteriorSegment, empty ? [] : composeAnterior(o));
   e.posteriorSegment = joinDerived(e.posteriorSegment, empty ? [] : composePosterior(o));
   e.diagnosis = joinDerived(e.diagnosis, empty ? [] : composeDiagnosis(o));
-  if (!empty && hasText(o.plan.investigation)) {
-    e.treatmentPlan = joinDerived(e.treatmentPlan, ['فحوصات مطلوبة: ' + o.plan.investigation.trim()]);
-  } else {
-    e.treatmentPlan = joinDerived(e.treatmentPlan, []);
-  }
+  const planLines = [];
+  if (!empty && hasText(o.plan.investigation)) planLines.push('فحوصات مطلوبة: ' + o.plan.investigation.trim());
+  if (!empty && hasText(o.plan.urgency)) planLines.push('درجة الاستعجال: ' + o.plan.urgency.trim());
+  e.treatmentPlan = joinDerived(e.treatmentPlan, planLines);
   return e;
 }
 
@@ -253,6 +252,12 @@ export const FOLLOWUP_REASON_OPTIONS = Object.freeze([
   'متابعة ضغط العين', 'تقييم الاستجابة بعد الحقن', 'جرعة حقن قادمة', 'مراجعة نتيجة فحص', 'متابعة سكري', 'بعد عملية', 'متابعة روتينية', 'قياس نظارة'
 ]);
 
+// How soon the patient must be seen again (clinical urgency tier), from the same-day case to a yearly review.
+// Stored as plain text like every other list here; the first tier is the most urgent.
+export const URGENCY_OPTIONS = Object.freeze([
+  'نفس اليوم', 'خلال أسبوع', 'خلال أسبوعين', 'خلال شهر', 'خلال 3 أشهر', 'خلال 6 أشهر', 'خلال 12 شهراً'
+]);
+
 // "Normal" shortcut: fills only EMPTY fields of one segment for the chosen eye(s) with the
 // first (normal) option of each list. Anything already written is never overwritten.
 export function fillNormalSegment(raw, group, eyes) {
@@ -265,4 +270,9 @@ export function fillNormalSegment(raw, group, eyes) {
     }
   }
   return o;
+}
+
+// One tap for the whole slit-lamp + fundus exam: the same rule as fillNormalSegment, applied to both segments.
+export function fillNormalAll(raw, eyes) {
+  return fillNormalSegment(fillNormalSegment(raw, 'anterior', eyes), 'posterior', eyes);
 }
