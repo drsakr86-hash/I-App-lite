@@ -71,3 +71,9 @@ export async function loadSystemErrors() {
   ]);
   return { audits: wrap(audits) || [], failed: wrap(failed) || [], retrying: wrap(retrying) || [] };
 }
+
+// Clinic knowledge (admin only; RLS + RPC re-check the role). Approved replies become wa_faq rows used by the assistant.
+export const loadReplyCandidates = (limit = 30) => rpc('wa_reply_candidates', { p_limit: limit });
+export const decideReply = (msgId, decision, topic, answer) => rpc('wa_reply_decide', { p_msg: msgId, p_decision: decision, p_topic: topic || null, p_answer: answer || null });
+export async function loadFaq() { return wrap(await sb().from('wa_faq').select('id,topic,answer,active,updated_at').order('updated_at', { ascending: false }).limit(200)) || []; }
+export async function setFaqActive(id, active) { return wrap(await sb().from('wa_faq').update({ active: !!active, updated_at: new Date().toISOString() }).eq('id', id)); }

@@ -1,0 +1,41 @@
+// UI strings of the clinic-knowledge review screen (WhatsApp inbox, admin only). Same key set in ar and en.
+export const ar = {
+  "wa.kb.open": "قاعدة المعرفة",
+  "wa.kb.title": "قاعدة معرفة العيادة",
+  "wa.kb.intro": "ردود السكرتارية السابقة. اعتمد ما تريد أن يستخدمه المساعد، بعد حذف أي اسم أو رقم هاتف. لا يدخل شيء قبل اعتمادك.",
+  "wa.kb.empty": "لا توجد ردود جديدة للمراجعة.",
+  "wa.kb.q": "سؤال المريض",
+  "wa.kb.noQ": "(لا يوجد سؤال سابق)",
+  "wa.kb.topic": "العنوان (السؤال)",
+  "wa.kb.answer": "الإجابة المعتمدة",
+  "wa.kb.approve": "اعتمده كمعلومة",
+  "wa.kb.ignore": "تجاهل",
+  "wa.kb.err.topic": "العنوان بين حرفين و80 حرفاً.",
+  "wa.kb.err.answer": "الإجابة بين حرفين و1200 حرف.",
+  "wa.kb.err.personal": "يوجد رقم هاتف أو بريد أو رابط في النص. احذفه قبل الاعتماد.",
+  "wa.kb.approved": "المعلومات المعتمدة",
+  "wa.kb.noFaq": "لا توجد معلومات معتمدة بعد.",
+  "wa.kb.disable": "إيقاف",
+  "wa.kb.enable": "تفعيل",
+  "wa.kb.notInstalled": "ميزة قاعدة المعرفة لم تُفعَّل بعد على الخادم."
+};
+export const en = {
+  "wa.kb.open": "Knowledge base",
+  "wa.kb.title": "Clinic knowledge base",
+  "wa.kb.intro": "Past secretary replies. Approve what the assistant may use, after removing any name or phone number. Nothing goes in before you approve it.",
+  "wa.kb.empty": "No new replies to review.",
+  "wa.kb.q": "Patient question",
+  "wa.kb.noQ": "(no earlier question)",
+  "wa.kb.topic": "Title (question)",
+  "wa.kb.answer": "Approved answer",
+  "wa.kb.approve": "Approve as knowledge",
+  "wa.kb.ignore": "Ignore",
+  "wa.kb.err.topic": "Title must be 2 to 80 characters.",
+  "wa.kb.err.answer": "Answer must be 2 to 1200 characters.",
+  "wa.kb.err.personal": "The text contains a phone number, e-mail or link. Remove it before approving.",
+  "wa.kb.approved": "Approved knowledge",
+  "wa.kb.noFaq": "Nothing approved yet.",
+  "wa.kb.disable": "Disable",
+  "wa.kb.enable": "Enable",
+  "wa.kb.notInstalled": "The knowledge-base feature is not enabled on the server yet."
+};

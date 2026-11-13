@@ -12,6 +12,7 @@ import { pushStatus, enablePush, disablePush, pushDiagnostics } from '../modules
 import { QUICK_REPLIES, applyQuickReply } from '../modules/whatsapp/quickReplies.js';
 import { askConfirm } from '../modules/ui/dialogs.js';
 import { friendlyError } from '../modules/errors/friendly.js';
+import WaKnowledge from './WaKnowledge.jsx';
 
 const POLL_MS = 5000;
 const pill = (color, text, key) => <span key={key} style={{ background: color + '22', color, border: '1px solid ' + color + '44', borderRadius: 20, padding: '2px 8px', fontSize: 10, fontWeight: 700, whiteSpace: 'nowrap' }}>{text}</span>;
@@ -34,6 +35,7 @@ export default function WhatsAppInbox({ session }) {
   const [push, setPush] = useState('unsupported');
   const [pushBusy, setPushBusy] = useState(false);
   const [pushDiag, setPushDiag] = useState('');
+  const [kbOpen, setKbOpen] = useState(false);
   const [errPanel, setErrPanel] = useState(null);   // null = closed, array = rows (admin only)
   const clientId = useRef(newClientId());
   const endRef = useRef(null);
@@ -105,6 +107,7 @@ export default function WhatsAppInbox({ session }) {
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('g9.wa.search', lang)} aria-label={t('g9.wa.search', lang)} style={{ flex: 1, background: C.card, border: '1px solid ' + C.border, borderRadius: 10, padding: '9px 12px', color: C.text, fontFamily: 'inherit', fontSize: 13 }} />
             <button onClick={loadList} aria-label={t('g9.wa.refresh', lang)} style={btn()}>🔄</button>
+            {session && session.role === 'admin' && <button onClick={() => setKbOpen(o => !o)} aria-label={t('wa.kb.open', lang)} title={t('wa.kb.open', lang)} style={btn(kbOpen ? { borderColor: C.accent, color: C.accent } : {})}>📚</button>}
             {session && session.role === 'admin' && <button onClick={toggleErrors} aria-label={t('g9.wa.errors', lang)} title={t('g9.wa.errors', lang)} style={btn(errPanel ? { borderColor: C.danger, color: C.danger } : {})}>⚠️</button>}
           </div>
           <div style={{ display: 'flex', gap: 6, overflowX: 'auto' }}>
@@ -115,6 +118,7 @@ export default function WhatsAppInbox({ session }) {
           {push === 'denied' && <div style={{ color: C.muted, fontSize: 12 }}>{t('g9.wa.push.denied', lang)}</div>}
           {err && <div role="alert" style={{ color: C.danger, fontSize: 12, wordBreak: 'break-word' }}>{err}</div>}
           {pushDiag && push !== 'on' && push !== 'unsupported' && <div style={{ color: C.muted, fontSize: 10, direction: 'ltr', textAlign: 'left', wordBreak: 'break-word' }}>{pushDiag}</div>}
+          {kbOpen && session && session.role === 'admin' && <WaKnowledge />}
           {errPanel && (
             <div style={{ background: C.card, border: '1px solid ' + C.danger + '66', borderRadius: 12, padding: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
               <div style={{ fontWeight: 700, color: C.text, fontSize: 13 }}>{'⚠️ ' + t('g9.wa.errors', lang)}</div>
