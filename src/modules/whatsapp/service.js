@@ -77,3 +77,16 @@ export const loadReplyCandidates = (limit = 30) => rpc('wa_reply_candidates', { 
 export const decideReply = (msgId, decision, topic, answer) => rpc('wa_reply_decide', { p_msg: msgId, p_decision: decision, p_topic: topic || null, p_answer: answer || null });
 export async function loadFaq() { return wrap(await sb().from('wa_faq').select('id,topic,answer,active,updated_at').order('updated_at', { ascending: false }).limit(200)) || []; }
 export async function setFaqActive(id, active) { return wrap(await sb().from('wa_faq').update({ active: !!active, updated_at: new Date().toISOString() }).eq('id', id)); }
+
+// Suggested reply (draft only; the Edge Function re-checks the staff role). Feedback carries a label and a number, never text.
+const SUGGEST_FUNCTION = 'wa-suggest-reply';
+async function callSuggest(payload) {
+  const { data } = await sb().auth.getSession();
+  const token = data && data.session && data.session.access_token; if (!token) throw new Error('not signed in');
+  const res = await fetch(String(sb().supabaseUrl || '').replace(/\/$/, '') + '/functions/v1/' + SUGGEST_FUNCTION, { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + token }, body: JSON.stringify(payload) });
+  let body = {}; try { body = await res.json(); } catch { /* empty */ }
+  if (!res.ok) { const e = new Error(body.error || 'suggest failed'); e.status = res.status; e.code = body.error; throw e; }
+  return body;
+}
+export const suggestReply = convId => callSuggest({ action: 'draft', conversation_id: convId });
+export const draftFeedback = (convId, outcome, ratio) => callSuggest({ action: 'feedback', conversation_id: convId, outcome, ratio }).catch(() => null);

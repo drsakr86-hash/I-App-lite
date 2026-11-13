@@ -17,7 +17,13 @@ export const ar = {
   "wa.kb.noFaq": "لا توجد معلومات معتمدة بعد.",
   "wa.kb.disable": "إيقاف",
   "wa.kb.enable": "تفعيل",
-  "wa.kb.notInstalled": "ميزة قاعدة المعرفة لم تُفعَّل بعد على الخادم."
+  "wa.kb.notInstalled": "ميزة قاعدة المعرفة لم تُفعَّل بعد على الخادم.",
+  "wa.sg.btn": "✨ اقترح رداً",
+  "wa.sg.busy": "جارٍ كتابة المسودة…",
+  "wa.sg.note": "مسودة من المساعد. راجعها وعدّلها قبل الإرسال، ولا تُرسل تلقائياً.",
+  "wa.sg.discard": "تجاهل المسودة",
+  "wa.sg.err.LLM_NOT_CONFIGURED": "اقتراح الرد غير مفعّل على الخادم بعد.",
+  "wa.sg.err": "تعذّر اقتراح رد الآن. اكتب الرد يدوياً."
 };
 export const en = {
   "wa.kb.open": "Knowledge base",
@@ -37,5 +43,11 @@ export const en = {
   "wa.kb.noFaq": "Nothing approved yet.",
   "wa.kb.disable": "Disable",
   "wa.kb.enable": "Enable",
-  "wa.kb.notInstalled": "The knowledge-base feature is not enabled on the server yet."
+  "wa.kb.notInstalled": "The knowledge-base feature is not enabled on the server yet.",
+  "wa.sg.btn": "✨ Suggest a reply",
+  "wa.sg.busy": "Writing a draft…",
+  "wa.sg.note": "Draft from the assistant. Review and edit it before sending; it is never sent automatically.",
+  "wa.sg.discard": "Discard draft",
+  "wa.sg.err.LLM_NOT_CONFIGURED": "Reply suggestions are not enabled on the server yet.",
+  "wa.sg.err": "Could not suggest a reply now. Write it manually."
 };

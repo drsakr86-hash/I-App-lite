@@ -13,6 +13,7 @@ import { QUICK_REPLIES, applyQuickReply } from '../modules/whatsapp/quickReplies
 import { askConfirm } from '../modules/ui/dialogs.js';
 import { friendlyError } from '../modules/errors/friendly.js';
 import WaKnowledge from './WaKnowledge.jsx';
+import { draftOutcome } from '../modules/whatsapp/draft.js';
 
 const POLL_MS = 5000;
 const pill = (color, text, key) => <span key={key} style={{ background: color + '22', color, border: '1px solid ' + color + '44', borderRadius: 20, padding: '2px 8px', fontSize: 10, fontWeight: 700, whiteSpace: 'nowrap' }}>{text}</span>;
@@ -36,6 +37,7 @@ export default function WhatsAppInbox({ session }) {
   const [pushBusy, setPushBusy] = useState(false);
   const [pushDiag, setPushDiag] = useState('');
   const [kbOpen, setKbOpen] = useState(false);
+  const [sug, setSug] = useState({ text: '', busy: false });   // suggested reply (draft only); text is kept to compare with what is sent
   const [errPanel, setErrPanel] = useState(null);   // null = closed, array = rows (admin only)
   const clientId = useRef(newClientId());
   const endRef = useRef(null);
@@ -86,10 +88,23 @@ export default function WhatsAppInbox({ session }) {
     catch (e) { logError('whatsapp.delete', e); setErr(/conversation_active/.test(String(e && e.message)) ? t('g9.wa.deleteActive', lang) : (e.message ? friendlyError(e, lang) : t('g9.wa.error', lang))); }
   };
 
+  useEffect(() => { setSug({ text: '', busy: false }); }, [selId]);   // a draft belongs to one conversation only
+  const suggest = async () => {
+    if (!sel || sug.busy) return;
+    setErr(''); setSug({ text: '', busy: true });
+    try { const r = await svc.suggestReply(sel.id); setDraft(r.draft); setSug({ text: r.draft, busy: false }); }
+    catch (e) { setSug({ text: '', busy: false }); setErr(e.code === 'LLM_NOT_CONFIGURED' ? t('wa.sg.err.LLM_NOT_CONFIGURED', lang) : t('wa.sg.err', lang)); }
+  };
+  const discardDraft = () => { if (sug.text) svc.draftFeedback(sel.id, 'discarded', 1); setSug({ text: '', busy: false }); setDraft(''); };
+
   const send = async () => {
     const text = draft.trim(); if (!text || !sel || busy) return;
     setBusy(true); setErr('');
-    try { await svc.sendManual(sel.id, text, clientId.current); setDraft(''); clientId.current = newClientId(); await loadThread(); await loadList(); }
+    try {
+      await svc.sendManual(sel.id, text, clientId.current); setDraft(''); clientId.current = newClientId();
+      if (sug.text) { const d = draftOutcome(sug.text, text); svc.draftFeedback(sel.id, d.outcome, d.ratio); setSug({ text: '', busy: false }); }
+      await loadThread(); await loadList();
+    }
     catch (e) { setErr(e.code === 'WINDOW_CLOSED' ? t('g9.wa.windowClosed', lang) : (t('g9.wa.sendFail', lang) + (e.message ? ': ' + friendlyError(e, lang) : ''))); }
     finally { setBusy(false); }
   };
@@ -200,6 +215,10 @@ export default function WhatsAppInbox({ session }) {
 
           {err && <div role="alert" style={{ color: C.danger, fontSize: 12 }}>{err}</div>}
           {!open && owner !== 'closed' && <div style={{ color: C.muted, fontSize: 12, lineHeight: 1.7 }}>{t('g9.wa.windowClosed', lang)}</div>}
+          {open && owner !== 'ai' && owner !== 'closed' && <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+            <button type="button" disabled={busy || sug.busy} onClick={suggest} style={btn({ borderColor: C.teal, color: C.teal })}>{sug.busy ? t('wa.sg.busy', lang) : t('wa.sg.btn', lang)}</button>
+            {sug.text && <><span style={{ fontSize: 11, color: C.muted, flex: 1 }}>{t('wa.sg.note', lang)}</span><button type="button" onClick={discardDraft} style={btn({ padding: '2px 8px', fontSize: 11 })}>{t('wa.sg.discard', lang)}</button></>}
+          </div>}
           {open && <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2 }} aria-label="ردود جاهزة">
             {QUICK_REPLIES.map(q => <button key={q.id} type="button" disabled={busy} onClick={() => setDraft(d => applyQuickReply(d, q.text))} style={btn({ whiteSpace: 'nowrap', padding: '4px 10px', fontSize: 11, borderRadius: 20 })}>{q.label}</button>)}
           </div>}
