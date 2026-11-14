@@ -48,3 +48,109 @@ export function chapterCounts(cards) {
 export const orderedSections = card => KIND_ORDER
   .map(kind => ({ kind, lines: (card.sections.find(s => s.kind === kind) || { lines: [] }).lines }))
   .filter(s => s.lines.length);
+
+// ---- edits layer -----------------------------------------------------------------------------------------------
+// The guide itself (data.js) never changes. The clinic's edits are a small list of records kept beside it (synced, see
+// store.js): { id, base, deleted?, num, chapter, title, urgent, sections, by, at }.
+//   base = id of the guide card the record replaces (or hides, with deleted: true); base = null = a card added by the clinic.
+// Removing a record brings the original card back.
+export const overrideId = baseId => 'o:' + baseId;
+
+export function applyOverlay(cards, overlay) {
+  const recs = Array.isArray(overlay) ? overlay.filter(r => r && typeof r === 'object') : [];
+  const byBase = new Map(recs.filter(r => r.base).map(r => [r.base, r]));
+  const out = [];
+  for (const card of cards || []) {
+    const r = byBase.get(card.id);
+    if (!r) out.push(card);
+    else if (!r.deleted) out.push({ id: card.id, num: r.num || card.num, chapter: r.chapter, title: r.title, urgent: !!r.urgent, sections: r.sections || [], edited: true });
+  }
+  for (const r of recs) {
+    if (!r.base && !r.deleted) out.push({ id: r.id, num: r.num || '', chapter: r.chapter, title: r.title, urgent: !!r.urgent, sections: r.sections || [], custom: true });
+  }
+  // keep the chapter order; inside a chapter the guide's cards come first, the clinic's own after them
+  return out.map((c, i) => ({ c, i })).sort((a, b) => a.c.chapter - b.c.chapter || a.i - b.i).map(x => x.c);
+}
+
+export const hiddenCount = overlay => (Array.isArray(overlay) ? overlay : []).filter(r => r && r.base && r.deleted).length;
+
+// Checks what the editor sends and returns { ok: true, value } or { ok: false, error: <i18n key> }.
+// sections: { check: 'line\nline', rx: '...', ... } (one line per row); empty lines are dropped, text is kept as typed.
+export function normalizeCardInput(input, chapterNumbers) {
+  const title = String((input && input.title) || '').trim();
+  if (!title) return { ok: false, error: 'rxg.err.title' };
+  const chapter = Number(input && input.chapter);
+  if (!(chapterNumbers || []).includes(chapter)) return { ok: false, error: 'rxg.err.chapter' };
+  const sections = [];
+  for (const kind of KIND_ORDER) {
+    const raw = input && input.sections ? input.sections[kind] : '';
+    const lines = (Array.isArray(raw) ? raw : String(raw || '').split(/\r?\n/)).map(l => String(l).trim()).filter(Boolean);
+    if (lines.length) sections.push({ kind, lines });
+  }
+  if (!sections.length) return { ok: false, error: 'rxg.err.empty' };
+  return { ok: true, value: { title, chapter, urgent: !!(input && input.urgent), sections } };
+}
+
+// Section texts for the editor: { check: 'line\nline', ... }.
+export const sectionsToText = card => Object.fromEntries(KIND_ORDER.map(k => [k, ((card.sections || []).find(s => s.kind === k) || { lines: [] }).lines.join('\n')]));
+
+// Plain-text version of a card, for pasting into the exam plan: title, then the chosen sections' lines.
+export function cardToPlanText(card, kinds = ['rx', 'follow']) {
+  const rows = [card.title];
+  for (const s of orderedSections(card)) if (kinds.includes(s.kind)) rows.push(...s.lines.map(l => '- ' + l));
+  return rows.join('\n');
+}
+
+// Splits one guide line into a medicine { name, dose } for the prescription form: the longest drug name from `drugs`
+// that the line starts with becomes the name and the rest of the line the dose. Drug names are compared without their
+// " ED"/" EO" suffix (case-insensitive); an ointment also matches the way the guide writes it ("Tobrex eye oint.",
+// "Maxitrol مرهم"). A line that starts with no known drug keeps the whole line as the name, with no dose.
+const SUFFIX = / (ED|EO)$/;
+const FORM_WORD = / (vial|amp|infusion|syrup|nasal|cream|lotion|ointment|iv)$/i;
+const norm = s => String(s).toLowerCase().replace(/\s+/g, ' ').trim();
+function baseOf(d) {
+  let b = norm(String(d).replace(SUFFIX, ''));
+  for (let prev = ''; prev !== b;) { prev = b; b = b.replace(FORM_WORD, '').trim(); }
+  return b;
+}
+const brandOf = base => base.split(' ').filter((w, i, all) => !all.slice(0, i + 1).some(x => /\d/.test(x))).join(' ');
+// Candidate texts a drug is recognised by: its own name (without the form suffix), the guide's way of writing an
+// ointment, and the bare brand ("Pred Forte" for "Pred Forte 1%") when only one drug in the list has that brand.
+function keysOf(drugs) {
+  const brandCount = {};
+  for (const d of drugs) { const br = brandOf(baseOf(d)); brandCount[br] = (brandCount[br] || 0) + 1; }
+  return (drugs || []).flatMap(d => {
+    const base = baseOf(d);
+    if (!base) return [];
+    const brand = brandOf(base);
+    const keys = / EO$/.test(d) ? [base + ' eye oint.', base + ' eye oint', base + ' oint.', base + ' مرهم', base] : [base];
+    if (brand && brand !== base && brandCount[brand] === 1) keys.push(brand);
+    return keys.map(k => ({ d, k }));
+  });
+}
+const keyCache = new WeakMap();
+const keysFor = drugs => { if (!keyCache.has(drugs)) keyCache.set(drugs, keysOf(drugs)); return keyCache.get(drugs); };
+export function lineToMedicine(line, drugs) {
+  const text = String(line).replace(/\s+/g, ' ').trim();
+  const low = text.toLowerCase();
+  let best = null;
+  for (const { d, k } of keysFor(drugs || [])) {
+    const fits = low === k || (low.startsWith(k) && /[\s×(,،:]/.test(low.charAt(k.length)));
+    if (fits && (!best || k.length > best.k.length)) best = { d, k };
+  }
+  if (!best) return { name: text, dose: '', known: false };
+  return { name: best.d, dose: text.slice(best.k.length).replace(/^[\s:،,-]+/, '').trim(), known: true };
+}
+
+// A guide line that adds a second drug ("Timolol 0.5% ×2 ± Cidamex 250 ×4") becomes one medicine per drug;
+// any other line (including "A أو B" alternatives) stays one line for the doctor to settle.
+export function linesToMedicines(lines, drugs) {
+  const out = [];
+  for (const line of lines || []) {
+    const parts = String(line).split(/\s[±+]\s/).map(p => p.trim()).filter(Boolean);
+    const meds = parts.map(p => lineToMedicine(p, drugs));
+    if (parts.length > 1 && meds.every(m => m.known)) out.push(...meds);
+    else out.push(lineToMedicine(line, drugs));
+  }
+  return out;
+}

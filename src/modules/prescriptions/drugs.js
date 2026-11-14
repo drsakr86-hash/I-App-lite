@@ -11,6 +11,8 @@ export const DEFAULT_DRUGS = [
   'Tetracycline EO', 'Vitamins A&E cap'
 ];
 
+import { GUIDE_DRUG_GROUPS } from './guide-drugs.js';
+
 const CUSTOM_DRUGS_KEY = 'iapp_custom_drugs';
 
 export function loadDrugs() {
@@ -47,3 +49,17 @@ export const DOSE_OPTIONS = [
   'مرة يومياً', 'مرتين يومياً', '3 مرات يومياً', '4 مرات يومياً',
   'كل 4 ساعات', 'كل 6 ساعات', 'عند اللزوم', 'قبل النوم'
 ];
+
+// The drug picker's list, grouped: the original list first, then the guide's drugs by form (anything already in an
+// earlier group is skipped, so a name never appears twice), then the drugs added by hand on this device.
+// loadDrugs() above is unchanged: it stays the flat original + custom list.
+export function loadDrugGroups() {
+  const seen = new Set();
+  const take = list => list.filter(d => (seen.has(d) ? false : (seen.add(d), true)));
+  const groups = [{ key: 'basic', labelKey: 'g17.drugs.basic', drugs: take(DEFAULT_DRUGS) }];
+  GUIDE_DRUG_GROUPS.forEach(g => groups.push({ key: g.key, labelKey: g.labelKey, drugs: take(g.drugs) }));
+  let custom = [];
+  try { custom = JSON.parse(localStorage.getItem(CUSTOM_DRUGS_KEY) || '[]'); } catch { custom = []; }
+  groups.push({ key: 'custom', labelKey: 'g17.drugs.custom', drugs: take(Array.isArray(custom) ? custom : []) });
+  return groups.filter(g => g.drugs.length);
+}

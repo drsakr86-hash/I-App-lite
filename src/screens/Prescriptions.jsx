@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { findPatientForRx, eyeRows } from '../modules/prescriptions/index.js';
 import { Modal, Confirm, Btn } from '../components/common.jsx';
 import { RxForm } from '../components/forms/index.js';
+import { can } from '../app/permissions.js';
 import { PrintModal } from '../components/modals/index.js';
 import { C } from '../modules/theme/index.js';
 import { trashPut, logAudit } from '../modules/sync/index.js';
@@ -13,7 +14,7 @@ const iconBtn = (bg, color, extra = {}) => ({
   fontWeight: 600, cursor: 'pointer', ...extra
 });
 
-export default function Prescriptions({ prescriptions, setRx, patients, doctorNames = [], primaryDoctor, clinic }) {
+export default function Prescriptions({ prescriptions, setRx, patients, doctorNames = [], primaryDoctor, clinic, session = null }) {
   const lang = useLang();
   const [modal, setModal] = useState(null);
   const [viewRx, setViewRx] = useState(null);
@@ -86,12 +87,12 @@ export default function Prescriptions({ prescriptions, setRx, patients, doctorNa
 
       {modal === 'add' && (
         <Modal title={t('g6.rx.newTitle', lang)} onClose={() => setModal(null)}>
-          <RxForm doctorNames={doctorNames} patients={patients} onSave={f => { add(f); setModal(null); }} onClose={() => setModal(null)} />
+          <RxForm guide={can(session && session.role, 'rx_guide', 'read')} doctorNames={doctorNames} patients={patients} onSave={f => { add(f); setModal(null); }} onClose={() => setModal(null)} />
         </Modal>
       )}
       {modal && modal.edit && (
         <Modal title={t('g6.rx.editTitle', lang)} onClose={() => setModal(null)}>
-          <RxForm doctorNames={doctorNames} patients={patients} initial={modal.edit} onSave={f => { edit(f); setModal(null); }} onClose={() => setModal(null)} />
+          <RxForm guide={can(session && session.role, 'rx_guide', 'read')} doctorNames={doctorNames} patients={patients} initial={modal.edit} onSave={f => { edit(f); setModal(null); }} onClose={() => setModal(null)} />
         </Modal>
       )}
       {modal && modal.del && (

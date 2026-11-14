@@ -5,11 +5,13 @@ import { inp } from '../../modules/ui/atoms.jsx';
 import { useLang, t } from '../../modules/i18n/index.js';
 import { tv } from '../../modules/i18n/tv.js';
 import {
-  DEFAULT_DRUGS, DOSE_OPTIONS, loadDrugs, saveDrug, deleteDrug,
+  DEFAULT_DRUGS, DOSE_OPTIONS, loadDrugs, loadDrugGroups, saveDrug, deleteDrug,
   loadRxTemplates, refreshRxTemplates, addRxTemplate, deleteRxTemplate
 } from '../../modules/prescriptions/index.js';
 import { parseMedicines, serializeMedicines, medicinesTextForTemplate } from './medicines-step-model.js';
 import { askConfirm, notify } from '../../modules/ui/dialogs.js';
+import { linesToMedicines } from '../../modules/rx-guide/model.js';
+const RxGuidePicker = React.lazy(() => import('../RxGuidePicker.jsx'));
 
 // The "medicines" step of RxForm's 3-step wizard: a drug picker (with a
 // custom-drug list stored locally), a dosing-frequency chooser, and a small
@@ -20,10 +22,11 @@ import { askConfirm, notify } from '../../modules/ui/dialogs.js';
 // directly) and the legacy runtime's own RxForm (via the
 // window.IAppModules bridge), same unification as Btn/Modal/Confirm/Toast/
 // ThemeToggle in batch 6. Exact copy of the original markup and logic.
-export default function MedicinesStep({ medicines, onChange }) {
+export default function MedicinesStep({ medicines, onChange, guide = false }) {
   const lang = useLang();
   const [meds, setMeds] = useState(() => parseMedicines(medicines));
   const [drugList, setDrugList] = useState(loadDrugs);
+  const [drugGroups, setDrugGroups] = useState(loadDrugGroups);
   const [templates, setTemplates] = useState(loadRxTemplates);
   useEffect(() => {
     (async () => {
@@ -33,6 +36,7 @@ export default function MedicinesStep({ medicines, onChange }) {
   }, []);
   const [newDrug, setNewDrug] = useState('');
   const [addingNew, setAddingNew] = useState(false);
+  const [picking, setPicking] = useState(false);
 
   const save = list => {
     setMeds(list);
@@ -50,6 +54,7 @@ export default function MedicinesStep({ medicines, onChange }) {
     if (!name) return;
     saveDrug(name);
     setDrugList(loadDrugs());
+    setDrugGroups(loadDrugGroups());
     setNewDrug('');
     setAddingNew(false);
   };
@@ -61,12 +66,14 @@ export default function MedicinesStep({ medicines, onChange }) {
     if (!await askConfirm(t('g2.meds.confirmDelDrug', lang, { name: drugName }))) return;
     deleteDrug(drugName);
     setDrugList(loadDrugs());
+    setDrugGroups(loadDrugGroups());
   };
 
   return React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 10 } },
     React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 } },
       React.createElement('span', { style: { color: C.text, fontWeight: 700, fontSize: 13 } }, '💊 ' + t('g2.meds.title', lang)),
       React.createElement('div', { style: { display: 'flex', gap: 6 } },
+        guide && React.createElement(Btn, { small: true, outline: true, onClick: () => setPicking(true) }, t('rxg.pickBtn', lang)),
         React.createElement(Btn, { small: true, color: C.teal, onClick: () => setAddingNew(v => !v) }, t('g2.meds.newItem', lang)),
         React.createElement(Btn, { small: true, onClick: addMed }, t('g2.meds.add', lang))
       )
@@ -114,6 +121,18 @@ export default function MedicinesStep({ medicines, onChange }) {
             ))
           )
     ),
+    picking && React.createElement(React.Suspense, { fallback: null },
+      React.createElement(RxGuidePicker, {
+        mode: 'meds',
+        drugs: drugGroups.flatMap(g => g.drugs),
+        onClose: () => setPicking(false),
+        onApply: ({ lines }) => {
+          const add = linesToMedicines(lines, drugGroups.flatMap(g => g.drugs)).map(m => ({ name: m.name, dose: m.dose }));
+          save([...meds.filter(m => m.name), ...add]);
+          setPicking(false);
+        }
+      })
+    ),
     addingNew && React.createElement('div', {
       style: { background: C.teal + '11', border: '1px solid ' + C.teal + '44', borderRadius: 12, padding: 12, display: 'flex', gap: 8, alignItems: 'center' }
     },
@@ -146,7 +165,11 @@ export default function MedicinesStep({ medicines, onChange }) {
             onChange: e => update(i, 'name', e.target.value)
           },
             React.createElement('option', { value: '' }, t('g2.meds.pickDrug', lang)),
-            drugList.map(d => React.createElement('option', { key: d, value: d }, tv(d)))
+            // a name that is not in any list (e.g. typed by an older version or inserted from the guide) stays selectable
+            m.name && !drugGroups.some(g => g.drugs.includes(m.name)) && React.createElement('option', { key: '_cur', value: m.name }, tv(m.name)),
+            drugGroups.map(g => React.createElement('optgroup', { key: g.key, label: t(g.labelKey, lang) },
+              g.drugs.map(d => React.createElement('option', { key: d, value: d }, tv(d)))
+            ))
           )
         ),
         React.createElement('div', {
