@@ -101,12 +101,12 @@ test('plan text: title then the chosen sections as dashed lines', () => {
 
 test('print sheet: escapes text, lists sections in order, shows the credit and the clinic name', () => {
   const evil = { id: 'x', num: '1.1', chapter: 3, title: '<img src=x onerror=alert(1)>', urgent: true, sections: [{ kind: 'rx', lines: ['a <b> & "c"'] }] };
-  const html = getGuideHTML([evil, hyphema], { address: 'دمنهور', phone: '123' }, 'Prepared by Dr. Reem Fawzy');
+  const html = getGuideHTML([evil, hyphema], { address: 'دمنهور', phone: '123' }, 'Condensed from The Wills Eye Manual');
   assert.ok(!html.includes('<img src=x'));
   assert.ok(html.includes('&lt;img src=x'));
   assert.ok(html.includes('a &lt;b&gt; &amp; &quot;c&quot;'));
   assert.ok(html.includes('د. عبدالستار صقر للعيون والليزر'));
-  assert.ok(html.includes('Prepared by Dr. Reem Fawzy'));
+  assert.ok(html.includes('Condensed from The Wills Eye Manual'));
   assert.ok(html.includes('دمنهور · 123'));
   assert.equal((html.match(/class="card"/g) || []).length, 2);
 });

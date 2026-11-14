@@ -28,7 +28,7 @@ for (const lang of ['ar', 'en']) {
   const cardButtons = () => r.root.findAll(n => n.type === 'button' && n.props['aria-expanded'] !== undefined);
   ok(cardButtons().length === 214, `${lang}: 214 cards listed (got ${cardButtons().length})`);
   ok(json(r).includes(lang === 'ar' ? 'روشتة في دقيقة' : 'Rx in a minute'), `${lang}: title`);
-  ok(json(r).includes('Reem Fawzy'), `${lang}: credit line shown`);
+  ok(json(r).includes('Wills Eye') && !json(r).includes('Reem Fawzy'), `${lang}: credit line shown without a personal name`);
   // search
   const search = r.root.findByProps({ type: 'search' });
   await act(async () => { search.props.onChange({ target: { value: 'hyphema' } }); });
