@@ -35,9 +35,14 @@ export function primaryNavItems(role) {
 export const ATLAS_NAV = { id: 'atlas', labelKey: 'atlas.nav', label: 'أطلس التشريح', icon: '🔬', inMore: true };
 export const atlasTabAllowed = (role, features = {}) => !!features.atlas && can(role, 'atlas', 'read');
 
+// "Rx in a minute" reference guide: a More-menu tab for doctor and admin only (permission `rx_guide.read`).
+export const RXGUIDE_NAV = { id: 'rxguide', labelKey: 'rxg.nav', label: 'دليل الروشتة', icon: '📖', inMore: true };
+export const rxGuideTabAllowed = role => can(role, 'rx_guide', 'read');
+
 export function moreNavItems(role, features = {}) {
-  const items = navItemsForRole(role).filter(item => item.inMore);
-  return atlasTabAllowed(role, features) ? [...items, ATLAS_NAV] : items;
+  let items = navItemsForRole(role).filter(item => item.inMore);
+  if (atlasTabAllowed(role, features)) items = [...items, ATLAS_NAV];
+  return rxGuideTabAllowed(role) ? [...items, RXGUIDE_NAV] : items;
 }
 
 export function isMoreActive(active, role, features = {}) {

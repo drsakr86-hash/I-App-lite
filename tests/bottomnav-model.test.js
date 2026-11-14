@@ -29,7 +29,9 @@ test('navItemsForRole: a non-admin role (doctor/secretary/employee) does not see
 test('More menu: bar keeps the 5 main tabs, investigation orders + imaging move into More', async () => {
   const { primaryNavItems, moreNavItems, isMoreActive } = await import('../src/components/bottomnav-model.js');
   assert.deepEqual(primaryNavItems('admin').map(i => i.id), ['dashboard', 'patients', 'waiting', 'appointments', 'accounting']);
-  assert.deepEqual(moreNavItems('admin').map(i => i.id), ['radiology', 'imaging', 'whatsapp']);
+  assert.deepEqual(moreNavItems('admin').map(i => i.id), ['radiology', 'imaging', 'whatsapp', 'rxguide']);
+  assert.deepEqual(moreNavItems('doctor').map(i => i.id), ['radiology', 'imaging', 'rxguide']);
+  assert.deepEqual(moreNavItems('secretary').map(i => i.id), ['radiology', 'imaging']);
   assert.deepEqual(primaryNavItems('secretary').map(i => i.id), ['dashboard', 'patients', 'waiting', 'appointments']);
   assert.ok(isMoreActive('radiology', 'admin') && isMoreActive('imaging', 'admin') && isMoreActive('settings', 'admin'));
   assert.ok(!isMoreActive('patients', 'admin'));

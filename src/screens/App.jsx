@@ -27,10 +27,10 @@ import WaWaitingBanner from '../components/WaWaitingBanner.jsx';
 import LogoutConfirm from '../components/LogoutConfirm.jsx';
 import { useTabHistory } from '../hooks/use-back.js';
 import { visibleInterval } from '../app/visible-interval.js';
-import { NAV } from '../components/bottomnav-model.js';
+import { NAV, rxGuideTabAllowed } from '../components/bottomnav-model.js';
 
 // Tabs the shell can show. The last tab survives a reload (pull-to-refresh, a new build) for this browser tab only.
-const TAB_IDS = [...NAV.map(n => n.id), 'settings'];
+const TAB_IDS = [...NAV.map(n => n.id), 'settings', 'rxguide'];
 const ADMIN_TABS = NAV.filter(n => n.adminOnly).map(n => n.id);
 const TAB_STORE = 'iapp_tab';
 const storedTab = () => {
@@ -44,6 +44,7 @@ const WhatsAppInbox = lazy(() => retryImport(() => import("./WhatsAppInbox.jsx")
 const ImagingCenter = lazy(() => retryImport(() => import("./ImagingCenter.jsx")));
 const Accounting = lazy(() => retryImport(() => import("./Accounting.jsx")));
 const Settings = lazy(() => retryImport(() => import("./Settings.jsx")));
+const RxGuide = lazy(() => retryImport(() => import("./RxGuide.jsx")));
 
 // Doctor-app shell. Exact port of the legacy runtime's App()
 // (public/legacy/app-runtime.js) -- same state, same effects, same screens
@@ -78,7 +79,7 @@ export default function App() {
   // Android/browser back returns to the previous tab instead of leaving the app.
   const roleRef = React.useRef(session && session.role);
   roleRef.current = session && session.role;
-  useTabHistory(tab, setTab, id => TAB_IDS.includes(id) && (roleRef.current === 'admin' || !ADMIN_TABS.includes(id)));
+  useTabHistory(tab, setTab, id => TAB_IDS.includes(id) && (roleRef.current === 'admin' || !ADMIN_TABS.includes(id)) && (id !== 'rxguide' || rxGuideTabAllowed(roleRef.current)));
   const [askLogout, setAskLogout] = useState(false);
   useWaUnread(!!session && session.role === "admin"); // WhatsApp unread count in the browser tab title (admin only)
   const waWaiting = useWaWaiting(!!session && session.role === "admin");
@@ -218,7 +219,7 @@ export default function App() {
     } catch { /* storage unavailable (private mode / quota): non-fatal */ }
   };
   if (!session) return <LoginScreen onLogin={handleLogin} />;
-  const effectiveTab = ((tab === "accounting" || tab === "whatsapp") && session.role !== "admin") ? "dashboard" : tab;
+  const effectiveTab = (((tab === "accounting" || tab === "whatsapp") && session.role !== "admin") || (tab === "rxguide" && !rxGuideTabAllowed(session.role))) ? "dashboard" : tab;
   if (!pR || !aR || !rR || !eR || !vR || !dR || !prR || !ctR || !clR || !exR || !reR) {
     return (
       <div style={{ minHeight: "100vh", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center", direction: dirOf(lang), fontFamily: "'Segoe UI','Tahoma',Arial,sans-serif" }}>
@@ -285,6 +286,7 @@ export default function App() {
     accounting: React.createElement(Accounting, {
       visits, expenses, recurringExpenses, appointments, doctors, clinic, session
     }),
+    rxguide: rxGuideTabAllowed(session.role) ? React.createElement(RxGuide) : null,
     settings: React.createElement(Settings, {
       patients, appointments, prescriptions, exams, visits, doctors, setDoctors,
       prices, setPrices, clinic, setClinic, onReset: reset, users, setUsers, session, onLogout: () => setAskLogout(true)
