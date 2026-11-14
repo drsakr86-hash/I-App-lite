@@ -28,4 +28,5 @@ export {
   getAccountingReportHTMLRaw
 } from './templates.js';
 export { lastExamOf } from './templates.js';
+export { getGuideHTML } from './guide-print.js';
 export { printDoc, printViaIframe, whenPrintReady } from './dom-print.js';

@@ -18,6 +18,7 @@ import { tv } from '../modules/i18n/tv.js';
 import { LangToggle } from '../components/common.jsx';
 import { Modal, Confirm } from '../components/common.jsx';
 import { PatientEditForm, RxForm, VisitForm, ExamForm } from '../components/forms/index.js';
+import { can } from '../app/permissions.js';
 import { PrintModal } from '../components/modals/index.js';
 import { C } from '../modules/theme/index.js';
 import { SC, Tag, XRAY_ICON } from '../modules/ui/atoms.jsx';
@@ -209,6 +210,7 @@ export default function PatientFile({ ctx }) {
       {modal === "addRx" && (
         <Modal title={t("g1.pf.newRx", lang)} onClose={() => setModal(null)}><Dirty onDirty={ctx.markModalDirty}>
           <RxForm
+            guide={can(ctx.session && ctx.session.role, 'rx_guide', 'read')}
             patients={[curPatient]}
             doctorNames={doctorNames}
             onSave={onAddRxSave}
@@ -219,6 +221,7 @@ export default function PatientFile({ ctx }) {
       {modal && modal.editRx && (
         <Modal title={t("g1.pf.editRx", lang)} onClose={() => setModal(null)}><Dirty onDirty={ctx.markModalDirty}>
           <RxForm
+            guide={can(ctx.session && ctx.session.role, 'rx_guide', 'read')}
             patients={[curPatient]}
             doctorNames={doctorNames}
             initial={modal.editRx}

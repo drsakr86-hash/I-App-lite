@@ -274,7 +274,7 @@ export default function App() {
       isAdmin: !!(session && session.role === 'admin')
     }),
     prescriptions: React.createElement(Prescriptions, {
-      prescriptions, setRx, patients, doctorNames, primaryDoctor: primary, clinic
+      prescriptions, setRx, patients, doctorNames, primaryDoctor: primary, clinic, session
     }),
     radiology: React.createElement(Radiology, {
       patients, customTests, setCustomTests, setExams, primary, clinic
@@ -286,7 +286,7 @@ export default function App() {
     accounting: React.createElement(Accounting, {
       visits, expenses, recurringExpenses, appointments, doctors, clinic, session
     }),
-    rxguide: rxGuideTabAllowed(session.role) ? React.createElement(RxGuide) : null,
+    rxguide: rxGuideTabAllowed(session.role) ? React.createElement(RxGuide, { clinic, session }) : null,
     settings: React.createElement(Settings, {
       patients, appointments, prescriptions, exams, visits, doctors, setDoctors,
       prices, setPrices, clinic, setClinic, onReset: reset, users, setUsers, session, onLogout: () => setAskLogout(true)

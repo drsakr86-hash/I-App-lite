@@ -22,7 +22,7 @@ import {
 // list + Rx templates step) directly from its own moved module (batch 15) --
 // no more reads from the IAppLegacy bridge. `doctorNames` is accepted but
 // unused, as in legacy.
-export default function RxForm({ initial, patients, onSave, onClose, doctorNames = DEFAULT_DOCTOR_NAMES }) {
+export default function RxForm({ initial, patients, onSave, onClose, doctorNames = DEFAULT_DOCTOR_NAMES, guide = false }) {
   const lang = useLang();
   const autoPatient = autoPatientOf(patients);
   const [f, setF] = useState(() => initialRxState(initial, autoPatient, localISO()));
@@ -237,7 +237,7 @@ export default function RxForm({ initial, patients, onSave, onClose, doctorNames
           )}
         </div>
       )}
-      {step === 2 && <MedicinesStep medicines={f.medicines} onChange={val => setF(v => ({ ...v, medicines: val }))} />}
+      {step === 2 && <MedicinesStep guide={guide} medicines={f.medicines} onChange={val => setF(v => ({ ...v, medicines: val }))} />}
       <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
         {step > 0 && <Btn outline onClick={() => setStep(p => p - 1)}>{t('g2.common.prev', lang)}</Btn>}
         {step < RX_LAST_STEP ? (

@@ -22,7 +22,8 @@ test('rx-guide data: 214 cards in 12 chapters, every card has a title and at lea
     }
   }
   assert.equal(data.cards.filter(c => c.urgent).length, 68);
-  assert.match(data.credit, /Reem Fawzy/);
+  assert.doesNotMatch(JSON.stringify(data), /Reem|Fawzy|ريم فوزي/);
+  assert.match(data.credit, /Wills Eye/);
 });
 
 test('rx-guide data: spot checks keep the source text exactly (doses are never rewritten)', () => {

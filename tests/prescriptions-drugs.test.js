@@ -55,3 +55,34 @@ test('DOSE_OPTIONS: has the expected fixed set of frequency strings', () => {
     'كل 4 ساعات', 'كل 6 ساعات', 'عند اللزوم', 'قبل النوم'
   ]);
 });
+
+import { loadDrugGroups } from '../src/modules/prescriptions/drugs.js';
+import { GUIDE_DRUGS, GUIDE_DRUG_GROUPS } from '../src/modules/prescriptions/guide-drugs.js';
+
+test('guide drugs: no duplicates across groups, and every guide drug really appears in the guide text', async () => {
+  assert.equal(new Set(GUIDE_DRUGS).size, GUIDE_DRUGS.length);
+  const guide = (await import('../src/modules/rx-guide/data.js')).default;
+  const text = guide.cards.map(c => c.sections.map(s => s.lines.join(' ')).join(' ')).join(' ').toLowerCase();
+  const brand = d => d.replace(/ (ED|EO|vial|amp|syrup|nasal|cream|lotion|infusion|IV|ointment)\b.*$/i, '').replace(/\s[\d.,]+\s?(%|mg|g|mcg)?.*$/i, '').toLowerCase();
+  const missing = GUIDE_DRUGS.filter(d => !text.includes(brand(d)));
+  assert.deepEqual(missing, [], 'drugs not found in the guide text: ' + missing.join(', '));
+});
+
+test('loadDrugGroups: original list first, guide groups next, custom last, no name twice', () => {
+  saveDrug('My Custom Drug');
+  const groups = loadDrugGroups();
+  assert.equal(groups[0].key, 'basic');
+  assert.deepEqual(groups[0].drugs, DEFAULT_DRUGS);
+  assert.equal(groups[groups.length - 1].key, 'custom');
+  assert.deepEqual(groups[groups.length - 1].drugs, ['My Custom Drug']);
+  const all = groups.flatMap(g => g.drugs);
+  assert.equal(new Set(all).size, all.length);
+  for (const g of GUIDE_DRUG_GROUPS) assert.ok(groups.some(x => x.key === g.key), g.key);
+  assert.ok(all.includes('Pred Forte 1% ED') && all.includes('Vigamox ED'));
+});
+
+test('loadDrugGroups: with malformed custom storage still returns the original and guide groups', () => {
+  globalThis.localStorage.setItem('iapp_custom_drugs', 'not json');
+  const groups = loadDrugGroups();
+  assert.ok(groups.length >= 2 && groups.every(g => g.key !== 'custom'));
+});

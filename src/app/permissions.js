@@ -11,11 +11,11 @@ export const PERMISSIONS = Object.freeze({
     accounting: ['*'], payments: ['*'], expenses: ['*'], doctor_settlements: ['*'], financial_reports: ['*'], cash_accounts: ['*'],
     atlas: ['*'], // anatomy atlas (behind the `atlas` feature flag)
     ddx: ['*'], // diagnosis assistant (behind the `ddx` feature flag)
-    rx_guide: ['read'] // "Rx in a minute" reference guide (doctor / admin only)
+    rx_guide: ['read', 'write'] // "Rx in a minute" reference guide: read, and edit / add / hide cards (doctor / admin only)
   },
   doctor: {
     patients: ['read', 'write'], visits: ['*'], examinations: ['*'], prescriptions: ['*'], investigations: ['*'], imaging: ['*'],
-    atlas: ['*'], ddx: ['*'], rx_guide: ['read']
+    atlas: ['*'], ddx: ['*'], rx_guide: ['read', 'write']
   },
   secretary: {
     patients: ['read', 'write'], visits: ['read', 'write'], investigations: ['read'], imaging: ['read'],

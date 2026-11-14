@@ -17,6 +17,7 @@ import { examForEditing, applyOphthToExam } from '../../modules/patient-file/oph
 import ScribePanel from './ScribePanel.jsx';
 import SpecialExamSheets from './SpecialExamSheets.jsx';
 import DdxPanel from './DdxPanel.jsx';
+const RxGuidePicker = lazy(() => import('../RxGuidePicker.jsx'));
 import { finalizeExamSpecial } from '../../modules/special-exam/model.js';
 import { appendWorkup } from '../../modules/special-exam/ddx.js';
 import { isEnabled } from '../../modules/feature-flags/index.js';
@@ -28,6 +29,8 @@ const ExamAtlasStep = lazy(() => import('../atlas/ExamAtlasStep.jsx'));
 // ExamForm (public/legacy/app-runtime.js).
 export default function ExamForm({ initial, patientId, patient = null, session = null, onSave, onClose, doctorNames = DEFAULT_DOCTOR_NAMES, priorExams = null }) {
   const lang = useLang();
+  const [pickingGuide, setPickingGuide] = useState(false);
+  const guideOn = can(session && session.role, 'rx_guide', 'read');
   const [f, setF] = useState(() => initialExamState(initial ? examForEditing(initial) : initial, localISO()));
   const atlasOn = isEnabled('atlas') && can(session && session.role, 'atlas', 'read');
   // steps: data, clinical, [anatomy sketch], diagnosis. The sketch step exists only with the atlas flag on, for doctor/admin.
@@ -289,6 +292,7 @@ export default function ExamForm({ initial, patientId, patient = null, session =
             />
           </Field>
           <Field label={t('g2.exam.plan', lang)}>
+            {guideOn && !signed && <Btn small outline onClick={() => setPickingGuide(true)}>{t('rxg.pickBtn', lang)}</Btn>}
             <textarea
               style={{ ...inp(), resize: 'none' }}
               rows={4}
@@ -297,6 +301,19 @@ export default function ExamForm({ initial, patientId, patient = null, session =
               placeholder={t('g2.exam.planPh', lang)}
             />
           </Field>
+          {pickingGuide && (
+            <Suspense fallback={null}>
+              <RxGuidePicker
+                mode="plan"
+                onClose={() => setPickingGuide(false)}
+                onApply={({ card, lines }) => {
+                  const block = [card.title, ...lines.map(l => '- ' + l)].join('\n');
+                  setF(v => ({ ...v, treatmentPlan: v.treatmentPlan ? v.treatmentPlan + '\n' + block : block }));
+                  setPickingGuide(false);
+                }}
+              />
+            </Suspense>
+          )}
           <Field label={t('g2.common.followUpDate', lang)}>
             <input style={inp()} type="date" value={f.followUp} onChange={s('followUp')} />
           </Field>
