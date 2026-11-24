@@ -169,3 +169,27 @@ test('book buttons are recognised exactly (not free text)', () => {
   for (const w of ['احجز موعد المتابعة', 'احجز موعد المتابعه', ' احجز الكشف ']) assert.ok(isBookButton(w), w);
   for (const w of ['عايز احجز موعد المتابعة بكرة', 'احجز', 'تأكيد الحضور']) assert.ok(!isBookButton(w), w);
 });
+
+test('reminder offer: "ياريت على الواتس" is a yes; "أنت ذكاء اصطناعي؟" gets an honest answer without a hand-off', async () => {
+  const { isReminderYes, isBotQuestion } = await import('../supabase/functions/_shared/assistant.js');
+  for (const t of ['ياريت على الواتس', 'يا ريت', 'ابعتلي', 'نعم', 'اه ياريت']) assert.ok(isReminderYes(t), t);
+  for (const t of ['لا', 'مش عايز', 'لا ياريت متبعتش', 'بلاش']) assert.ok(!isReminderYes(t), t);
+  for (const t of ['أنت ذكاء اصطناعي؟', 'الرد ده ai؟', 'انت روبوت', 'ده رد آلي؟']) assert.ok(isBotQuestion(t), t);
+  assert.ok(!isBotQuestion('عايز احجز كشف'));
+  const st = fakeStore(), llm = scriptedLlm([say('x')]); let handoffs = 0; st.handoff = async () => { handoffs++; };
+  await run(st, llm, 'أنت ذكاء اصطناعي؟');
+  assert.equal(llm.calls.length, 0); assert.equal(handoffs, 0); assert.match(st.out.at(-1).body, /المساعد الآلي/);
+});
+
+test('after a booking request the model is told it is registered, and a later "نعم" still answers the reminder offer', async () => {
+  const st = fakeStore(); st.cfg.reminders_enabled = true; const consents = []; st.setConsent = async (...a) => { consents.push(a); };
+  const flow = { pending: { kind: 'book', args: { clinic: 'دمنهور', date: '2026-01-18', time: '20:10', name: 'سارة أحمد', type: 'x' }, created_msg_id: 9, expires_at: new Date(NOW.getTime() + 600000).toISOString() } };
+  const mk = (id, body, llm) => ({ store: st, llm, conv: { id: 1 }, contact: { wa_id: WA, consent: 'service', reminders_opt_in: false }, waId: WA, config: st.cfg, now: () => NOW, log: () => {}, flow, unprocessed: [{ id, body, kind: 'text' }], attempts: 1 });
+  await processConversation(mk(10, 'تأكيد', scriptedLlm([say('x')])));
+  assert.ok(flow.last_done && flow.reminder_offer);
+  const llm = scriptedLlm([say('الميعاد متسجل باسم حضرتك.')]);
+  await processConversation(mk(11, 'هو الميعاد اتسجل؟', llm));
+  assert.match(JSON.stringify(llm.calls[0]), /ممنوع تقول إنه ما اتسجلش/);
+  await processConversation(mk(12, 'نعم', scriptedLlm([say('x')])));
+  assert.equal(consents.length, 1); assert.deepEqual(consents[0].slice(1), [true, false, 'chat']);
+});
