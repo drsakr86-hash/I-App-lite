@@ -31,6 +31,8 @@ import WhatsAppInbox from "./WhatsAppInbox.jsx";
 import { useWaUnread } from "../modules/whatsapp/useWaUnread.js";
 import { useWaWaiting } from "../modules/whatsapp/useWaWaiting.js";
 import WaWaitingBanner from "../components/WaWaitingBanner.jsx";
+import QuickArrival from "../components/QuickArrival.jsx";
+import { isEnabled } from "../modules/feature-flags/index.js";
 import { waTabLabel } from "../modules/whatsapp/model.js";
 import { askConfirm, notify } from '../modules/ui/dialogs.js';
 import { friendlyError } from '../modules/errors/friendly.js';
@@ -366,6 +368,7 @@ export default function SecretaryApp() {
           {waitingCount > 0 && <span style={{ background: C.accent + "22", color: C.accent, borderRadius: 8, padding: "2px 8px", fontSize: 10, fontWeight: 700 }}>{"⏳"}{waitingCount}</span>}
         </div>
         <div style={{ display: "flex", gap: 6 }}>
+          {isEnabled("quick_desk") && <button onClick={() => setModal("arrive")} style={{ background: C.gold, border: "none", borderRadius: 10, padding: "8px 12px", color: C.bg, fontWeight: 800, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>{t("qd.btn", lang)}</button>}
           <button onClick={() => setModal("add")} style={{ background: `linear-gradient(135deg,${C.accent},${C.teal})`, border: "none", borderRadius: 10, padding: "8px 12px", color: C.bg, fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>{t("g5.sec.new", lang)}</button>
           <ThemeToggle />
           <button onClick={loadData} title={t("g5.sec.refresh", lang)} aria-label={t("g5.sec.refresh", lang)} style={{ background: "transparent", border: "1px solid " + C.border, borderRadius: 10, padding: "8px 10px", color: C.muted, fontSize: 14, cursor: "pointer" }}>🔄</button>
@@ -562,6 +565,11 @@ export default function SecretaryApp() {
         </div>
       )}
 
+      {modal === "arrive" && (
+        <Modal title={t("qd.title", lang)} onClose={() => setModal(null)}>
+          <QuickArrival patients={patients} appointments={apts} prices={prices} onSave={f => addApt(f)} onClose={() => setModal(null)} />
+        </Modal>
+      )}
       {modal === "add" && (
         <Modal title={t("g5.sec.modalNew", lang)} onClose={() => setModal(null)}>
           <SecretaryAptForm patients={patients} appointments={apts} prices={prices} onSave={async f => { if (await addApt(f)) setModal(null); }} onClose={() => setModal(null)} />
