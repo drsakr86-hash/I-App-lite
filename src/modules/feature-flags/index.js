@@ -11,7 +11,9 @@ export const FLAG_DEFS = Object.freeze({
   // Special-case examination sheets (neuro, uveitis, squint, glaucoma, DR) inside the exam form
   special_sheets: Object.freeze({ env: 'VITE_FF_SPECIAL_SHEETS', storageKey: 'iapp_ff_special_sheets', fallback: true }),
   // Rule-based differential diagnosis / work-up suggestions (decision support, doctor decides)
-  ddx: Object.freeze({ env: 'VITE_FF_DDX', storageKey: 'iapp_ff_ddx', fallback: true })
+  ddx: Object.freeze({ env: 'VITE_FF_DDX', storageKey: 'iapp_ff_ddx', fallback: true }),
+  // Phase 1 "from paper to app": quick arrival at the front desk + one-page quick exam (?ff=-quick_desk turns it off)
+  quick_desk: Object.freeze({ env: 'VITE_FF_QUICK_DESK', storageKey: 'iapp_ff_quick_desk', fallback: true })
 });
 
 const ON = new Set(['1', 'true', 'on', 'yes']);

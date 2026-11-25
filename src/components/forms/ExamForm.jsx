@@ -17,6 +17,8 @@ import { examForEditing, applyOphthToExam } from '../../modules/patient-file/oph
 import ScribePanel from './ScribePanel.jsx';
 import SpecialExamSheets from './SpecialExamSheets.jsx';
 import DdxPanel from './DdxPanel.jsx';
+import QuickExam from './QuickExam.jsx';
+import { readExamMode, saveExamMode } from '../../modules/quick-desk/model.js';
 const RxGuidePicker = lazy(() => import('../RxGuidePicker.jsx'));
 import { finalizeExamSpecial } from '../../modules/special-exam/model.js';
 import { appendWorkup } from '../../modules/special-exam/ddx.js';
@@ -38,6 +40,12 @@ export default function ExamForm({ initial, patientId, patient = null, session =
   const labels = examStepLabels();
   const stepLabels = atlasOn ? [labels[0], labels[1], t('atlas.exam.step', lang), labels[2]] : labels;
   const [step, setStep] = useState(0);
+  // Quick exam (one page of tap chips) is the default for a NEW exam with the quick_desk flag on; an edited or signed
+  // exam opens in the full form. The doctor's last choice is remembered on the device.
+  const quickAllowed = isEnabled('quick_desk') && !(initial && initial.id);
+  const [mode, setModeState] = useState(() => (quickAllowed ? readExamMode(typeof localStorage !== 'undefined' ? localStorage : null) : 'full'));
+  const quick = quickAllowed && mode === 'quick';
+  const setMode = m => { setModeState(m); try { saveExamMode(localStorage, m); } catch { /* not remembered */ } };
   const cur = keys[step];
   const lastStep = keys.length - 1;
   // an exam that is still new gets its id now, so a drawing approved while examining can point at it
@@ -59,6 +67,28 @@ export default function ExamForm({ initial, patientId, patient = null, session =
         </div>
       )}
       {!signed && session && session.role === 'admin' && <ScribePanel form={f} onApply={setF} by={session.email || session.username || ''} />}
+      {quickAllowed && (
+        <div style={{ display: 'flex', gap: 4, marginBottom: 12, background: C.card, borderRadius: 12, padding: 4 }}>
+          {['quick', 'full'].map(m => (
+            <button type="button" key={m} aria-pressed={mode === m} onClick={() => setMode(m)} style={{ flex: 1, minHeight: 40, border: 'none', font: 'inherit', borderRadius: 9, cursor: 'pointer', fontSize: 12, fontWeight: 800, background: mode === m ? C.teal : 'transparent', color: mode === m ? '#fff' : C.muted }}>{t('qd.ex.mode.' + m, lang)}</button>
+          ))}
+        </div>
+      )}
+      {quick && <QuickExam f={f} setF={setF} onPickGuide={guideOn && !signed ? () => setPickingGuide(true) : null} />}
+      {quick && pickingGuide && (
+        <Suspense fallback={null}>
+          <RxGuidePicker
+            mode="plan"
+            onClose={() => setPickingGuide(false)}
+            onApply={({ card, lines }) => {
+              const block = [card.title, ...lines.map(l => '- ' + l)].join('\n');
+              setF(v => ({ ...v, treatmentPlan: v.treatmentPlan ? v.treatmentPlan + '\n' + block : block }));
+              setPickingGuide(false);
+            }}
+          />
+        </Suspense>
+      )}
+      {!quick && <>
       <div role="tablist" aria-label={t('g2.exam.stepsAria', lang)} style={{ display: 'flex', marginBottom: 18, background: C.card, borderRadius: 12, padding: 4 }}>
         {stepLabels.map((st, i) => (
           <button
@@ -329,9 +359,10 @@ export default function ExamForm({ initial, patientId, patient = null, session =
           </Field>
         </div>
       )}
+      </>}
       <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
-        {step > 0 && <Btn outline onClick={() => setStep(p => Math.max(0, prevStep(p)))}>{t('g2.common.prev', lang)}</Btn>}
-        {step < lastStep ? (
+        {!quick && step > 0 && <Btn outline onClick={() => setStep(p => Math.max(0, prevStep(p)))}>{t('g2.common.prev', lang)}</Btn>}
+        {!quick && step < lastStep ? (
           <Btn full onClick={() => setStep(p => Math.min(lastStep, nextStep(p)))}>{t('g2.common.next', lang)}</Btn>
         ) : (
           <>

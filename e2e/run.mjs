@@ -124,6 +124,17 @@ await session('admin', async ({ page, text, has, dialogs, nav, back, step }) => 
     await has('هل تريد تسجيل الخروج؟', false); await has('المزيد');
   });
   await step('reload keeps the current tab', async () => { await page.reload(); await has('P-0001'); });
+  await step('quick exam: a new exam opens on one page; tap chips fill VA / diagnosis / follow-up', async () => {
+    await nav('المرضى'); await page.getByText('الملف الكامل').first().click();
+    await page.getByText('الفحوصات').first().click();
+    await page.getByText('فحص جديد').first().click(); await dialogs(1);
+    await has('⚡ كشف سريع');
+    await page.locator('[role=dialog]').getByRole('button', { name: 'Cataract' }).click();
+    await page.locator('[role=dialog]').getByRole('button', { name: 'شهر', exact: true }).click();
+    await page.waitForFunction(() => [...document.querySelectorAll('[role=dialog] textarea')].some(x => x.value === 'Cataract'));
+    await page.locator('[role=dialog]').getByRole('button', { name: 'الشيت الكامل' }).click();
+    await page.locator('[role=dialog]').getByRole('tab').first().waitFor();
+  });
 });
 
 // ---- secretary shell ------------------------------------------------------------------------------------------
@@ -134,10 +145,22 @@ await session('secretary', async ({ page, has, dialogs, back, step }) => {
     await page.locator('button').filter({ hasText: /جديد/ }).first().click(); await dialogs(1);
     await back(); await dialogs(0);
   });
+  await step('quick arrival: site asked once; Arabic search finds the patient; check-in shows in today\'s list', async () => {
+    await page.getByText('⚡ وصول').click(); await dialogs(1);
+    await page.getByRole('button', { name: 'عيادة دمنهور', exact: true }).click();
+    await page.keyboard.type('احمد مصطفي');
+    await page.locator('[role=dialog]').getByText('P-0001').click();
+    await page.locator('[role=dialog]').getByText('تسجيل الوصول').click();
+    await has('مسجل اليوم بالفعل'); // the seeded 10:00 appointment is the same patient -> asked before adding twice
+    await page.locator('[role=dialog]').last().getByRole('button', { name: 'تأكيد' }).click();
+    await dialogs(0);
+    await has('أحمد مصطفى');
+    if (await page.evaluate(() => localStorage.getItem('iapp_my_site')) !== 'دمنهور') throw new Error('site not remembered');
+  });
   await step('logout asks first; Escape cancels', async () => {
     await page.locator('button[aria-label]').filter({ hasText: '⏻' }).click();
-    await has('هل تريد تسجيل الخروج؟');
-    await page.keyboard.press('Escape'); await has('هل تريد تسجيل الخروج؟', false);
+    await has('تسجيل الخروج'); await dialogs(1); // the offline check-in above is still pending, so the question names it
+    await page.keyboard.press('Escape'); await dialogs(0);
   });
 });
 
